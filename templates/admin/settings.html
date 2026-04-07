@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}System Settings - Admin Panel{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-global.css') }}">
+<style>
+    .settings-section {
+        background: var(--surface);
+        border-radius: var(--radius-xl);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <!-- Page Header -->
+    <div class="dashboard-header">
+        <h2><i class="fas fa-cog"></i> System Settings</h2>
+        <p class="subtitle">Customize your school information, branding, and system preferences</p>
+    </div>
+
+    {% if settings %}
+    <form method="POST" enctype="multipart/form-data">
+
+        <!-- ================= SCHOOL INFO ================= -->
+        <div class="settings-section">
+            <h4><i class="fas fa-school"></i> School Information</h4>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">School Name *</label>
+                    <input type="text" class="form-control" name="school_name"
+                           value="{{ settings.school_name or '' }}" required>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Short Name</label>
+                    <input type="text" class="form-control" name="school_short_name"
+                           value="{{ settings.school_short_name or '' }}">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label>Email</label>
+                    <input type="email" class="form-control" name="school_email"
+                           value="{{ settings.school_email or '' }}">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label>Phone</label>
+                    <input type="text" class="form-control" name="school_phone"
+                           value="{{ settings.school_phone or '' }}">
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label>Address</label>
+                <textarea class="form-control" name="school_address">{{ settings.school_address or '' }}</textarea>
+            </div>
+        </div>
+
+        <!-- ================= BRANDING ================= -->
+        <div class="settings-section">
+            <h4><i class="fas fa-palette"></i> Branding</h4>
+
+            <div class="row">
+                <div class="col-md-6">
+
+                    <!-- LOGO -->
+                    <label>Logo</label>
+
+                    {% if settings.school_logo %}
+                        <div class="mb-2">
+                            <img src="{{ url_for('static', filename=settings.school_logo) }}"
+                                 class="img-fluid"
+                                 style="max-height:100px;"
+                                 onerror="this.style.display='none'">
+
+                            <br>
+                            <a href="{{ url_for('admin.remove_logo') }}"
+                               class="btn btn-danger btn-sm mt-2"
+                               onclick="return confirm('Remove logo?')">
+                                Remove Logo
+                            </a>
+                        </div>
+                    {% endif %}
+
+                    <input type="file" name="school_logo" class="form-control">
+                </div>
+
+                <div class="col-md-6">
+
+                    <!-- FAVICON -->
+                    <label>Favicon</label>
+
+                    {% if settings.school_favicon %}
+                        <div class="mb-2">
+                            <img src="{{ url_for('static', filename=settings.school_favicon) }}"
+                                 width="32" height="32"
+                                 onerror="this.style.display='none'">
+
+                            <br>
+                            <a href="{{ url_for('admin.remove_favicon') }}"
+                               class="btn btn-danger btn-sm mt-2"
+                               onclick="return confirm('Remove favicon?')">
+                                Remove Favicon
+                            </a>
+                        </div>
+                    {% endif %}
+
+                    <input type="file" name="school_favicon" class="form-control">
+                </div>
+            </div>
+
+            <!-- COLORS -->
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <label>Primary Color</label>
+                    <input type="color" name="primary_color"
+                           value="{{ settings.primary_color or '#6366f1' }}">
+                </div>
+
+                <div class="col-md-6">
+                    <label>Secondary Color</label>
+                    <input type="color" name="secondary_color"
+                           value="{{ settings.secondary_color or '#10b981' }}">
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SYSTEM SETTINGS ================= -->
+        <div class="settings-section">
+            <h4><i class="fas fa-sliders-h"></i> System Settings</h4>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <label>Student Registration</label><br>
+                    <input type="checkbox" name="allow_student_registration"
+                        {{ 'checked' if settings.allow_student_registration else '' }}>
+                </div>
+
+                <div class="col-md-4">
+                    <label>Maintenance Mode</label><br>
+                    <input type="checkbox" name="maintenance_mode"
+                        {{ 'checked' if settings.maintenance_mode else '' }}>
+                </div>
+
+                <div class="col-md-4">
+                    <label>Timezone</label>
+                    <select class="form-select" name="timezone">
+                        <option value="UTC" {{ 'selected' if settings.timezone=='UTC' else '' }}>UTC</option>
+                        <option value="Africa/Lagos" {{ 'selected' if settings.timezone=='Africa/Lagos' else '' }}>Africa/Lagos</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= FOOTER ================= -->
+        <div class="settings-section">
+            <h4><i class="fas fa-align-center"></i> Footer</h4>
+
+            <div class="mb-3">
+                <label>Footer Text</label>
+                <textarea class="form-control" name="footer_text">{{ settings.footer_text or '' }}</textarea>
+            </div>
+
+            <div class="mb-3">
+                <label>Copyright</label>
+                <input type="text" class="form-control" name="copyright_text"
+                       value="{{ settings.copyright_text or '' }}">
+            </div>
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div class="d-flex justify-content-between mb-4">
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Save Settings</button>
+        </div>
+
+    </form>
+
+    {% else %}
+    <div class="alert alert-danger">
+        Settings not loaded. Please initialize system settings.
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

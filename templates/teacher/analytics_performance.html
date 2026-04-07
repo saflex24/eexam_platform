@@ -1,0 +1,540 @@
+{% extends "base.html" %}
+
+{% block title %}Student Performance Analytics - {{ teacher_subject or 'All Subjects' }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        color: white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 10px 0;
+    }
+
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .filter-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .subject-badge {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 8px 20px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 1.1rem;
+        display: inline-block;
+        margin-bottom: 10px;
+    }
+
+    .rank-badge {
+        width: 35px;
+        height: 35px;
+        line-height: 35px;
+        border-radius: 50%;
+        display: inline-block;
+        text-align: center;
+        font-weight: 700;
+    }
+
+    .rank-1 { background: #ffd700; color: #000; }
+    .rank-2 { background: #c0c0c0; color: #000; }
+    .rank-3 { background: #cd7f32; color: #fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+
+    <!-- Header with Subject Badge -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-chart-line"></i> Student Performance Analytics</h2>
+            {% if teacher_subject %}
+            <div class="subject-badge">
+                <i class="fas fa-book"></i> {{ teacher_subject }}
+            </div>
+            <p class="text-muted">Performance data for your {{ teacher_subject }} exams only</p>
+            {% else %}
+            <p class="text-muted">Monitor and analyze student performance in your exams</p>
+            {% endif %}
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('teacher.export_performance_report',
+                       exam_id=filters.exam_id or '',
+                       class_id=filters.class_id or '',
+                       date_from=filters.date_from or '',
+                       date_to=filters.date_to or '') }}"
+               class="btn btn-success">
+                <i class="fas fa-file-excel"></i> Export Report
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-card">
+        <h6 class="mb-3"><i class="fas fa-filter"></i> Filters</h6>
+        <form method="GET" action="{{ url_for('teacher.analytics_performance') }}">
+            <div class="row">
+                <div class="col-md-4">
+                    <label>Exam</label>
+                    <select name="exam_id" class="form-select form-select-sm">
+                        <option value="">All Exams</option>
+                        {% for exam in teacher_exams %}
+                        <option value="{{ exam.id }}" {% if filters.exam_id == exam.id %}selected{% endif %}>
+                            {{ exam.title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label>Class</label>
+                    <select name="class_id" class="form-select form-select-sm">
+                        <option value="">All Classes</option>
+                        {% for cls in teacher_classes %}
+                        <option value="{{ cls.id }}" {% if filters.class_id == cls.id %}selected{% endif %}>
+                            {{ cls.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label>Date From</label>
+                    <input type="date" name="date_from" class="form-control form-control-sm"
+                           value="{{ filters.date_from or '' }}">
+                </div>
+                <div class="col-md-2">
+                    <label>Date To</label>
+                    <input type="date" name="date_to" class="form-control form-control-sm"
+                           value="{{ filters.date_to or '' }}">
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary btn-sm w-100">Apply</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="stat-card bg-primary">
+                <div class="stat-label">Students</div>
+                {# FIX: access dict keys explicitly — avoids attr vs key ambiguity #}
+                <div class="stat-value">{{ stats['total_students'] }}</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card bg-info">
+                <div class="stat-label">Submissions</div>
+                <div class="stat-value">{{ stats['total_submissions'] }}</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card bg-success">
+                <div class="stat-label">Avg Score</div>
+                <div class="stat-value">{{ stats['average_score'] }}%</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card bg-warning">
+                <div class="stat-label">Pass Rate</div>
+                <div class="stat-value">{{ stats['pass_rate'] }}%</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card bg-danger">
+                <div class="stat-label">Highest</div>
+                <div class="stat-value">{{ stats['highest_score'] }}%</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card bg-secondary">
+                <div class="stat-label">Lowest</div>
+                <div class="stat-value">{{ stats['lowest_score'] }}%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row — only shown when there is actual data -->
+    {% if stats['total_students'] > 0 %}
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-chart-pie"></i> Grade Distribution
+                    {% if teacher_subject %}
+                    <span class="badge bg-light text-primary float-end">{{ teacher_subject }}</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <canvas id="gradeChart" style="height: 250px;"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <i class="fas fa-chart-line"></i> Performance Trend (6 Months)
+                    {% if teacher_subject %}
+                    <span class="badge bg-light text-success float-end">{{ teacher_subject }}</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <canvas id="trendChart" style="height: 250px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Top Performers & Struggling Students -->
+    <div class="row mb-4">
+
+        <!-- Top Performers -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-trophy"></i> Top Performers
+                        {% if teacher_subject %} - {{ teacher_subject }}{% endif %}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if top_performers %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Student</th>
+                                    <th>Avg Score</th>
+                                    <th>Exams</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {# FIX: perf is a dict; 'student' key holds a User object #}
+                                {% for perf in top_performers %}
+                                <tr>
+                                    <td>
+                                        <span class="rank-badge {% if loop.index <= 3 %}rank-{{ loop.index }}{% endif %}">
+                                            {{ loop.index }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <strong>
+                                            {{ perf['student'].full_name if perf['student'] else 'Unknown' }}
+                                        </strong>
+                                    </td>
+                                    <td>
+                                        <span class="text-success fw-bold">{{ perf['average_score'] }}%</span>
+                                    </td>
+                                    <td>{{ perf['total_exams'] }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">No data available</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Struggling Students -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0">
+                        <i class="fas fa-exclamation-triangle"></i> Students Needing Support (Below 50%)
+                        {% if teacher_subject %} - {{ teacher_subject }}{% endif %}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if struggling_students %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Avg Score</th>
+                                    <th>Failed</th>
+                                    <th>Lowest</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {# FIX: stud is a dict; 'student' key holds a User object #}
+                                {% for stud in struggling_students %}
+                                <tr>
+                                    <td>
+                                        <strong>
+                                            {{ stud['student'].full_name if stud['student'] else 'Unknown' }}
+                                        </strong>
+                                    </td>
+                                    <td>
+                                        <span class="text-danger fw-bold">{{ stud['average_score'] }}%</span>
+                                    </td>
+                                    <td>{{ stud['failed_exams'] }}/{{ stud['total_exams'] }}</td>
+                                    <td>{{ stud['lowest_score'] }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-success text-center">
+                        <i class="fas fa-check-circle"></i> All students performing well!
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exam Performance & Class Comparison -->
+    <div class="row mb-4">
+
+        <!-- Top Exams by Performance -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-file-alt"></i> Top Exams by Performance
+                        {% if teacher_subject %} - {{ teacher_subject }}{% endif %}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if exam_performance %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Exam</th>
+                                    <th>Submissions</th>
+                                    <th>Avg Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {# FIX: exam_data is a dict with 'exam' key holding an Exam object #}
+                                {% for exam_data in exam_performance %}
+                                <tr>
+                                    <td>
+                                        <strong>
+                                            {{ exam_data['exam'].title[:40] if exam_data['exam'] else 'N/A' }}
+                                        </strong>
+                                    </td>
+                                    <td>{{ exam_data['total_submissions'] }}</td>
+                                    <td>{{ exam_data['average_score'] }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">No exam data</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Class Comparison -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-users"></i> Class Comparison
+                        {% if teacher_subject %} - {{ teacher_subject }}{% endif %}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if class_comparison %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Class</th>
+                                    <th>Submissions</th>
+                                    <th>Avg Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {# FIX: cls is a dict #}
+                                {% for cls in class_comparison %}
+                                <tr>
+                                    <td><strong>{{ cls['class_name'] }}</strong></td>
+                                    <td>{{ cls['total_submissions'] }}</td>
+                                    <td>{{ cls['average_score'] }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">No class data</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Submissions -->
+    <div class="card">
+        <div class="card-header bg-dark text-white">
+            <h6 class="mb-0">
+                <i class="fas fa-clock"></i> Recent Submissions
+                {% if teacher_subject %} - {{ teacher_subject }}{% endif %}
+            </h6>
+        </div>
+        <div class="card-body">
+            {% if recent_submissions %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Exam</th>
+                            <th>Score</th>
+                            <th>Grade</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {#
+                            FIX: recent_submissions is now a list of enriched dicts:
+                              item['result']  → ExamResult object
+                              item['student'] → User object  (has .full_name)
+                              item['exam']    → Exam object  (has .title)
+                        #}
+                        {% for item in recent_submissions %}
+                        {% set result  = item['result'] %}
+                        {% set student = item['student'] %}
+                        {% set exam    = item['exam'] %}
+                        <tr>
+                            <td>{{ student.full_name if student else 'Unknown' }}</td>
+                            <td>{{ exam.title if exam else 'N/A' }}</td>
+                            <td><strong>{{ result.percentage }}%</strong></td>
+                            <td>{{ result.grade or 'N/A' }}</td>
+                            <td>
+                                {% if result.is_passed %}
+                                <span class="badge bg-success">PASS</span>
+                                {% else %}
+                                <span class="badge bg-danger">FAIL</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ result.submitted_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted text-center py-4">No recent submissions</p>
+            {% endif %}
+        </div>
+    </div>
+
+</div><!-- /container-fluid -->
+
+{# Charts are only rendered when there is actual data to display #}
+{% if stats['total_students'] > 0 %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+(function () {
+    // ── Grade Distribution Pie ─────────────────────────────────────────────
+    // FIX: Use the tojson filter to safely serialise Python dicts/values
+    // into valid JS so the browser never receives un-quoted Python repr output.
+    var gradeData = {
+        A: {{ charts_data['grade_dist']['A'] | tojson }},
+        B: {{ charts_data['grade_dist']['B'] | tojson }},
+        C: {{ charts_data['grade_dist']['C'] | tojson }},
+        D: {{ charts_data['grade_dist']['D'] | tojson }},
+        F: {{ charts_data['grade_dist']['F'] | tojson }}
+    };
+
+    var gradeCtx = document.getElementById('gradeChart').getContext('2d');
+    new Chart(gradeCtx, {
+        type: 'pie',
+        data: {
+            labels: ['A', 'B', 'C', 'D', 'F'],
+            datasets: [{
+                data: [gradeData.A, gradeData.B, gradeData.C, gradeData.D, gradeData.F],
+                backgroundColor: ['#28a745', '#17a2b8', '#ffc107', '#fd7e14', '#dc3545']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' },
+                title: {
+                    display: true,
+                    text: {{ (teacher_subject or 'All Exams') | tojson }}
+                }
+            }
+        }
+    });
+
+    // ── Performance Trend Line ─────────────────────────────────────────────
+    // FIX: Use tojson on the whole list so Jinja doesn't emit raw Python list/
+    // dict syntax that breaks JS (e.g. True instead of true).
+    var trendData  = {{ charts_data['trend'] | tojson }};
+    var trendMonths = trendData.map(function(d) { return d.month; });
+    var trendScores = trendData.map(function(d) { return d.average_score; });
+
+    var trendCtx = document.getElementById('trendChart').getContext('2d');
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: trendMonths,
+            datasets: [{
+                label: 'Average Score - ' + {{ (teacher_subject or 'All Subjects') | tojson }},
+                data: trendScores,
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) { return value + '%'; }
+                    }
+                }
+            }
+        }
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

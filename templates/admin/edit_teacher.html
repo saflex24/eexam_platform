@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Teacher{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h2><i class="fas fa-chalkboard-teacher"></i> Edit Teacher</h2>
+    
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('admin.manage_teachers') }}">Teachers</a></li>
+            <li class="breadcrumb-item active">Edit</li>
+        </ol>
+    </nav>
+
+    <form method="POST" action="{{ url_for('admin.edit_teacher', teacher_id=teacher.id) }}">
+        <div class="row">
+            <div class="col-md-9">
+                
+                <!-- ========== LOGIN CREDENTIALS (USERNAME & PASSWORD) ========== -->
+                <div class="card mb-4 border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-key"></i> LOGIN CREDENTIALS</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="username" class="form-label"><strong>Username</strong> <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-lg" id="username" name="username" 
+                                       value="{{ teacher.user.username }}" required>
+                                <small class="text-muted">Used for login - must be unique</small>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="email" class="form-label"><strong>Email</strong> <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control form-control-lg" id="email" name="email" 
+                                       value="{{ teacher.user.email }}" required>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <i class="fas fa-info-circle"></i> 
+                            <strong>Password:</strong> Leave blank to keep current password. Fill to change password.
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="password" class="form-label"><strong>New Password</strong></label>
+                                <input type="password" class="form-control form-control-lg" id="password" name="password" 
+                                       placeholder="Leave blank to keep current">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="confirm_password" class="form-label"><strong>Confirm Password</strong></label>
+                                <input type="password" class="form-control form-control-lg" id="confirm_password" name="confirm_password" 
+                                       placeholder="Re-enter password">
+                            </div>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="showPassword">
+                            <label class="form-check-label" for="showPassword">
+                                Show passwords
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========== TEACHER INFORMATION ========== -->
+                <div class="card mb-4">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0">Teacher Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">First Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="first_name" 
+                                       value="{{ teacher.user.first_name }}" required>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="last_name" 
+                                       value="{{ teacher.user.last_name }}" required>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Gender</label>
+                                <select class="form-select" name="gender">
+                                    <option value="">Select</option>
+                                    <option value="Male" {% if teacher.user.gender == 'Male' %}selected{% endif %}>Male</option>
+                                    <option value="Female" {% if teacher.user.gender == 'Female' %}selected{% endif %}>Female</option>
+                                    <option value="Other" {% if teacher.user.gender == 'Other' %}selected{% endif %}>Other</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Teacher ID <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="teacher_id" 
+                                       value="{{ teacher.teacher_id }}" required>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Subject <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="subject" 
+                                       value="{{ teacher.subject }}" required>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Qualification</label>
+                                <input type="text" class="form-control" name="qualification" 
+                                       value="{{ teacher.qualification or '' }}">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Specialization</label>
+                                <input type="text" class="form-control" name="specialization" 
+                                       value="{{ teacher.specialization or '' }}">
+                            </div>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" name="is_active" 
+                                   {% if teacher.is_active %}checked{% endif %}>
+                            <label class="form-check-label">Active Account</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-between mb-4">
+                    <a href="{{ url_for('admin.manage_teachers') }}" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-arrow-left"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-save"></i> Update Teacher
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-md-3">
+                <div class="card border-warning">
+                    <div class="card-header bg-warning">
+                        <h6 class="mb-0">Help</h6>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Required Fields</strong></p>
+                        <ul class="small">
+                            <li>First Name</li>
+                            <li>Last Name</li>
+                            <li>Email</li>
+                            <li>Username</li>
+                            <li>Teacher ID</li>
+                            <li>Subject</li>
+                        </ul>
+
+                        <p><strong>Tips</strong></p>
+                        <ul class="small">
+                            <li>Username must be unique</li>
+                            <li>Email must be valid</li>
+                            <li>Leave password blank to keep current</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Show/Hide password
+    document.getElementById('showPassword').addEventListener('change', function() {
+        const pwd = document.getElementById('password');
+        const conf = document.getElementById('confirm_password');
+        pwd.type = this.checked ? 'text' : 'password';
+        conf.type = this.checked ? 'text' : 'password';
+    });
+
+    // Validate passwords match
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const pwd = document.getElementById('password').value;
+        const conf = document.getElementById('confirm_password').value;
+        
+        if (pwd || conf) {
+            if (pwd !== conf) {
+                e.preventDefault();
+                alert('Passwords do not match!');
+                return false;
+            }
+            if (pwd.length < 6) {
+                e.preventDefault();
+                alert('Password must be at least 6 characters!');
+                return false;
+            }
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,1018 @@
+{% extends "base.html" %}
+
+{% block title %}Result Details — {{ result.student_user.full_name }}{% endblock %}
+
+{% block content %}
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Sora:wght@300;400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- MathJax — config MUST appear before the loader script -->
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath:  [['$','$'], ['\\(','\\)']],
+    displayMath: [['$$','$$'], ['\\[','\\]']],
+    processEscapes: true,
+    processEnvironments: true
+  },
+  options: {
+    skipHtmlTags: ['script','noscript','style','textarea'],
+    processHtmlClass: 'mathjax-process'
+  },
+  startup: {
+    ready() {
+      MathJax.startup.defaultReady();
+      /* re-run after a short delay so dynamic Jinja content is in the DOM */
+      MathJax.startup.promise.then(() => {
+        setTimeout(() => MathJax.typesetPromise(), 120);
+      });
+    }
+  }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+
+<style>
+/* =============================
+   TOKENS
+============================= */
+:root {
+  --slate-900: #0d1117;
+  --slate-800: #161b22;
+  --slate-700: #21262d;
+  --slate-600: #30363d;
+  --slate-400: #8b949e;
+  --slate-200: #c9d1d9;
+  --slate-100: #e6edf3;
+
+  --cream:     #faf8f4;
+  --cream-2:   #f2ede6;
+  --cream-3:   #e8e2d9;
+
+  --ink:       #1a1a2e;
+  --ink-soft:  #3d4151;
+  --ink-muted: #6e7491;
+
+  --gold:      #c9973a;
+  --gold-light:#f0c96e;
+  --gold-dim:  #7a5a1e;
+
+  --emerald:   #0d7a5f;
+  --emerald-bg:#e6f4f0;
+  --emerald-b: #a3d9cb;
+
+  --crimson:   #c0392b;
+  --crimson-bg:#fbeae8;
+  --crimson-b: #f0b3ac;
+
+  --amber:     #b7791f;
+  --amber-bg:  #fef9ec;
+  --amber-b:   #f6d860;
+
+  --cobalt:    #1e40af;
+  --cobalt-bg: #eff3ff;
+  --cobalt-b:  #bfcffd;
+
+  --r-sm:  6px;
+  --r:     10px;
+  --r-lg:  16px;
+  --r-xl:  22px;
+
+  --sh-xs: 0 1px 3px rgba(0,0,0,.07);
+  --sh-sm: 0 2px 10px rgba(0,0,0,.09);
+  --sh:    0 4px 24px rgba(0,0,0,.10);
+  --sh-lg: 0 8px 48px rgba(0,0,0,.14);
+
+  --ff-serif: 'Playfair Display', Georgia, serif;
+  --ff-sans:  'Sora', system-ui, sans-serif;
+  --ff-mono:  'Fira Code', 'Courier New', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+
+body {
+  font-family: var(--ff-sans);
+  background: var(--cream);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  font-size: 14.5px;
+  line-height: 1.65;
+}
+
+/* =============================
+   LAYOUT SHELL
+============================= */
+.rd-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.rd-page {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 0 1.5rem 4rem;
+  width: 100%;
+}
+
+/* =============================
+   TOP BANNER
+============================= */
+.rd-banner {
+  background: var(--slate-900);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 2.5rem;
+}
+
+.rd-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 600px 300px at 80% 50%, rgba(201,151,58,.12) 0%, transparent 70%),
+    radial-gradient(ellipse 400px 200px at 20% 80%, rgba(13,122,95,.10) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.rd-banner-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.rd-banner-left { display: flex; flex-direction: column; gap: 0.6rem; }
+
+.rd-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: rgba(201,151,58,.12);
+  border: 1px solid rgba(201,151,58,.25);
+  padding: 0.28rem 0.7rem;
+  border-radius: 100px;
+  width: fit-content;
+}
+
+.rd-banner-name {
+  font-family: var(--ff-serif);
+  font-size: 2rem;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.rd-banner-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.rd-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--slate-200);
+  background: var(--slate-800);
+  border: 1px solid var(--slate-600);
+  padding: 0.25rem 0.65rem;
+  border-radius: 100px;
+}
+.rd-meta-pill i { color: var(--slate-400); font-size: 0.65rem; }
+
+.rd-banner-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: flex-end;
+}
+
+.rd-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--ff-sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.55rem 1.15rem;
+  border-radius: var(--r);
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all .18s ease;
+  white-space: nowrap;
+}
+.rd-btn-ghost {
+  background: var(--slate-800);
+  color: var(--slate-200);
+  border-color: var(--slate-600);
+}
+.rd-btn-ghost:hover {
+  background: var(--slate-700);
+  color: white;
+  border-color: var(--slate-400);
+}
+.rd-btn-danger {
+  background: #8b1a1a;
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(139,26,26,.35);
+}
+.rd-btn-danger:hover {
+  background: #a11f1f;
+  box-shadow: 0 4px 16px rgba(139,26,26,.45);
+  transform: translateY(-1px);
+}
+
+/* =============================
+   INFO STRIP (2-col)
+============================= */
+.rd-info-strip {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.rd-info-card {
+  background: var(--cream);
+  border: 1px solid var(--cream-3);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  box-shadow: var(--sh-xs);
+}
+
+.rd-info-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.8rem 1.25rem;
+  border-bottom: 1px solid var(--cream-3);
+  background: var(--cream-2);
+}
+.rd-info-card-head-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+}
+.rd-info-card-head-icon.cobalt { background: var(--cobalt-bg); color: var(--cobalt); }
+.rd-info-card-head-icon.emerald { background: var(--emerald-bg); color: var(--emerald); }
+.rd-info-card-head-title {
+  font-family: var(--ff-serif);
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+.rd-info-card-body { padding: 1rem 1.25rem; }
+
+.rd-kv-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.rd-kv {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.rd-kv-key {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-muted);
+  min-width: 90px;
+  flex-shrink: 0;
+}
+.rd-kv-val {
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+}
+.rd-kv-val.mono {
+  font-family: var(--ff-mono);
+  font-weight: 500;
+  color: var(--ink);
+}
+
+/* =============================
+   SCORE BANNER
+============================= */
+.rd-score-strip {
+  background: var(--slate-900);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--sh);
+  position: relative;
+}
+.rd-score-strip::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gold), var(--emerald), var(--cobalt));
+}
+
+.rd-score-strip-inner {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1.2fr;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  gap: 1rem;
+}
+
+.rd-score-main { display: flex; flex-direction: column; gap: 0.25rem; }
+.rd-score-main-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--slate-400);
+}
+.rd-score-main-num {
+  font-family: var(--ff-serif);
+  font-size: 2.5rem;
+  color: white;
+  line-height: 1;
+}
+.rd-score-main-sub {
+  font-size: 0.75rem;
+  color: var(--slate-400);
+  font-family: var(--ff-mono);
+}
+
+.rd-score-divider {
+  width: 1px;
+  background: var(--slate-700);
+  align-self: stretch;
+}
+
+.rd-score-cell { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; }
+.rd-score-cell-val {
+  font-family: var(--ff-mono);
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: white;
+  line-height: 1;
+}
+.rd-score-cell-key {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--slate-400);
+}
+
+.rd-verdict-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+.rd-verdict-badge {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0.45rem 1.25rem;
+  border-radius: 100px;
+}
+.rd-verdict-badge.pass {
+  background: rgba(13,122,95,.25);
+  color: #4ade80;
+  border: 1.5px solid rgba(74,222,128,.3);
+}
+.rd-verdict-badge.fail {
+  background: rgba(192,57,43,.25);
+  color: #f87171;
+  border: 1.5px solid rgba(248,113,113,.3);
+}
+.rd-verdict-sub {
+  font-size: 0.7rem;
+  color: var(--slate-400);
+  font-family: var(--ff-mono);
+}
+
+/* =============================
+   STAT CARDS
+============================= */
+.rd-stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.rd-stat-card {
+  border-radius: var(--r-lg);
+  border: 1px solid;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: var(--sh-xs);
+}
+.rd-stat-card.emerald { background: var(--emerald-bg); border-color: var(--emerald-b); }
+.rd-stat-card.crimson { background: var(--crimson-bg); border-color: var(--crimson-b); }
+.rd-stat-card.amber   { background: var(--amber-bg);   border-color: var(--amber-b); }
+
+.rd-stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+.emerald .rd-stat-icon { background: var(--emerald); color: white; }
+.crimson .rd-stat-icon { background: var(--crimson); color: white; }
+.amber   .rd-stat-icon { background: var(--amber);   color: white; }
+
+.rd-stat-info { flex: 1; }
+.rd-stat-num {
+  font-family: var(--ff-mono);
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1;
+}
+.emerald .rd-stat-num { color: var(--emerald); }
+.crimson .rd-stat-num { color: var(--crimson); }
+.amber   .rd-stat-num { color: var(--amber); }
+
+.rd-stat-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--ink-muted);
+  margin-top: 2px;
+}
+
+/* =============================
+   QUESTION LEDGER
+============================= */
+.rd-section {
+  background: white;
+  border: 1px solid var(--cream-3);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  box-shadow: var(--sh-sm);
+  margin-bottom: 2rem;
+}
+
+.rd-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--cream-3);
+  background: var(--cream-2);
+}
+.rd-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+.rd-section-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  background: var(--slate-800);
+  color: var(--gold);
+}
+.rd-section-title {
+  font-family: var(--ff-serif);
+  font-size: 1.05rem;
+  color: var(--ink);
+  font-style: italic;
+}
+.rd-section-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  background: var(--cream-3);
+  padding: 0.25rem 0.65rem;
+  border-radius: 100px;
+}
+
+/* Table styles */
+.rd-ledger { width: 100%; border-collapse: collapse; }
+
+.rd-ledger thead tr {
+  background: var(--slate-900);
+}
+.rd-ledger th {
+  padding: 0.75rem 1rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--slate-400);
+  text-align: left;
+  border: none;
+}
+.rd-ledger th.center { text-align: center; }
+
+/* Row variants */
+.rd-ledger tbody tr {
+  border-bottom: 1px solid var(--cream-3);
+  border-left: 4px solid transparent;
+  transition: background .15s;
+}
+.rd-ledger tbody tr:last-child { border-bottom: none; }
+.rd-ledger tbody tr:hover td { background: var(--cream); }
+
+.rd-ledger tbody tr.row-correct { border-left-color: var(--emerald); }
+.rd-ledger tbody tr.row-wrong   { border-left-color: var(--crimson); }
+.rd-ledger tbody tr.row-skip    { border-left-color: var(--amber); }
+
+.rd-ledger td {
+  padding: 1.1rem 1rem;
+  vertical-align: top;
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+}
+
+/* Q-number cell */
+.td-num {
+  font-family: var(--ff-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  padding-top: 1.15rem !important;
+  white-space: nowrap;
+}
+
+/* Status dot */
+.td-status { padding-top: 1.1rem !important; text-align: center; }
+.status-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.6rem;
+  border-radius: 100px;
+  white-space: nowrap;
+}
+.status-dot.correct { background: var(--emerald-bg); color: var(--emerald); border: 1px solid var(--emerald-b); }
+.status-dot.wrong   { background: var(--crimson-bg); color: var(--crimson); border: 1px solid var(--crimson-b); }
+.status-dot.skip    { background: var(--amber-bg);   color: var(--amber);   border: 1px solid var(--amber-b); }
+
+/* Question text */
+.td-question {}
+.q-text {
+  font-weight: 500;
+  color: var(--ink);
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+}
+.q-text mjx-container { display: inline !important; }
+
+/* Options — 2-column grid */
+.q-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+.q-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: var(--r-sm);
+  font-size: 0.81rem;
+  line-height: 1.5;
+  border: 1px solid transparent;
+  transition: background .12s;
+}
+.q-opt-lbl {
+  font-family: var(--ff-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 2px;
+  min-width: 20px;
+}
+/* MathJax inline rendering inside options and question text */
+.q-opt mjx-container,
+.q-text mjx-container,
+.option-text mjx-container {
+  display: inline !important;
+  vertical-align: middle;
+}
+.q-opt.opt-correct {
+  background: rgba(13,122,95,.11);
+  border-color: var(--emerald-b);
+  color: #064e3b;
+  font-weight: 600;
+}
+.q-opt.opt-correct .q-opt-lbl { color: var(--emerald); }
+.q-opt.opt-wrong-sel {
+  background: rgba(192,57,43,.10);
+  border-color: var(--crimson-b);
+  color: #7f1d1d;
+}
+.q-opt.opt-wrong-sel .q-opt-lbl { color: var(--crimson); }
+.q-opt.opt-neutral {
+  background: rgba(0,0,0,.03);
+  border-color: rgba(0,0,0,.05);
+  color: var(--ink-soft);
+}
+.q-opt-icon { margin-left: auto; flex-shrink: 0; font-size: 0.68rem; margin-top: 3px; }
+@media (max-width: 1100px) { .q-options { grid-template-columns: 1fr; } }
+
+/* Answer cells */
+.td-answer {
+  font-family: var(--ff-mono);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--ink);
+  vertical-align: top;
+  padding-top: 1.1rem !important;
+}
+.td-answer.correct { color: var(--emerald); }
+.td-answer.wrong   { color: var(--crimson); }
+.td-answer.skip    { color: var(--amber); }
+.td-answer.muted   { color: var(--ink-muted); font-style: italic; font-family: var(--ff-sans); }
+.td-correct-ans {
+  font-family: var(--ff-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--emerald);
+  padding-top: 1.1rem !important;
+}
+.td-correct-ans.none { color: var(--ink-muted); font-style: italic; font-family: var(--ff-sans); font-weight: 400; }
+
+/* Marks cell */
+.td-marks { text-align: center; vertical-align: top; padding-top: 1.1rem !important; }
+.marks-badge {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0px;
+}
+.marks-score {
+  font-family: var(--ff-mono);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.marks-total {
+  font-size: 0.68rem;
+  color: var(--ink-muted);
+  font-family: var(--ff-mono);
+}
+.row-correct .marks-score { color: var(--emerald); }
+.row-wrong   .marks-score { color: var(--crimson); }
+.row-skip    .marks-score { color: var(--amber); }
+
+/* Empty state */
+.rd-empty {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--ink-muted);
+}
+.rd-empty i { font-size: 2.5rem; opacity: .3; margin-bottom: 1rem; display: block; }
+.rd-empty p { font-size: 0.875rem; }
+
+/* =============================
+   FOOTER
+============================= */
+.rd-footer-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--cream-3);
+}
+
+/* =============================
+   RESPONSIVE
+============================= */
+@media (max-width: 900px) {
+  .rd-banner-inner { grid-template-columns: 1fr; }
+  .rd-banner-actions { flex-direction: row; align-items: flex-start; }
+  .rd-info-strip { grid-template-columns: 1fr; }
+  .rd-score-strip-inner { grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .rd-score-divider { display: none; }
+  .rd-stat-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 680px) {
+  .rd-ledger thead { display: none; }
+  .rd-ledger tbody tr { display: flex; flex-direction: column; padding: 1rem; border-left-width: 4px; }
+  .rd-ledger td { padding: 0.25rem 0 !important; border: none; }
+  .td-num::before { content: 'Question '; }
+}
+
+/* Page-load fade-in */
+@keyframes fadein { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+.rd-page > * { animation: fadein .4s ease both; }
+.rd-page > *:nth-child(1) { animation-delay: .05s; }
+.rd-page > *:nth-child(2) { animation-delay: .10s; }
+.rd-page > *:nth-child(3) { animation-delay: .15s; }
+.rd-page > *:nth-child(4) { animation-delay: .20s; }
+.rd-page > *:nth-child(5) { animation-delay: .25s; }
+</style>
+
+{# ── helpers ── #}
+{% set total = question_results|length %}
+{% set passed = result.is_passed %}
+{% set init = result.student_user.full_name[0]|upper %}
+
+<div class="rd-shell">
+
+  <!-- ══ DARK BANNER ══ -->
+  <div class="rd-banner">
+    <div class="rd-banner-inner">
+      <div class="rd-banner-left">
+        <div class="rd-eyebrow"><i class="fas fa-graduation-cap"></i> Examination Record</div>
+        <div class="rd-banner-name">{{ result.student_user.full_name }}</div>
+        <div class="rd-banner-meta">
+          <span class="rd-meta-pill"><i class="fas fa-book"></i> {{ result.exam.title }}</span>
+          <span class="rd-meta-pill"><i class="fas fa-calendar"></i> {{ result.submitted_at.strftime('%d %b %Y') }}</span>
+          <span class="rd-meta-pill"><i class="fas fa-clock"></i> {{ result.submitted_at.strftime('%H:%M:%S') }}</span>
+        </div>
+      </div>
+      <div class="rd-banner-actions">
+        <a href="{{ url_for('admin.exam_results', id=result.exam_id) }}" class="rd-btn rd-btn-ghost">
+          <i class="fas fa-arrow-left"></i> Back to Results
+        </a>
+        <a href="{{ url_for('admin.generate_result_pdf', result_id=result.id) }}" class="rd-btn rd-btn-danger">
+          <i class="fas fa-file-pdf"></i> Download PDF
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="rd-page">
+
+    <!-- ══ INFO STRIP ══ -->
+    <div class="rd-info-strip">
+      <div class="rd-info-card">
+        <div class="rd-info-card-head">
+          <div class="rd-info-card-head-icon cobalt"><i class="fas fa-user"></i></div>
+          <span class="rd-info-card-head-title">Student Information</span>
+        </div>
+        <div class="rd-info-card-body">
+          <div class="rd-kv-list">
+            <div class="rd-kv">
+              <span class="rd-kv-key">Full Name</span>
+              <span class="rd-kv-val">{{ result.student_user.full_name }}</span>
+            </div>
+            <div class="rd-kv">
+              <span class="rd-kv-key">Email</span>
+              <span class="rd-kv-val">{{ result.student_user.email }}</span>
+            </div>
+            <div class="rd-kv">
+              <span class="rd-kv-key">Submitted</span>
+              <span class="rd-kv-val mono">{{ result.submitted_at.strftime('%Y-%m-%d  %H:%M:%S') }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rd-info-card">
+        <div class="rd-info-card-head">
+          <div class="rd-info-card-head-icon emerald"><i class="fas fa-file-alt"></i></div>
+          <span class="rd-info-card-head-title">Exam Information</span>
+        </div>
+        <div class="rd-info-card-body">
+          <div class="rd-kv-list">
+            <div class="rd-kv">
+              <span class="rd-kv-key">Exam</span>
+              <span class="rd-kv-val">{{ result.exam.title }}</span>
+            </div>
+            <div class="rd-kv">
+              <span class="rd-kv-key">Total Marks</span>
+              <span class="rd-kv-val mono">{{ result.total_marks }}</span>
+            </div>
+            <div class="rd-kv">
+              <span class="rd-kv-key">Pass Marks</span>
+              <span class="rd-kv-val mono">{{ result.pass_marks }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SCORE STRIP ══ -->
+    <div class="rd-score-strip">
+      <div class="rd-score-strip-inner">
+
+        <div class="rd-score-main">
+          <span class="rd-score-main-label">Marks Obtained</span>
+          <span class="rd-score-main-num">{{ result.marks_obtained }}</span>
+          <span class="rd-score-main-sub">out of {{ result.total_marks }} &nbsp;·&nbsp; pass: {{ result.pass_marks }}</span>
+        </div>
+
+        <div class="rd-score-divider"></div>
+
+        <div class="rd-score-cell">
+          <span class="rd-score-cell-val" style="color:var(--gold-light)">{{ result.percentage }}%</span>
+          <span class="rd-score-cell-key">Percentage</span>
+        </div>
+
+        <div class="rd-score-cell">
+          <span class="rd-score-cell-val" style="color:#60a5fa">{{ result.grade or '—' }}</span>
+          <span class="rd-score-cell-key">Grade</span>
+        </div>
+
+        <div class="rd-verdict-cell">
+          <span class="rd-verdict-badge {% if passed %}pass{% else %}fail{% endif %}">
+            {% if passed %}✓ Passed{% else %}✗ Failed{% endif %}
+          </span>
+          <span class="rd-verdict-sub">
+            \(\text{Score} = \frac{ {{result.marks_obtained}} }{ {{result.total_marks}} } \times 100 = {{ result.percentage }}\%\)
+          </span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══ STAT CARDS ══ -->
+    <div class="rd-stat-row">
+      <div class="rd-stat-card emerald">
+        <div class="rd-stat-icon"><i class="fas fa-check"></i></div>
+        <div class="rd-stat-info">
+          <div class="rd-stat-num">{{ statistics.correct }}</div>
+          <div class="rd-stat-label">Correct Answers</div>
+        </div>
+      </div>
+      <div class="rd-stat-card crimson">
+        <div class="rd-stat-icon"><i class="fas fa-times"></i></div>
+        <div class="rd-stat-info">
+          <div class="rd-stat-num">{{ statistics.wrong }}</div>
+          <div class="rd-stat-label">Incorrect Answers</div>
+        </div>
+      </div>
+      <div class="rd-stat-card amber">
+        <div class="rd-stat-icon"><i class="fas fa-minus"></i></div>
+        <div class="rd-stat-info">
+          <div class="rd-stat-num">{{ statistics.unanswered }}</div>
+          <div class="rd-stat-label">Unattempted</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ QUESTION LEDGER ══ -->
+    <div class="rd-section">
+      <div class="rd-section-header">
+        <div class="rd-section-heading">
+          <div class="rd-section-icon"><i class="fas fa-list-ol"></i></div>
+          <span class="rd-section-title">Question-wise Analysis</span>
+        </div>
+        <span class="rd-section-badge">{{ total }} question{% if total != 1 %}s{% endif %}</span>
+      </div>
+
+      {% if question_results %}
+      <div style="overflow-x:auto">
+        <table class="rd-ledger">
+          <thead>
+            <tr>
+              <th style="width:4%">#</th>
+              <th style="width:5%" class="center">Status</th>
+              <th style="width:50%">Question &amp; Options</th>
+              <th style="width:14%">Student Answer</th>
+              <th style="width:14%">Correct Answer</th>
+              <th style="width:9%" class="center">Marks</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in question_results %}
+            {% set s = item.status %}
+            <tr class="row-{% if s == 'correct' %}correct{% elif s == 'wrong' %}wrong{% else %}skip{% endif %}">
+
+              <!-- # -->
+              <td class="td-num">{{ loop.index }}</td>
+
+              <!-- Status -->
+              <td class="td-status">
+                {% if s == 'correct' %}
+                  <span class="status-dot correct"><i class="fas fa-check"></i></span>
+                {% elif s == 'wrong' %}
+                  <span class="status-dot wrong"><i class="fas fa-times"></i></span>
+                {% else %}
+                  <span class="status-dot skip"><i class="fas fa-minus"></i></span>
+                {% endif %}
+              </td>
+
+              <!-- Question -->
+              <td class="td-question">
+                <div class="q-text question-text">{{ item.question.question_text|safe }}</div>
+
+                {% if item.question.question_type == 'mcq' %}
+                <div class="q-options">
+                  {% for option in item.question.options %}
+                  {% set selected = item.answer and option.id == item.answer.selected_option_id %}
+                  <div class="q-opt
+                    {% if option.is_correct %}opt-correct
+                    {% elif selected and not option.is_correct %}opt-wrong-sel
+                    {% else %}opt-neutral{% endif %}">
+                    <span class="q-opt-lbl">{{ option.option_label }}.</span>
+                    <span class="option-text">{{ option.option_text|safe }}</span>
+                    {% if option.is_correct %}
+                      <i class="fas fa-check-circle q-opt-icon" style="color:var(--emerald)"></i>
+                    {% elif selected and not option.is_correct %}
+                      <i class="fas fa-times-circle q-opt-icon" style="color:var(--crimson)"></i>
+                    {% endif %}
+                  </div>
+                  {% endfor %}
+                </div>
+                {% endif %}
+              </td>
+
+              <!-- Student answer -->
+              <td class="td-answer {% if s == 'correct' %}correct{% elif s == 'wrong' %}wrong{% elif s == 'skipped' %}skip{% endif %}">
+                {% if item.student_answer_text %}
+                  {{ item.student_answer_text|safe }}
+                {% else %}
+                  <span class="td-answer muted">Not Attempted</span>
+                {% endif %}
+              </td>
+
+              <!-- Correct answer -->
+              <td class="{% if item.correct_answer_text %}td-correct-ans{% else %}td-correct-ans none{% endif %}">
+                {% if item.correct_answer_text %}
+                  {{ item.correct_answer_text|safe }}
+                {% else %}—{% endif %}
+              </td>
+
+              <!-- Marks -->
+              <td class="td-marks">
+                <div class="marks-badge">
+                  <span class="marks-score">{{ item.marks_obtained }}</span>
+                  <span class="marks-total">/ {{ item.question.marks }}</span>
+                </div>
+              </td>
+
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% else %}
+      <div class="rd-empty">
+        <i class="fas fa-inbox"></i>
+        <p>No questions found for this exam.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ══ FOOTER NAV ══ -->
+    <div class="rd-footer-nav">
+      <a href="{{ url_for('admin.exam_results', id=result.exam_id) }}" class="rd-btn rd-btn-ghost">
+        <i class="fas fa-arrow-left"></i> Back to Results
+      </a>
+      <a href="{{ url_for('admin.generate_result_pdf', result_id=result.id) }}" class="rd-btn rd-btn-danger">
+        <i class="fas fa-file-pdf"></i> Download PDF
+      </a>
+    </div>
+
+  </div><!-- /rd-page -->
+</div><!-- /rd-shell -->
+
+<script>
+/* Robust MathJax typeset — fires immediately if ready, else polls */
+(function tryTypeset() {
+  if (window.MathJax && MathJax.typesetPromise) {
+    MathJax.typesetPromise().catch(console.error);
+  } else {
+    setTimeout(tryTypeset, 150);
+  }
+})();
+/* Also fire on full load for any stragglers */
+window.addEventListener('load', function () {
+  setTimeout(function () {
+    if (window.MathJax && MathJax.typesetPromise) {
+      MathJax.typesetPromise().catch(console.error);
+    }
+  }, 300);
+});
+</script>
+{% endblock %}

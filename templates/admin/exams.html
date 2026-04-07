@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Exams - E-Exam Platform{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-file-alt"></i> Manage Exams</h2>
+    <a href="{{ url_for('teacher.create_exam') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Create Exam
+    </a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('admin.manage_exams') }}" class="row g-3">
+            <div class="col-md-6">
+                <input type="text" class="form-control" name="search" placeholder="Search by exam title" value="{{ search }}">
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" name="status">
+                    <option value="">All Status</option>
+                    <option value="published" {% if status_filter == 'published' %}selected{% endif %}>Published</option>
+                    <option value="unpublished" {% if status_filter == 'unpublished' %}selected{% endif %}>Unpublished</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-secondary w-100"><i class="fas fa-search"></i> Search</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Title</th>
+                    <th>Subject</th>
+                    <th>Class</th>
+                    <th>Questions</th>
+                    <th>Duration</th>
+                    <th>Status</th>
+                    <th>Start Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for exam in exams.items %}
+                <tr>
+                    <td><strong>{{ exam.code }}</strong></td>
+                    <td>{{ exam.title }}</td>
+                    <td>{{ exam.subject }}</td>
+                    <td>{{ exam.class_info.name if exam.class_info else '-' }}</td>
+                    <td>{{ exam.total_questions }}</td>
+                    <td>{{ exam.duration_minutes }} min</td>
+                    <td>
+                        {% if exam.published %}
+                        <span class="badge bg-success">Published</span>
+                        {% else %}
+                        <span class="badge bg-warning">Draft</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ exam.start_date.strftime('%Y-%m-%d') if exam.start_date else '-' }}</td>
+                    <td>
+                        <a href="{{ url_for('admin.exam_results', id=exam.id) }}" class="btn btn-sm btn-info" title="View Results">
+                            <i class="fas fa-chart-bar"></i>
+                        </a>
+                        
+                        <form method="POST" action="{{ url_for('teacher.delete_exam', exam_id=exam.id) }}" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-danger" title="Delete" onclick="return confirm('Are you sure?');">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9" class="text-center text-muted py-4">No exams found</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <nav aria-label="Page navigation" class="d-flex justify-content-center mt-4">
+        <ul class="pagination">
+            {% if exams.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('admin.manage_exams', page=exams.prev_num, search=search, status=status_filter) }}">Previous</a>
+            </li>
+            {% endif %}
+
+            {% for page_num in exams.iter_pages() %}
+                {% if page_num %}
+                    {% if page_num == exams.page %}
+                    <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin.manage_exams', page=page_num, search=search, status=status_filter) }}">{{ page_num }}</a>
+                    </li>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+
+            {% if exams.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('admin.manage_exams', page=exams.next_num, search=search, status=status_filter) }}">Next</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endblock %}

@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block title %}Proctoring Reports - E-Exam Platform{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-shield-alt"></i> Proctoring Reports</h2>
+            <p class="text-muted">Monitor exam integrity and proctoring violations</p>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h6>Total Violations</h6>
+                    <h3>{{ stats.total_violations }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-white bg-danger">
+                <div class="card-body">
+                    <h6>Face Not Visible</h6>
+                    <h3>{{ stats.face_not_visible }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <h6>Multiple Faces</h6>
+                    <h3>{{ stats.multiple_faces }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h6>Tab Switch</h6>
+                    <h3>{{ stats.tab_switch }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-white bg-secondary">
+                <div class="card-body">
+                    <h6>Fullscreen Exit</h6>
+                    <h3>{{ stats.fullscreen_exit }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-white bg-dark">
+                <div class="card-body">
+                    <h6>Suspicious Activity</h6>
+                    <h3>{{ stats.suspicious_activity }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="fas fa-filter"></i> Filters</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('admin.proctoring_reports') }}">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label>Exam</label>
+                        <select name="exam_id" class="form-select">
+                            <option value="">All Exams</option>
+                            {% for exam in exams %}
+                            <option value="{{ exam.id }}" {% if filters.exam_id == exam.id %}selected{% endif %}>
+                                {{ exam.title }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label>Student</label>
+                        <select name="student_id" class="form-select">
+                            <option value="">All Students</option>
+                            {% for student in students %}
+<option value="{{ student.id }}">
+    {{ student.full_name }}  <!-- ✅ Fixed -->
+</option>
+{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label>Violation Type</label>
+                        <select name="violation_type" class="form-select">
+                            <option value="">All Types</option>
+                            {% for vtype in violation_types %}
+                            <option value="{{ vtype }}" {% if filters.violation_type == vtype %}selected{% endif %}>
+                                {{ vtype.replace('_', ' ').title() }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label>Date From</label>
+                        <input type="date" name="date_from" class="form-control" value="{{ filters.date_from }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label>Date To</label>
+                        <input type="date" name="date_to" class="form-control" value="{{ filters.date_to }}">
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Apply Filters
+                        </button>
+                        <a href="{{ url_for('admin.proctoring_reports') }}" class="btn btn-secondary">
+                            <i class="fas fa-redo"></i> Reset
+                        </a>
+                        {% if filters.exam_id %}
+                        <a href="{{ url_for('admin.export_proctoring_report', exam_id=filters.exam_id) }}" 
+                           class="btn btn-success">
+                            <i class="fas fa-file-excel"></i> Export to Excel
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Violations Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5><i class="fas fa-list"></i> Proctoring Violations</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Student</th>
+                            <th>Exam</th>
+                            <th>Violation Type</th>
+                            <th>Severity</th>
+                            <th>Details</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+    {% for log in logs.items %}
+    <tr>
+        <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+        <td>
+            {% if log.student_user %}
+                {{ log.student_user.full_name }}
+            {% else %}
+                Unknown
+            {% endif %}
+        </td>
+        <td>
+            {% if log.exam %}
+                {{ log.exam.title }}
+            {% else %}
+                Unknown Exam
+            {% endif %}
+        </td>
+        <td>
+            <span class="badge 
+                {% if log.violation_type == 'face_not_visible' %}bg-danger
+                {% elif log.violation_type == 'multiple_faces' %}bg-warning
+                {% elif log.violation_type == 'tab_switch' %}bg-info
+                {% elif log.violation_type == 'fullscreen_exit' %}bg-secondary
+                {% else %}bg-dark{% endif %}">
+                {{ (log.violation_type or '').replace('_', ' ').title() or 'No Violation' }}
+
+
+            </span>
+        </td>
+        <td>
+            {% if log.severity == 'high' %}
+            <span class="badge bg-danger">HIGH</span>
+            {% elif log.severity == 'medium' %}
+            <span class="badge bg-warning">MEDIUM</span>
+            {% else %}
+            <span class="badge bg-info">LOW</span>
+            {% endif %}
+        </td>
+        <td>{{ (log.details[:50] + '...') if log.details and log.details|length > 50 else (log.details or 'N/A') }}</td>
+        <td>
+            <!-- Change FROM: Complex logic with student_profile.id -->
+   
+   <!-- TO: Simple check -->
+   {% if log.student_user and log.exam %}
+       <a href="{{ url_for('admin.student_proctoring_detail', 
+                  student_id=log.student_user.id, 
+                  exam_id=log.exam.id) }}">
+   {% endif %}
+        </td>
+    </tr>
+    {% else %}
+    <tr>
+        <td colspan="7" class="text-center text-muted py-4">
+            <i class="fas fa-info-circle"></i> No proctoring violations found
+        </td>
+    </tr>
+    {% endfor %}
+</tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if logs.pages > 1 %}
+            <nav>
+                <ul class="pagination">
+                    <li class="page-item {% if not logs.has_prev %}disabled{% endif %}">
+                        <a class="page-link" href="{{ url_for('admin.proctoring_reports', page=logs.prev_num) }}">
+                            Previous
+                        </a>
+                    </li>
+                    {% for page_num in logs.iter_pages() %}
+                        {% if page_num %}
+                            <li class="page-item {% if page_num == logs.page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('admin.proctoring_reports', page=page_num) }}">
+                                    {{ page_num }}
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+                    <li class="page-item {% if not logs.has_next %}disabled{% endif %}">
+                        <a class="page-link" href="{{ url_for('admin.proctoring_reports', page=logs.next_num) }}">
+                            Next
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

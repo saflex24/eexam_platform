@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Start Exam - {{ exam.title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-clipboard-list"></i> {{ exam.title }}</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Exam Information -->
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-info-circle"></i> Exam Information</h5>
+                        <ul class="mb-0">
+                            <li><strong>Subject:</strong> {{ exam.subject }}</li>
+                            <li><strong>Total Questions:</strong> {{ questions|length }}</li>
+                            <li><strong>Total Marks:</strong> {{ exam.total_marks }}</li>
+                            <li><strong>Duration:</strong> {{ exam.duration_minutes }} minutes</li>
+                            <li><strong>Pass Marks:</strong> {{ exam.pass_marks }}</li>
+                        </ul>
+                    </div>
+
+                    <!-- Instructions -->
+                    <div class="mb-4">
+                        <h5><i class="fas fa-list-ol"></i> Instructions</h5>
+                        {% if exam.description %}
+                        <p>{{ exam.description }}</p>
+                        {% endif %}
+                        <ul>
+                            <li>Make sure you have a stable internet connection</li>
+                            <li>Once you start, you must complete the exam within the time limit</li>
+                            <li>You cannot pause or restart the exam</li>
+                            <li>All questions must be answered before submission</li>
+                            <li>Click "Submit Exam" when you're done</li>
+                        </ul>
+                    </div>
+
+                    <!-- Important Notice -->
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Important:</strong> Once you click "Start Exam", the timer will begin and you cannot stop it.
+                    </div>
+
+                    <!-- Start Button -->
+                    <form method="POST">
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-play"></i> Start Exam Now
+                            </button>
+                            <a href="{{ url_for('student.dashboard') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Dashboard
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

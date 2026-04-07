@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit Exam' if exam else 'Create Exam' }} - E-Exam Platform{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-file-alt"></i> {{ 'Edit Exam' if exam else 'Create New Exam' }}</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.manage_exams') }}">Exams</a></li>
+                    <li class="breadcrumb-item active">{{ 'Edit' if exam else 'Create' }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <form method="POST">
+        <div class="row">
+            <div class="col-md-8">
+                <!-- Basic Information -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-info-circle"></i> Basic Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label for="title" class="form-label">Exam Title *</label>
+                                <input type="text" class="form-control" id="title" name="title" 
+                                       value="{{ exam.title if exam else '' }}" required>
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label for="code" class="form-label">Exam Code *</label>
+                                <input type="text" class="form-control" id="code" name="code" 
+                                       value="{{ exam.code if exam else '' }}" 
+                                       {{ 'readonly' if exam else '' }} required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3">{{ exam.description if exam else '' }}</textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="subject" class="form-label">Subject *</label>
+                                <input type="text" class="form-control" id="subject" name="subject" 
+                                       value="{{ exam.subject if exam else '' }}" required>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="class_id" class="form-label">Class</label>
+                                <select class="form-select" id="class_id" name="class_id">
+                                    <option value="">Select Class (Optional)</option>
+                                    {% for class in classes %}
+                                    <option value="{{ class.id }}" {{ 'selected' if exam and exam.class_id == class.id else '' }}>
+                                        {{ class.name }} - {{ class.section }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Exam Settings -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-cog"></i> Exam Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="duration_minutes" class="form-label">Duration (minutes) *</label>
+                                <input type="number" class="form-control" id="duration_minutes" name="duration_minutes" 
+                                       value="{{ exam.duration_minutes if exam else 60 }}" min="1" required>
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label for="total_marks" class="form-label">Total Marks *</label>
+                                <input type="number" class="form-control" id="total_marks" name="total_marks" 
+                                       value="{{ exam.total_marks if exam else 100 }}" min="0" step="0.5" required>
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label for="pass_marks" class="form-label">Pass Marks *</label>
+                                <input type="number" class="form-control" id="pass_marks" name="pass_marks" 
+                                       value="{{ exam.pass_marks if exam else 40 }}" min="0" step="0.5" required>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="start_date" class="form-label">Start Date & Time *</label>
+                                <input type="datetime-local" class="form-control" id="start_date" name="start_date" 
+                                       value="{{ exam.start_date.strftime('%Y-%m-%dT%H:%M') if exam and exam.start_date else '' }}" required>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="end_date" class="form-label">End Date & Time *</label>
+                                <input type="datetime-local" class="form-control" id="end_date" name="end_date" 
+                                       value="{{ exam.end_date.strftime('%Y-%m-%dT%H:%M') if exam and exam.end_date else '' }}" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security Settings -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Security Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="passcode" class="form-label">
+                                <i class="fas fa-key"></i> Exam Passcode (Optional)
+                            </label>
+                            <div class="input-group">
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="passcode" 
+                                       name="passcode" 
+                                       value="{{ exam.passcode if exam else '' }}"
+                                       placeholder="Leave empty for no passcode protection"
+                                       maxlength="50">
+                                <button class="btn btn-outline-secondary" 
+                                        type="button" 
+                                        id="generatePasscode"
+                                        title="Generate Random Passcode">
+                                    <i class="fas fa-random"></i> Generate
+                                </button>
+                                <button class="btn btn-outline-secondary" 
+                                        type="button" 
+                                        id="togglePasscode"
+                                        title="Show/Hide Passcode">
+                                    <i class="fas fa-eye" id="toggleIcon"></i>
+                                </button>
+                            </div>
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle"></i> 
+                                Students will need to enter this passcode before starting the exam. 
+                                Leave empty to allow direct access.
+                            </small>
+                        </div>
+
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-lightbulb"></i> <strong>Tip:</strong> 
+                            Use a passcode to prevent unauthorized access. Share it with students only when the exam begins.
+                        </div>
+                    </div>
+                </div>
+
+          <!-- Display Settings -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-eye"></i> Display Settings</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="shuffle_questions" name="shuffle_questions" 
+                           {{ 'checked' if not exam or exam.shuffle_questions else '' }}>
+                    <label class="form-check-label" for="shuffle_questions">
+                        Shuffle Questions
+                    </label>
+                </div>
+
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="shuffle_options" name="shuffle_options" 
+                           {{ 'checked' if not exam or exam.shuffle_options else '' }}>
+                    <label class="form-check-label" for="shuffle_options">
+                        Shuffle Options
+                    </label>
+                </div>
+
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="show_results_immediately" name="show_results_immediately" 
+                           {{ 'checked' if exam and exam.show_results_immediately else '' }}>
+                    <label class="form-check-label" for="show_results_immediately">
+                        Show Results Immediately
+                    </label>
+                </div>
+                
+                <!-- ADD THIS NEW CHECKBOX -->
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="allow_student_view_result" name="allow_student_view_result" 
+                           {{ 'checked' if not exam or exam.allow_student_view_result else '' }}>
+                    <label class="form-check-label" for="allow_student_view_result">
+                        <strong>Allow Students to View Results</strong>
+                        <small class="text-muted d-block">Uncheck to hide results from students</small>
+                    </label>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="allow_review" name="allow_review" 
+                           {{ 'checked' if not exam or exam.allow_review else '' }}>
+                    <label class="form-check-label" for="allow_review">
+                        Allow Review
+                    </label>
+                </div>
+
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="show_correct_answers" name="show_correct_answers" 
+                           {{ 'checked' if exam and exam.show_correct_answers else '' }}>
+                    <label class="form-check-label" for="show_correct_answers">
+                        Show Correct Answers
+                    </label>
+                </div>
+
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="enable_proctoring" name="enable_proctoring" 
+                           {{ 'checked' if not exam or exam.enable_proctoring else '' }}>
+                    <label class="form-check-label" for="enable_proctoring">
+                        Enable Proctoring
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('teacher.manage_exams') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> {{ 'Update Exam' if exam else 'Create Exam' }}
+                    </button>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-question-circle"></i> Help</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6>Required Fields</h6>
+                        <ul>
+                            <li>Exam Title</li>
+                            <li>Exam Code</li>
+                            <li>Subject</li>
+                            <li>Duration</li>
+                            <li>Total & Pass Marks</li>
+                            <li>Start & End Date</li>
+                        </ul>
+                        <hr>
+                        <h6>Tips</h6>
+                        <ul>
+                            <li>Use unique exam codes</li>
+                            <li>Set realistic time limits</li>
+                            <li>Enable proctoring for security</li>
+                            <li>Add questions after creating exam</li>
+                            <li>Use passcode for extra security</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Passcode Display Card (if passcode exists) -->
+                {% if exam and exam.passcode %}
+                <div class="card border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h6 class="mb-0"><i class="fas fa-key"></i> Current Passcode</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-warning mb-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>Passcode:</strong>
+                                    <code class="ms-2" style="font-size: 16px;">{{ exam.passcode }}</code>
+                                </div>
+                                <button type="button" 
+                                        class="btn btn-sm btn-warning" 
+                                        onclick="copyPasscode('{{ exam.passcode }}')"
+                                        title="Copy Passcode">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                            <hr>
+                            <small>
+                                <i class="fas fa-info-circle"></i> 
+                                Share this with students before the exam starts
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Generate random passcode
+    document.getElementById('generatePasscode').addEventListener('click', function() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed ambiguous characters
+        let passcode = '';
+        for (let i = 0; i < 8; i++) {
+            passcode += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        document.getElementById('passcode').value = passcode;
+    });
+
+    // Toggle passcode visibility
+    let passcodeVisible = false;
+    document.getElementById('togglePasscode').addEventListener('click', function() {
+        const passcodeInput = document.getElementById('passcode');
+        const toggleIcon = document.getElementById('toggleIcon');
+        
+        if (passcodeVisible) {
+            passcodeInput.type = 'text';
+            toggleIcon.classList.remove('fa-eye');
+            toggleIcon.classList.add('fa-eye-slash');
+        } else {
+            passcodeInput.type = 'text';
+            toggleIcon.classList.remove('fa-eye-slash');
+            toggleIcon.classList.add('fa-eye');
+        }
+        passcodeVisible = !passcodeVisible;
+    });
+
+    // Copy passcode to clipboard
+    function copyPasscode(passcode) {
+        navigator.clipboard.writeText(passcode).then(function() {
+            alert('Passcode copied to clipboard: ' + passcode);
+        }).catch(function(err) {
+            console.error('Failed to copy passcode: ', err);
+        });
+    }
+
+    // Validate dates
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const startDate = new Date(document.getElementById('start_date').value);
+        const endDate = new Date(document.getElementById('end_date').value);
+        
+        if (endDate <= startDate) {
+            e.preventDefault();
+            alert('End date must be after start date!');
+            return false;
+        }
+    });
+</script>
+{% endblock %}

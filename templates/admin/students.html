@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Students - E-Exam Platform{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-users"></i> Manage Students</h2>
+    <a href="{{ url_for('admin.create_student') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Add Student
+    </a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('admin.manage_students') }}" class="row g-3">
+            <div class="col-md-6">
+                <input type="text" class="form-control" name="search" placeholder="Search by name or admission number" value="{{ search }}">
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" name="class">
+                    <option value="">All Classes</option>
+                    {% for cls in classes %}
+                    <option value="{{ cls.id }}" {% if cls.id|string == class_filter %}selected{% endif %}>{{ cls.name }} - {{ cls.section }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-secondary w-100"><i class="fas fa-search"></i> Search</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Admission No.</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Class</th>
+                    <th>Gender</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students.items %}
+                <tr>
+                    <td><strong>{{ student.admission_number }}</strong></td>
+                    <td>{{ student.user.full_name }}</td>
+                    <td>{{ student.user.email }}</td>
+                    <td>
+                        {% if student.class_info %}
+                        {{ student.class_info.name }} - {{ student.class_info.section }}
+                        {% else %}
+                        <span class="text-muted">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ student.user.gender }}</td>
+                    <td>
+                        {% if student.is_active %}
+                        <span class="badge bg-success">Active</span>
+                        {% else %}
+                        <span class="badge bg-danger">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('admin.edit_student', id=student.id) }}" class="btn btn-sm btn-info" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <form method="POST" action="{{ url_for('admin.delete_student', id=student.id) }}" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-danger" title="Delete" onclick="return confirm('Are you sure?');">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">No students found</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <nav aria-label="Page navigation" class="d-flex justify-content-center mt-4">
+        <ul class="pagination">
+            {% if students.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('admin.manage_students', page=students.prev_num, search=search, class=class_filter) }}">Previous</a>
+            </li>
+            {% endif %}
+
+            {% for page_num in students.iter_pages() %}
+                {% if page_num %}
+                    {% if page_num == students.page %}
+                    <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin.manage_students', page=page_num, search=search, class=class_filter) }}">{{ page_num }}</a>
+                    </li>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+
+            {% if students.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('admin.manage_students', page=students.next_num, search=search, class=class_filter) }}">Next</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endblock %}

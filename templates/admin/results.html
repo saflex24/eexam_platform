@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+
+{% block title %}Exam Results - Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-dashboard.css') }}">
+<style>
+    .filter-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 25px;
+    }
+    
+    .result-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .status-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .status-passed {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+    }
+    
+    .status-failed {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+    }
+    
+    .result-table th {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        font-weight: 600;
+        padding: 12px;
+    }
+    
+    .result-table td {
+        padding: 12px;
+        vertical-align: middle;
+    }
+    
+    .result-table tbody tr:hover {
+        background: #f8fafc;
+    }
+    
+    .action-btn {
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        margin: 0 3px;
+    }
+    
+    .bulk-action-bar {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .bulk-btn {
+        background: white;
+        color: #6366f1;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .bulk-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2><i class="fas fa-chart-bar"></i> Exam Results</h2>
+            <hr>
+            
+            <!-- Filters -->
+            <div class="filter-card">
+                <form method="GET" action="{{ url_for('admin.view_results') }}">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label>Exam</label>
+                            <select name="exam_id" class="form-control" id="exam-filter">
+                                <option value="">All Exams</option>
+                                {% for exam in exams %}
+                                <option value="{{ exam.id }}" {% if selected_exam == exam.id %}selected{% endif %}>
+                                    {{ exam.title }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label>Class</label>
+                            <select name="class_id" class="form-control">
+                                <option value="">All Classes</option>
+                                {% for class in classes %}
+                                <option value="{{ class.id }}" {% if selected_class == class.id %}selected{% endif %}>
+                                    {{ class.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label>Search Student</label>
+                            <input type="text" name="search" class="form-control" 
+                                   placeholder="Name or username" value="{{ search }}">
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label>&nbsp;</label>
+                            <button type="submit" class="btn btn-primary form-control">
+                                <i class="fas fa-search"></i> Filter
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Bulk Actions -->
+            {% if selected_exam %}
+            <div class="bulk-action-bar">
+                <div>
+                    <i class="fas fa-file-pdf"></i>
+                    <strong>Print All Students Report</strong>
+                    <span class="ms-2">Generate combined PDF for all students in this exam</span>
+                </div>
+                <button class="bulk-btn" onclick="printAllStudents()">
+                    <i class="fas fa-print"></i> Print All (2-Column)
+                </button>
+            </div>
+            {% endif %}
+            
+            <!-- Results Table -->
+            <div class="result-card">
+                {% if results.items %}
+                <div class="table-responsive">
+                    <table class="table table-bordered result-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Student</th>
+                                <th>Exam</th>
+                                <th>Subject</th>
+                                <th>Score</th>
+                                <th>Percentage</th>
+                                <th>Grade</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for result in results.items %}
+                            <tr>
+                                <td>{{ loop.index + (results.page - 1) * results.per_page }}</td>
+                                <td>
+                                    <strong>{{ result.student_user.first_name }} {{ result.student_user.last_name }}</strong><br>
+                                    <small class="text-muted">{{ result.student_user.username }}</small>
+                                </td>
+                                <td>{{ result.exam.title }}</td>
+                                <td>{{ result.exam.subject }}</td>
+                                <td>
+                                    <strong>{{ result.marks_obtained }}</strong> / {{ result.total_marks }}
+                                </td>
+                                <td>
+                                    <strong>{{ result.percentage }}%</strong>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">{{ result.grade }}</span>
+                                </td>
+                                <td>
+                                    {% if result.is_passed %}
+                                    <span class="status-badge status-passed">
+                                        <i class="fas fa-check-circle"></i> Passed
+                                    </span>
+                                    {% else %}
+                                    <span class="status-badge status-failed">
+                                        <i class="fas fa-times-circle"></i> Failed
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ result.submitted_at.strftime('%b %d, %Y') }}</td>
+                                <td class="text-nowrap">
+                                    <a href="{{ url_for('admin.result_details', result_id=result.id) }}" 
+                                       class="btn btn-sm btn-info action-btn"
+                                       title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('admin.generate_result_pdf', result_id=result.id) }}" 
+                                       class="btn btn-sm btn-danger action-btn" 
+                                       target="_blank"
+                                       title="Download PDF">
+                                        <i class="fas fa-file-pdf"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                {% if results.pages > 1 %}
+                <nav>
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item {% if not results.has_prev %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('admin.view_results', page=results.prev_num, exam_id=selected_exam, class_id=selected_class, search=search) }}">
+                                Previous
+                            </a>
+                        </li>
+                        
+                        {% for page_num in results.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                            {% if page_num %}
+                                <li class="page-item {% if page_num == results.page %}active{% endif %}">
+                                    <a class="page-link" href="{{ url_for('admin.view_results', page=page_num, exam_id=selected_exam, class_id=selected_class, search=search) }}">
+                                        {{ page_num }}
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        <li class="page-item {% if not results.has_next %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('admin.view_results', page=results.next_num, exam_id=selected_exam, class_id=selected_class, search=search) }}">
+                                Next
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                {% endif %}
+                {% else %}
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-info-circle"></i> No results found.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function printAllStudents() {
+    var examId = document.getElementById('exam-filter').value;
+    
+    if (!examId) {
+        alert('Please select an exam first!');
+        return;
+    }
+    
+    // Open PDF in new window
+    window.open(
+        '{{ url_for("admin.generate_all_students_report", exam_id=0) }}'.replace('0', examId),
+        '_blank'
+    );
+}
+</script>
+{% endblock %}

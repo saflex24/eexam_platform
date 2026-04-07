@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Import Results - E-Exam Platform{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-check-circle"></i> {{ import_type }} Import Results</h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Import Summary</h5>
+                </div>
+                <div class="card-body">
+                    {% if results %}
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="alert alert-success">
+                                <h5><i class="fas fa-check"></i> Success</h5>
+                                <p class="mb-0"><strong>{{ results.success }}</strong> records imported</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert alert-{{ 'warning' if results.failed > 0 else 'info' }}">
+                                <h5><i class="fas fa-times"></i> Failed</h5>
+                                <p class="mb-0"><strong>{{ results.failed }}</strong> records failed</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if results.errors %}
+                    <div class="alert alert-danger">
+                        <h5><i class="fas fa-exclamation-triangle"></i> Errors</h5>
+                        <ul class="mb-0">
+                            {% for error in results.errors %}
+                            <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    {% if results.success > 0 %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i> 
+                        Successfully imported {{ results.success }} {{ import_type|lower }}!
+                    </div>
+                    {% endif %}
+
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <p class="mb-0">No import results available.</p>
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-3">
+                        {% if import_type == 'Teachers' %}
+                        <a href="{{ url_for('admin.import_teachers') }}" class="btn btn-primary">
+                            <i class="fas fa-upload"></i> Import More Teachers
+                        </a>
+                        <a href="{{ url_for('admin.manage_teachers') }}" class="btn btn-secondary">
+                            <i class="fas fa-users"></i> View Teachers
+                        </a>
+                        {% elif import_type == 'Students' %}
+                        <a href="{{ url_for('admin.import_students') }}" class="btn btn-primary">
+                            <i class="fas fa-upload"></i> Import More Students
+                        </a>
+                        <a href="{{ url_for('admin.manage_students') }}" class="btn btn-secondary">
+                            <i class="fas fa-user-graduate"></i> View Students
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
+                            <i class="fas fa-home"></i> Back to Dashboard
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

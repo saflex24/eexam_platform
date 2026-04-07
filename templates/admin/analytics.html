@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - E-Exam Platform{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h2><i class="fas fa-chart-bar"></i> Analytics Dashboard</h2>
+    <p class="text-muted">Overview of exam performance and statistics</p>
+</div>
+
+<!-- Performance by Class -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-school"></i> Performance by Class</h5>
+    </div>
+    <div class="card-body">
+        {% if class_performance %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Class</th>
+                        <th>Average Score (%)</th>
+                        <th>Total Submissions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for class_name, avg_score, submissions in class_performance %}
+                    <tr>
+                        <td><strong>{{ class_name }}</strong></td>
+                        <td>
+                            <div class="progress" style="height: 25px;">
+                                <div class="progress-bar bg-success" style="width: {{ avg_score }}%">
+                                    {{ "%.2f"|format(avg_score) }}%
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ submissions }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-center text-muted">No class performance data available</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Top Performers -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-trophy"></i> Top Performers</h5>
+    </div>
+    <div class="card-body">
+        {% if top_performers %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Student Name</th>
+                        <th>Average Score (%)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for first_name, last_name, avg_score in top_performers %}
+                    <tr>
+                        <td><strong>{{ loop.index }}</strong></td>
+                        <td>{{ first_name }} {{ last_name }}</td>
+                        <td>
+                            <span class="badge bg-success">{{ "%.2f"|format(avg_score) }}%</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-center text-muted">No top performers data available</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Exam Statistics -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-file-alt"></i> Exam Statistics</h5>
+    </div>
+    <div class="card-body">
+        {% if exam_stats %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Exam Title</th>
+                        <th>Submissions</th>
+                        <th>Average</th>
+                        <th>Highest</th>
+                        <th>Lowest</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for title, submissions, avg, max_score, min_score in exam_stats %}
+                    <tr>
+                        <td><strong>{{ title }}</strong></td>
+                        <td>{{ submissions }}</td>
+                        <td>{{ "%.2f"|format(avg) }}%</td>
+                        <td><span class="badge bg-success">{{ "%.2f"|format(max_score) }}%</span></td>
+                        <td><span class="badge bg-danger">{{ "%.2f"|format(min_score) }}%</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-center text-muted">No exam statistics available</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Performance Chart -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-chart-line"></i> Performance Trends</h5>
+    </div>
+    <div class="card-body">
+        <canvas id="performanceChart" width="400" height="150"></canvas>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Performance Chart
+const ctx = document.getElementById('performanceChart').getContext('2d');
+
+fetch('{{ url_for("admin.analytics_chart_data") }}?type=performance')
+    .then(response => response.json())
+    .then(data => {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels || [],
+                datasets: [{
+                    label: 'Average Score (%)',
+                    data: data.data || [],
+                    backgroundColor: 'rgba(52, 152, 219, 0.5)',
+                    borderColor: 'rgba(52, 152, 219, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+    })
+    .catch(error => {
+        console.error('Error loading chart data:', error);
+    });
+</script>
+{% endblock %}

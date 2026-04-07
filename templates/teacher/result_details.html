@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Result Details - E-Exam Platform{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-chart-line"></i> Result Details</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.manage_exams') }}">Exams</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.exam_results', exam_id=result.exam_id) }}">Results</a></li>
+                    <li class="breadcrumb-item active">Details</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Student & Exam Info -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-user"></i> Student Information</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Name:</strong> {{ result.student_user.full_name }}</p>
+                    <p><strong>Email:</strong> {{ result.student_user.email }}</p>
+                    <p><strong>Submitted At:</strong> {{ result.submitted_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                    {% if result.exam_session and result.exam_session.time_taken %}
+<p><strong>Time Taken:</strong> {{ result.exam_session.time_taken }} minutes</p>
+{% elif result.exam_session and result.exam_session.start_time and result.exam_session.end_time %}
+<p><strong>Time Taken:</strong> {{ ((result.exam_session.end_time - result.exam_session.start_time).total_seconds() / 60) | int }} minutes</p>
+{% else %}
+<p><strong>Time Taken:</strong> Not recorded</p>
+{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Score Summary</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Marks Obtained:</strong> {{ result.marks_obtained }} / {{ result.total_marks }}</p>
+                    <p><strong>Percentage:</strong> 
+                        <span class="badge {% if result.is_passed %}bg-success{% else %}bg-danger{% endif %} fs-6">
+                            {{ "%.2f"|format(result.percentage) }}%
+                        </span>
+                    </p>
+                    <p><strong>Status:</strong> 
+                        {% if result.is_passed %}
+                        <span class="badge bg-success">Passed</span>
+                        {% else %}
+                        <span class="badge bg-danger">Failed</span>
+                        {% endif %}
+                    </p>
+                    <p><strong>Correct:</strong> {{ result.correct_answers }} | 
+                       <strong>Incorrect:</strong> {{ result.incorrect_answers }} | 
+                       <strong>Unattempted:</strong> {{ result.unattempted }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Answer Details -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-list"></i> Answer Details</h5>
+        </div>
+        <div class="card-body">
+            {% if answers %}
+            {% for answer in answers %}
+            <div class="card mb-3 {% if answer.is_correct %}border-success{% elif answer.is_correct == False %}border-danger{% else %}border-warning{% endif %}">
+                <div class="card-header {% if answer.is_correct %}bg-success bg-opacity-10{% elif answer.is_correct == False %}bg-danger bg-opacity-10{% else %}bg-warning bg-opacity-10{% endif %}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong>Question {{ loop.index }}</strong>
+                        <span class="badge {% if answer.is_correct %}bg-success{% elif answer.is_correct == False %}bg-danger{% else %}bg-warning{% endif %}">
+                            {% if answer.is_correct %}Correct{% elif answer.is_correct == False %}Incorrect{% else %}Unattempted{% endif %}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p><strong>Question:</strong> {{ answer.question.question_text }}</p>
+                    
+                    {% if answer.question.question_type == 'mcq' or answer.question.question_type == 'true_false' %}
+                    <p><strong>Student's Answer:</strong> 
+                        {% if answer.selected_option %}
+                        {{ answer.selected_option.option_label }}. {{ answer.selected_option.option_text }}
+                        {% else %}
+                        <span class="text-muted">Not Attempted</span>
+                        {% endif %}
+                    </p>
+                    
+                    <p><strong>Correct Answer:</strong> 
+                        {% for option in answer.question.options %}
+                            {% if option.is_correct %}
+                            <span class="text-success">{{ option.option_label }}. {{ option.option_text }}</span>
+                            {% endif %}
+                        {% endfor %}
+                    </p>
+                    
+                    <p><strong>All Options:</strong></p>
+                    <ul>
+                        {% for option in answer.question.options %}
+                        <li>
+                            <strong>{{ option.option_label }}.</strong> {{ option.option_text }}
+                            {% if option.is_correct %}
+                            <span class="badge bg-success">Correct</span>
+                            {% endif %}
+                            {% if answer.selected_option and answer.selected_option.id == option.id %}
+                            <span class="badge bg-primary">Student's Choice</span>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    
+                    {% elif answer.question.question_type == 'theory' %}
+                    <p><strong>Student's Answer:</strong></p>
+                    <div class="border p-3 bg-light">
+                        {{ answer.theory_answer if answer.theory_answer else '<em>Not Attempted</em>' }}
+                    </div>
+                    {% endif %}
+                    
+                    <p class="mb-0 mt-2">
+                        <strong>Marks:</strong> {{ answer.marks_obtained }} / {{ answer.question.marks }} |
+                        <strong>Time Spent:</strong> {{ answer.time_spent_seconds }} seconds
+                        {% if answer.marked_for_review %}
+                        | <span class="badge bg-warning">Marked for Review</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p class="text-center text-muted">No answer details available</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="{{ url_for('teacher.exam_results', exam_id=result.exam_id) }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Results
+        </a>
+    </div>
+</div>
+{% endblock %}

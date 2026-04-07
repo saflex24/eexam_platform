@@ -1,0 +1,365 @@
+{% extends "base.html" %}
+
+{% block title %}Edit User - {{ user.username }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-user-edit"></i> Edit User - {{ user.username }}</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin.manage_users') }}">Users</a></li>
+                    <li class="breadcrumb-item active">Edit</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('admin.edit_user', user_id=user.id) }}">
+        <div class="row">
+            <div class="col-md-8">
+                <!-- Basic Information -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Basic Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Username <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="username" 
+                                       value="{{ user.username }}" required>
+                                <small class="text-muted">Used for login - must be unique</small>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Email <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control" name="email" 
+                                       value="{{ user.email }}" required>
+                                <small class="text-muted">Must be a valid email address</small>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">First Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="first_name" 
+                                       value="{{ user.first_name }}" required>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="last_name" 
+                                       value="{{ user.last_name }}" required>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Gender</label>
+                                <select class="form-select" name="gender">
+                                    <option value="">Select Gender</option>
+                                    <option value="Male" {{ 'selected' if user.gender == 'Male' else '' }}>Male</option>
+                                    <option value="Female" {{ 'selected' if user.gender == 'Female' else '' }}>Female</option>
+                                    <option value="Other" {{ 'selected' if user.gender == 'Other' else '' }}>Other</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Password Reset -->
+                <div class="card mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-key"></i> Change Password</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> 
+                            <strong>Note:</strong> Leave both password fields blank to keep the current password. To change the password, enter the new password in both fields.
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">New Password</label>
+                                <input type="password" class="form-control" name="password" 
+                                       id="password" placeholder="Enter new password">
+                                <small class="text-muted">Minimum 6 characters recommended</small>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Confirm New Password</label>
+                                <input type="password" class="form-control" name="confirm_password" 
+                                       id="confirm_password" placeholder="Re-enter new password">
+                                <small class="text-muted">Must match the password above</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="showPassword">
+                            <label class="form-check-label" for="showPassword">
+                                Show passwords
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Student-specific fields -->
+                {% if student_profile %}
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-user-graduate"></i> Student Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Admission Number</label>
+                                <input type="text" class="form-control" 
+                                       value="{{ student_profile.admission_number }}" readonly>
+                                <small class="text-muted">Read-only field</small>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Roll Number</label>
+                                <input type="text" class="form-control" name="roll_number" 
+                                       value="{{ student_profile.roll_number or '' }}">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Contact Number</label>
+                                <input type="tel" class="form-control" name="contact_number" 
+                                       value="{{ student_profile.contact_number or '' }}"
+                                       placeholder="+234 XXX XXX XXXX">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Date of Birth</label>
+                                <input type="date" class="form-control" name="date_of_birth" 
+                                       value="{{ student_profile.date_of_birth if student_profile.date_of_birth else '' }}">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Address</label>
+                            <textarea class="form-control" name="address" rows="3">{{ student_profile.address or '' }}</textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Guardian Name</label>
+                                <input type="text" class="form-control" name="guardian_name" 
+                                       value="{{ student_profile.guardian_name or '' }}">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Guardian Contact</label>
+                                <input type="tel" class="form-control" name="guardian_contact" 
+                                       value="{{ student_profile.guardian_contact or '' }}"
+                                       placeholder="+234 XXX XXX XXXX">
+                            </div>
+                        </div>
+                        
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="is_active" 
+                                   id="student_active" {{ 'checked' if student_profile.is_active else '' }}>
+                            <label class="form-check-label" for="student_active">
+                                Active Student
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Teacher-specific fields -->
+                {% if teacher_profile %}
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-chalkboard-teacher"></i> Teacher Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Teacher ID</label>
+                                <input type="text" class="form-control" 
+                                       value="{{ teacher_profile.teacher_id }}" readonly>
+                                <small class="text-muted">Read-only field</small>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Subject <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="subject" 
+                                       value="{{ teacher_profile.subject or '' }}" required>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Qualification</label>
+                                <input type="text" class="form-control" name="qualification" 
+                                       value="{{ teacher_profile.qualification or '' }}"
+                                       placeholder="e.g., M.Ed, Ph.D">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Specialization</label>
+                                <input type="text" class="form-control" name="specialization" 
+                                       value="{{ teacher_profile.specialization or '' }}"
+                                       placeholder="e.g., Mathematics Education">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Contact Number</label>
+                                <input type="tel" class="form-control" name="contact_number" 
+                                       value="{{ teacher_profile.contact_number or '' }}"
+                                       placeholder="+234 XXX XXX XXXX">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Joining Date</label>
+                                <input type="date" class="form-control" name="joining_date" 
+                                       value="{{ teacher_profile.joining_date if teacher_profile.joining_date else '' }}">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Address</label>
+                            <textarea class="form-control" name="address" rows="3">{{ teacher_profile.address or '' }}</textarea>
+                        </div>
+                        
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="is_active" 
+                                   id="teacher_active" {{ 'checked' if teacher_profile.is_active else '' }}>
+                            <label class="form-check-label" for="teacher_active">
+                                Active Teacher
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Account Status (for users without student/teacher profile) -->
+                {% if not student_profile and not teacher_profile %}
+                <div class="card mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">Account Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="is_active" 
+                                   id="user_active" {{ 'checked' if user.is_active else '' }}>
+                            <label class="form-check-label" for="user_active">
+                                Active Account
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-between mb-4">
+                    <a href="{{ url_for('admin.manage_users') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sidebar Info -->
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-info-circle"></i> Account Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>User ID:</strong> #{{ user.id }}</p>
+                        <p><strong>Role:</strong> 
+                            <span class="badge bg-primary">{{ user.role.name|title }}</span>
+                        </p>
+                        <p><strong>Status:</strong> 
+                            {% if user.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-danger">Inactive</span>
+                            {% endif %}
+                        </p>
+                        <p><strong>Created:</strong><br>{{ user.created_at.strftime('%d %b %Y, %I:%M %p') }}</p>
+                        <p class="mb-0"><strong>Last Updated:</strong><br>{{ user.updated_at.strftime('%d %b %Y, %I:%M %p') }}</p>
+                    </div>
+                </div>
+
+                <div class="card border-warning mb-4">
+                    <div class="card-header bg-warning">
+                        <h6 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Important Notes</h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="mb-0 small">
+                            <li>Username must be unique across all users</li>
+                            <li>Email address must be valid and unique</li>
+                            <li>Password must match in both fields when changing</li>
+                            <li>Leave password fields blank to keep current password</li>
+                            <li>Changes take effect immediately upon saving</li>
+                            <li>Deactivating a user will prevent them from logging in</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card border-danger">
+                    <div class="card-header bg-danger text-white">
+                        <h6 class="mb-0"><i class="fas fa-shield-alt"></i> Security</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="small mb-2"><strong>Password Requirements:</strong></p>
+                        <ul class="small mb-0">
+                            <li>Minimum 6 characters</li>
+                            <li>Passwords are encrypted and stored securely</li>
+                            <li>Users should change default passwords</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+{% block extra_js %}
+<script>
+    // Show/Hide password functionality
+    document.getElementById('showPassword').addEventListener('change', function() {
+        const passwordField = document.getElementById('password');
+        const confirmPasswordField = document.getElementById('confirm_password');
+        const type = this.checked ? 'text' : 'password';
+        passwordField.type = type;
+        confirmPasswordField.type = type;
+    });
+
+    // Password match validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirm_password').value;
+        
+        // Only validate if password fields are filled
+        if (password || confirmPassword) {
+            if (password !== confirmPassword) {
+                e.preventDefault();
+                alert('Passwords do not match! Please ensure both password fields contain the same value.');
+                document.getElementById('confirm_password').focus();
+                return false;
+            }
+            
+            if (password.length < 6) {
+                e.preventDefault();
+                alert('Password must be at least 6 characters long.');
+                document.getElementById('password').focus();
+                return false;
+            }
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

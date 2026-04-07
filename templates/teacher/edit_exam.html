@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Exam - {{ exam.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-edit"></i> Edit Exam
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="editExamForm">
+                        <!-- Basic Information -->
+                        <h5 class="border-bottom pb-2 mb-3">
+                            <i class="fas fa-info-circle"></i> Basic Information
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label for="title" class="form-label">Exam Title <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="title" name="title" 
+                                       value="{{ exam.title }}" required>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="subject" class="form-label">Subject</label>
+                                <input type="text" class="form-control" id="subject" name="subject" 
+                                       value="{{ exam.subject or '' }}" placeholder="e.g., Mathematics">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" 
+                                      rows="3" placeholder="Brief description of the exam">{{ exam.description or '' }}</textarea>
+                        </div>
+
+                        <!-- Date and Time Settings -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="fas fa-calendar-alt"></i> Schedule
+                        </h5>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="start_date" class="form-label">
+                                    Start Date & Time <span class="text-danger">*</span>
+                                </label>
+                                <input type="datetime-local" class="form-control" id="start_date" name="start_date" 
+                                       value="{{ exam.start_date.strftime('%Y-%m-%dT%H:%M') if exam.start_date else '' }}" 
+                                       required>
+                                <small class="form-text text-muted">When students can start taking the exam</small>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="end_date" class="form-label">
+                                    End Date & Time <span class="text-danger">*</span>
+                                </label>
+                                <input type="datetime-local" class="form-control" id="end_date" name="end_date" 
+                                       value="{{ exam.end_date.strftime('%Y-%m-%dT%H:%M') if exam.end_date else '' }}" 
+                                       required>
+                                <small class="form-text text-muted">Deadline for exam submission</small>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Note:</strong> Students will only be able to access this exam between the start and end dates.
+                        </div>
+
+                        <!-- Exam Settings -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="fas fa-cog"></i> Exam Settings
+                        </h5>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="duration_minutes" class="form-label">
+                                    Duration (minutes) <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" class="form-control" id="duration_minutes" name="duration_minutes" 
+                                       value="{{ exam.duration_minutes }}" min="1" required>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="total_marks" class="form-label">
+                                    Total Marks <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" class="form-control" id="total_marks" name="total_marks" 
+                                       value="{{ exam.total_marks }}" min="1" step="0.5" required>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="pass_marks" class="form-label">
+                                    Pass Marks <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" class="form-control" id="pass_marks" name="pass_marks" 
+                                       value="{{ exam.pass_marks }}" min="0" step="0.5" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="class_id" class="form-label">Assign to Class (Optional)</label>
+                            <select class="form-select" id="class_id" name="class_id">
+                                <option value="">All Students</option>
+                                {% for cls in classes %}
+                                <option value="{{ cls.id }}" {% if exam.class_id == cls.id %}selected{% endif %}>
+                                    {{ cls.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted">Leave blank to make available to all students</small>
+                        </div>
+
+                        <!-- Advanced Options -->
+<h5 class="border-bottom pb-2 mb-3 mt-4">
+    <i class="fas fa-sliders-h"></i> Advanced Options
+</h5>
+
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="published" name="published" 
+                   {% if exam.published %}checked{% endif %}>
+            <label class="form-check-label" for="published">
+                <strong>Published</strong>
+                <br><small class="text-muted">Make exam visible to students</small>
+            </label>
+        </div>
+    </div>
+
+    <!-- REPLACE show_results WITH allow_student_view_result -->
+    <div class="col-md-6 mb-3">
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="allow_student_view_result" name="allow_student_view_result" 
+                   {% if exam.allow_student_view_result %}checked{% endif %}>
+            <label class="form-check-label" for="allow_student_view_result">
+                <strong>Allow Students to View Results</strong>
+                <br><small class="text-muted">Allow students to view their exam results</small>
+            </label>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-3">
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="randomize_per_student" 
+                   name="randomize_per_student" {% if exam.randomize_per_student %}checked{% endif %}>
+            <label class="form-check-label" for="randomize_per_student">
+                <strong>Randomize Questions</strong>
+                <br><small class="text-muted">Shuffle question order for each student</small>
+            </label>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-3">
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="enable_proctoring" 
+                   name="enable_proctoring" {% if exam.enable_proctoring %}checked{% endif %}>
+            <label class="form-check-label" for="enable_proctoring">
+                <strong>Enable Proctoring</strong>
+                <br><small class="text-muted">Track tab switches and copy/paste attempts</small>
+            </label>
+        </div>
+    </div>
+</div>
+                        <!-- Exam Status Info -->
+                        <div class="alert alert-secondary mt-3">
+                            <h6><i class="fas fa-chart-bar"></i> Exam Statistics</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <strong>Total Questions:</strong> {{ exam.questions|length }}
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Students Attempted:</strong> {{ exam.results|length if exam.results else 0 }}
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Created:</strong> {{ exam.created_at.strftime('%d %b %Y') if exam.created_at else 'N/A' }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ url_for('teacher.view_exam', exam_id=exam.id) }}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Form validation
+document.getElementById('editExamForm').addEventListener('submit', function(e) {
+    const startDate = new Date(document.getElementById('start_date').value);
+    const endDate = new Date(document.getElementById('end_date').value);
+    const totalMarks = parseFloat(document.getElementById('total_marks').value);
+    const passMarks = parseFloat(document.getElementById('pass_marks').value);
+    
+    // Validate dates
+    if (startDate >= endDate) {
+        e.preventDefault();
+        alert('End date must be after start date!');
+        return false;
+    }
+    
+    // Validate marks
+    if (passMarks > totalMarks) {
+        e.preventDefault();
+        alert('Pass marks cannot exceed total marks!');
+        return false;
+    }
+    
+    // Confirm submission
+    if (!confirm('Are you sure you want to save these changes?')) {
+        e.preventDefault();
+        return false;
+    }
+});
+
+// Real-time date validation
+document.getElementById('start_date').addEventListener('change', validateDates);
+document.getElementById('end_date').addEventListener('change', validateDates);
+
+function validateDates() {
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    
+    if (startDate && endDate) {
+        if (new Date(startDate) >= new Date(endDate)) {
+            document.getElementById('end_date').setCustomValidity('End date must be after start date');
+        } else {
+            document.getElementById('end_date').setCustomValidity('');
+        }
+    }
+}
+
+// Real-time marks validation
+document.getElementById('pass_marks').addEventListener('input', function() {
+    const totalMarks = parseFloat(document.getElementById('total_marks').value);
+    const passMarks = parseFloat(this.value);
+    
+    if (passMarks > totalMarks) {
+        this.setCustomValidity('Pass marks cannot exceed total marks');
+    } else {
+        this.setCustomValidity('');
+    }
+});
+</script>
+{% endblock %}

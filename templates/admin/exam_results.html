@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}Exam Results - {{ exam.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Results: {{ exam.title }}</h2>
+        <a href="{{ url_for('admin.manage_exams') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Exams
+        </a>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h6>Total Attempts</h6>
+                    <h3>{{ stats.total_attempts }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h6>Average Score</h6>
+                    <h3>{{ stats.avg_score }}%</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h6>Passed</h6>
+                    <h3>{{ stats.pass_count }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-danger">
+                <div class="card-body">
+                    <h6>Failed</h6>
+                    <h3>{{ stats.fail_count }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" name="search" class="form-control" 
+                           placeholder="Search by student name..." value="{{ search }}">
+                </div>
+                <div class="col-md-3">
+                    <select name="sort" class="form-select">
+                        <option value="marks_obtained" {% if sort_by == 'marks_obtained' %}selected{% endif %}>
+                            Sort by Marks
+                        </option>
+                        <option value="percentage" {% if sort_by == 'percentage' %}selected{% endif %}>
+                            Sort by Percentage
+                        </option>
+                        <option value="submitted_at" {% if sort_by == 'submitted_at' %}selected{% endif %}>
+                            Sort by Date
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
+                </div>
+                <div class="col-md-3">
+                    <a href="{{ url_for('admin.exam_results', id=exam.id) }}" class="btn btn-secondary w-100">
+                        <i class="fas fa-times"></i> Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Student Results</h5>
+        </div>
+        <div class="card-body">
+            {% if results.items %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Student Name</th>
+                            <th>Total Marks</th>
+                            <th>Marks Obtained</th>
+                            <th>Percentage</th>
+                            <th>Status</th>
+                            <th>Submitted At</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in results.items %}
+                        <tr>
+                            <td>{{ loop.index + (results.page - 1) * results.per_page }}</td>
+                            <td>{{ result.student_user.full_name }}</td>
+                            <td>{{ result.total_marks }}</td>
+                            <td>{{ result.marks_obtained }}</td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if result.is_passed else 'danger' }}">
+                                    {{ result.percentage }}%
+                                </span>
+                            </td>
+                            <td>
+                                {% if result.is_passed %}
+                                    <span class="badge bg-success">Passed</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Failed</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ result.submitted_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{{ url_for('admin.result_details_view', result_id=result.id) }}" 
+                                       class="btn btn-sm btn-info"
+                                       title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <button type="button" 
+                                            class="btn btn-sm btn-danger"
+                                            onclick="confirmDelete({{ result.id }}, '{{ result.student_user.full_name }}')"
+                                            title="Delete for Retake">
+                                        <i class="fas fa-redo"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if results.pages > 1 %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if results.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin.exam_results', id=exam.id, page=results.prev_num, search=search, sort=sort_by) }}">
+                            Previous
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in results.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                        {% if page_num %}
+                            <li class="page-item {% if page_num == results.page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('admin.exam_results', id=exam.id, page=page_num, search=search, sort=sort_by) }}">
+                                    {{ page_num }}
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if results.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin.exam_results', id=exam.id, page=results.next_num, search=search, sort=sort_by) }}">
+                            Next
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> No results found for this exam.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    <i class="fas fa-exclamation-triangle"></i> Delete Result for Retake
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-info-circle"></i> <strong>Important:</strong> This action will allow the student to retake the exam.
+                </div>
+                <p>Are you sure you want to delete the exam result for:</p>
+                <p class="text-center"><strong id="studentName" class="fs-5"></strong></p>
+                <p class="text-muted small">This action will delete:</p>
+                <ul class="text-muted small">
+                    <li>The exam result record</li>
+                    <li>All student answers for this attempt</li>
+                    <li>The exam session data</li>
+                    <li>Proctoring logs for this session</li>
+                </ul>
+                <p class="text-danger small"><strong>Note:</strong> The student will be able to retake the exam immediately after deletion.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash-alt"></i> Delete & Allow Retake
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(resultId, studentName) {
+    // Set student name in modal
+    document.getElementById('studentName').textContent = studentName;
+    
+    // Set form action
+    const form = document.getElementById('deleteForm');
+    form.action = `/admin/result/${resultId}/delete-for-retake`;
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

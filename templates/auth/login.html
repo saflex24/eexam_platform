@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}Login - E-Exam Platform{% endblock %}
+
+{% block content %}
+
+<!-- Background Animation -->
+<style>
+body {
+    background: linear-gradient(-45deg, #1d2671, #c33764, #1d2671, #0f2027);
+    background-size: 400% 400%;
+    animation: gradientBG 12s ease infinite;
+    height: 100vh;
+}
+
+/* Animated Gradient */
+@keyframes gradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Glass Card */
+.login-card-wrapper {
+    position: relative;
+}
+.login-card {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(15px);
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+    animation: fadeSlide 1s ease;
+    color: white;
+    overflow: hidden;
+}
+
+/* Fade & Slide */
+@keyframes fadeSlide {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Floating Inputs */
+.form-control {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.5);
+    color: white;
+}
+
+.form-control:focus {
+    background: transparent;
+    color: white;
+    border-color: #00f2fe;
+    box-shadow: 0 0 10px #00f2fe;
+}
+
+/* Login Button */
+.btn-login {
+    background: linear-gradient(135deg, #00f2fe, #4facfe);
+    border: none;
+    color: white;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.btn-login:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0,242,254,0.6);
+}
+
+/* Links */
+a {
+    color: #00f2fe;
+}
+a:hover {
+    color: #4facfe;
+}
+
+/* Dim overlay */
+.login-error-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255,0,0,0.05);
+    border-radius: 20px;
+    pointer-events: none;
+    z-index: 5;
+    transition: opacity 0.3s;
+    opacity: 0;
+}
+
+/* Shake animation */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-8px); }
+    40%, 80% { transform: translateX(8px); }
+}
+
+.shake {
+    animation: shake 0.6s ease;
+}
+
+/* Pulse animation for signing in */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+.animate__pulse {
+    animation: pulse 0.6s ease-in-out infinite;
+}
+</style>
+
+<div class="container d-flex justify-content-center align-items-center" style="min-height:100vh;">
+    <div class="col-md-6 col-lg-4">
+        <div class="login-card-wrapper">
+            <div class="card login-card p-4">
+                <div class="card-body">
+
+                    <div class="text-center mb-4">
+                        <h2 class="fw-bold">🎓 E-Exam Platform</h2>
+                        <p class="text-light">Sign in to your account</p>
+                    </div>
+
+                    <form method="POST" action="{{ url_for('auth.login') }}">
+                        <!-- Username -->
+                        <div class="mb-3">
+                            <label class="form-label">Username</label>
+                            <input type="text" name="username" class="form-control form-control-lg" required>
+                        </div>
+
+                        <!-- Password -->
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" name="password" class="form-control form-control-lg" required>
+                        </div>
+
+                        <!-- Remember -->
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" name="remember" id="remember">
+                            <label class="form-check-label" for="remember">Remember me</label>
+                        </div>
+
+                        <!-- Button -->
+                        <button type="submit" class="btn btn-login btn-lg w-100" id="loginBtn">
+                            <i class="fas fa-sign-in-alt"></i>
+                            <span class="btn-text">Login</span>
+                            <span class="spinner-border spinner-border-sm ms-2 d-none" role="status" id="loginSpinner"></span>
+                        </button>
+                    </form>
+
+                    <hr class="text-light">
+
+                    <p class="text-center text-light">
+                        Don’t have an account?
+                        <a href="{{ url_for('auth.register') }}">Register here</a>
+                    </p>
+
+                </div>
+            </div>
+            <div class="login-error-overlay d-none"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.querySelector('form');
+    const loginBtn = document.getElementById('loginBtn');
+    const spinner = document.getElementById('loginSpinner');
+    const btnText = loginBtn.querySelector('.btn-text');
+    const loginCardWrapper = document.querySelector('.login-card-wrapper');
+    const overlay = document.querySelector('.login-error-overlay');
+
+    loginForm.addEventListener('submit', function() {
+        // Disable button and show signing in state
+        loginBtn.disabled = true;
+        spinner.classList.remove('d-none');
+        btnText.textContent = 'Signing In...';
+        loginBtn.classList.add('animate__pulse');
+    });
+
+    // Server-side error handling
+    {% if error %}
+        loginBtn.disabled = false;
+        spinner.classList.add('d-none');
+        btnText.textContent = 'Login';
+        overlay.classList.remove('d-none');
+        overlay.style.opacity = 1;
+        loginCardWrapper.classList.add('shake');
+        setTimeout(() => {
+            loginCardWrapper.classList.remove('shake');
+            overlay.style.opacity = 0;
+            setTimeout(() => overlay.classList.add('d-none'), 300);
+        }, 600);
+    {% endif %}
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}My Results - E-Exam Platform{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-list-check"></i> My Results</h2>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('student.my_results') }}" class="row g-3">
+            <div class="col-md-8">
+                <input type="text" class="form-control" placeholder="Search exam title...">
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" name="sort">
+                    <option value="submitted_at" {% if sort_by == 'submitted_at' %}selected{% endif %}>Latest</option>
+                    <option value="percentage" {% if sort_by == 'percentage' %}selected{% endif %}>Highest Score</option>
+                    <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Exam Name</option>
+                </select>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Exam Title</th>
+                    <th>Subject</th>
+                    <th>Score</th>
+                    <th>Percentage</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in results.items %}
+                <tr>
+                    <td><strong>{{ result.exam.title }}</strong></td>
+                    <td>{{ result.exam.subject }}</td>
+                    <td>{{ result.marks_obtained }}/{{ result.total_marks }}</td>
+                    <td>{{ result.percentage }}%</td>
+                    <td>
+                        {% if result.is_passed %}
+                        <span class="badge bg-success">PASSED</span>
+                        {% else %}
+                        <span class="badge bg-danger">FAILED</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ result.submitted_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>
+                        <a href="{{ url_for('student.view_result', result_id=result.id) }}" class="btn btn-sm btn-info">
+                            <i class="fas fa-eye"></i> View
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">No results yet</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <nav aria-label="Page navigation" class="d-flex justify-content-center mt-4">
+        <ul class="pagination">
+            {% if results.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('student.my_results', page=results.prev_num, sort=sort_by) }}">Previous</a>
+            </li>
+            {% endif %}
+
+            {% for page_num in results.iter_pages() %}
+                {% if page_num %}
+                    {% if page_num == results.page %}
+                    <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('student.my_results', page=page_num, sort=sort_by) }}">{{ page_num }}</a>
+                    </li>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+
+            {% if results.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('student.my_results', page=results.next_num, sort=sort_by) }}">Next</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endblock %}

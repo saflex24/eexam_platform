@@ -1,0 +1,426 @@
+{% extends "base.html" %}
+
+{% block title %}Teacher Dashboard - E-Exam Platform{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-tachometer-alt"></i> Teacher Dashboard</h2>
+            <p class="text-muted">Welcome back, {{ current_user.first_name }}!</p>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <!-- Total Exams -->
+        <div class="col-md-3 mb-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Total Exams</h6>
+                            <h2 class="mb-0">{{ total_exams }}</h2>
+                        </div>
+                        <div class="fs-1 text-white-50">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-primary-dark">
+                    <small>
+                        <i class="fas fa-check-circle"></i> {{ published_exams }} Published | 
+                        <i class="fas fa-clock"></i> {{ unpublished_exams }} Draft
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Questions -->
+        <div class="col-md-3 mb-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Total Questions</h6>
+                            <h2 class="mb-0">{{ total_questions }}</h2>
+                        </div>
+                        <div class="fs-1 text-white-50">
+                            <i class="fas fa-question-circle"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-success-dark">
+                    <small>Across all exams</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Students -->
+        <div class="col-md-3 mb-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Total Students</h6>
+                            <h2 class="mb-0">{{ total_students }}</h2>
+                        </div>
+                        <div class="fs-1 text-white-50">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-info-dark">
+                    <small>In your classes</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Attempts -->
+        <div class="col-md-3 mb-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Total Attempts</h6>
+                            <h2 class="mb-0">{{ total_attempts }}</h2>
+                        </div>
+                        <div class="fs-1 text-white-50">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-warning-dark">
+                    <small>
+                        <i class="fas fa-percentage"></i> Avg Score: {{ avg_score }}%
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Exams -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-clock"></i> Recent Exams</h5>
+                    <a href="{{ url_for('teacher.manage_exams') }}" class="btn btn-sm btn-primary">
+                        View All Exams
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if recent_exams %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Subject</th>
+                                    <th>Questions</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for exam in recent_exams %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ exam.title }}</strong><br>
+                                        <small class="text-muted">{{ exam.code }}</small>
+                                    </td>
+                                    <td>{{ exam.subject }}</td>
+                                    <td>
+                                        <span class="badge bg-info">
+                                            {{ exam.total_questions }} questions
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if exam.published %}
+                                        <span class="badge bg-success">Published</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">Draft</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ exam.created_at.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <!-- Student Reports Button (NEW) -->
+                                            <a href="{{ url_for('teacher.exam_student_reports', exam_id=exam.id) }}" 
+                                               class="btn btn-outline-success" 
+                                               title="Student Reports">
+                                                <i class="fas fa-file-alt"></i>
+                                            </a>
+                                            
+                                            <!-- Manage Questions -->
+                                            <a href="{{ url_for('teacher.edit_exam_questions', exam_id=exam.id) }}" 
+                                               class="btn btn-outline-primary" 
+                                               title="Manage Questions">
+                                                <i class="fas fa-list"></i>
+                                            </a>
+                                            
+                                            <!-- Edit Exam -->
+                                            <a href="{{ url_for('teacher.edit_exam', exam_id=exam.id) }}" 
+                                               class="btn btn-outline-secondary" 
+                                               title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            
+                                            <!-- View Results -->
+                                            <a href="{{ url_for('teacher.exam_results', exam_id=exam.id) }}" 
+                                               class="btn btn-outline-info" 
+                                               title="Results">
+                                                <i class="fas fa-chart-bar"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info text-center">
+                        <i class="fas fa-info-circle fa-2x mb-2"></i>
+                        <p class="mb-0">No exams created yet. Create your first exam to get started!</p>
+                        <a href="{{ url_for('teacher.create_exam') }}" class="btn btn-primary mt-2">
+                            <i class="fas fa-plus"></i> Create Exam
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Card -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <a href="{{ url_for('teacher.create_exam') }}" class="btn btn-primary w-100">
+                                <i class="fas fa-plus-circle"></i> Create New Exam
+                            </a>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <a href="{{ url_for('teacher.manage_exams') }}" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-list"></i> Manage Exams
+                            </a>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <button class="btn btn-outline-info w-100" data-bs-toggle="modal" data-bs-target="#helpModal">
+                                <i class="fas fa-question-circle"></i> Help & Guide
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Section -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-graduation-cap"></i> Student Reports Feature</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Generate Professional Exam Reports</h6>
+                    <p class="text-muted mb-2">Create detailed reports for your students:</p>
+                    <ul class="small">
+                        <li>Click the <span class="badge bg-success"><i class="fas fa-file-alt"></i></span> button next to any exam</li>
+                        <li>View all students who took the exam</li>
+                        <li>Download individual or bulk reports as Word documents</li>
+                        <li>Reports include detailed question analysis</li>
+                        <li>Print-ready format (max 4 pages per student)</li>
+                        <li>Includes school branding and student information</li>
+                    </ul>
+                    <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#helpModal">
+                        <i class="fas fa-book"></i> Learn More
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-lightbulb"></i> Tips & Best Practices</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Exam Management Tips</h6>
+                    <ul class="small">
+                        <li><strong>Set Clear Pass Percentage:</strong> Define passing criteria before publishing exams</li>
+                        <li><strong>Test Your Exams:</strong> Preview questions before students take them</li>
+                        <li><strong>Monitor Progress:</strong> Check results dashboard regularly</li>
+                        <li><strong>Download Reports:</strong> Keep records of student performance</li>
+                        <li><strong>Bulk Operations:</strong> Use ZIP download for multiple student reports</li>
+                        <li><strong>Print Settings:</strong> Use duplex printing to save paper</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Help Modal -->
+<div class="modal fade" id="helpModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-book"></i> Student Reports - Complete Guide
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6 class="text-primary"><i class="fas fa-file-alt"></i> What are Student Reports?</h6>
+                <p>Professional, print-ready exam reports that include:</p>
+                <ul>
+                    <li><strong>School Information:</strong> Logo, name, and contact details</li>
+                    <li><strong>Student Details:</strong> Name, admission number, and class</li>
+                    <li><strong>Exam Information:</strong> Title, subject, date, and duration</li>
+                    <li><strong>Performance Summary:</strong> Marks, percentage, grade, and status</li>
+                    <li><strong>Question Analysis:</strong> Detailed breakdown of each question with correct/incorrect indicators</li>
+                </ul>
+
+                <hr>
+
+                <h6 class="text-primary"><i class="fas fa-download"></i> How to Generate Reports</h6>
+                <ol>
+                    <li>Find the exam in your dashboard</li>
+                    <li>Click the <span class="badge bg-success"><i class="fas fa-file-alt"></i></span> button</li>
+                    <li>You'll see a list of all students who took the exam</li>
+                    <li>Choose one of these options:
+                        <ul>
+                            <li><strong>Individual Report:</strong> Click download button next to student name</li>
+                            <li><strong>Bulk Download:</strong> Click "Download All Reports (ZIP)"</li>
+                            <li><strong>Selected Students:</strong> Check boxes and click "Download Selected"</li>
+                        </ul>
+                    </li>
+                </ol>
+
+                <hr>
+
+                <h6 class="text-primary"><i class="fas fa-print"></i> Printing Tips</h6>
+                <ul>
+                    <li>Reports are optimized for standard Letter or A4 paper</li>
+                    <li>Each report is maximum 4 pages</li>
+                    <li>Works with any printer (color or black & white)</li>
+                    <li>Consider duplex (double-sided) printing to save paper</li>
+                    <li>Multiple reports can be printed at once from ZIP file</li>
+                </ul>
+
+                <hr>
+
+                <h6 class="text-primary"><i class="fas fa-cog"></i> Customization</h6>
+                <p>To customize your reports with school branding:</p>
+                <ol>
+                    <li>Edit the <code>get_school_settings()</code> function in <code>routes/teacher.py</code></li>
+                    <li>Update school name, address, phone, and email</li>
+                    <li>Add your school logo to <code>static/uploads/school_logo.png</code></li>
+                    <li>Reports will automatically use your branding</li>
+                </ol>
+
+                <hr>
+
+                <h6 class="text-primary"><i class="fas fa-check"></i> Report Features</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="small">For Multiple Choice:</h6>
+                        <ul class="small">
+                            <li>[CORRECT] = Right answer</li>
+                            <li>[X WRONG] = Student's wrong choice</li>
+                            <li>All options are shown</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="small">For Theory Questions:</h6>
+                        <ul class="small">
+                            <li>Student's answer displayed</li>
+                            <li>Expected answer shown</li>
+                            <li>Marks awarded per question</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="alert alert-info mb-0">
+                    <h6 class="alert-heading"><i class="fas fa-info-circle"></i> Need Help?</h6>
+                    <p class="mb-0 small">
+                        If you encounter any issues, check that Node.js is installed (<code>node --version</code>) 
+                        and that the docx library is available (<code>npm list -g docx</code>). 
+                        See the setup documentation for detailed troubleshooting.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .bg-primary-dark {
+        background-color: rgba(0, 0, 0, 0.1) !important;
+    }
+    .bg-success-dark {
+        background-color: rgba(0, 0, 0, 0.1) !important;
+    }
+    .bg-info-dark {
+        background-color: rgba(0, 0, 0, 0.1) !important;
+    }
+    .bg-warning-dark {
+        background-color: rgba(0, 0, 0, 0.1) !important;
+    }
+    .card {
+        transition: transform 0.2s;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .btn-group .btn {
+        border-radius: 0;
+    }
+    .btn-group .btn:first-child {
+        border-top-left-radius: 0.25rem;
+        border-bottom-left-radius: 0.25rem;
+    }
+    .btn-group .btn:last-child {
+        border-top-right-radius: 0.25rem;
+        border-bottom-right-radius: 0.25rem;
+    }
+    /* Highlight the new Student Reports button */
+    .btn-outline-success {
+        font-weight: 600;
+    }
+    .btn-outline-success:hover {
+        background-color: #28a745;
+        border-color: #28a745;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Initialize Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}

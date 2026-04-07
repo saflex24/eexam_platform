@@ -1,0 +1,578 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit Question' if question else 'Add Question' }} - E-Exam Platform{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<style>
+    .latex-preview {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 15px;
+        margin-top: 10px;
+        min-height: 50px;
+    }
+    .latex-preview:empty::before {
+        content: "Preview will appear here...";
+        color: #6c757d;
+        font-style: italic;
+    }
+    
+    .image-upload-section {
+        background: linear-gradient(135deg, #f8fafc 0%, #f0f4ff 100%);
+        border: 2px dashed #cbd5e0;
+        border-radius: 12px;
+        padding: 30px;
+        margin: 20px 0;
+        transition: all 0.3s;
+        text-align: center;
+    }
+    
+    .image-upload-section:hover {
+        border-color: #667eea;
+        background: linear-gradient(135deg, #f0f4ff 0%, #e8edff 100%);
+        transform: translateY(-2px);
+    }
+    
+    .image-preview-container {
+        position: relative;
+        max-width: 600px;
+        margin: 15px auto;
+        display: none;
+    }
+    
+    .image-preview-container.show {
+        display: block;
+    }
+    
+    .image-preview {
+        width: 100%;
+        max-height: 400px;
+        object-fit: contain;
+        border-radius: 12px;
+        border: 3px solid #667eea;
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .remove-image-btn {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 700;
+        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+        transition: all 0.3s;
+    }
+    
+    .remove-image-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+    }
+    
+    .upload-icon {
+        font-size: 64px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 15px;
+    }
+    
+    .upload-text {
+        color: #4a5568;
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+    
+    .upload-subtext {
+        color: #718096;
+        font-size: 13px;
+        margin-bottom: 20px;
+    }
+    
+    .file-input-label {
+        display: inline-block;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 12px 32px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 15px;
+        transition: all 0.3s;
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    .file-input-label:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+    }
+    
+    .current-image-section {
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        border: 3px solid #10b981;
+        border-radius: 12px;
+        padding: 20px;
+        margin: 20px 0;
+    }
+    
+    .current-image-label {
+        color: #059669;
+        font-weight: 700;
+        font-size: 14px;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .delete-current-image {
+        margin-top: 15px;
+    }
+    
+    .form-label {
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>
+                <i class="fas fa-{{ 'edit' if question else 'plus' }}"></i> 
+                {{ 'Edit Question' if question else 'Add New Question' }}
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.manage_exams') }}">Exams</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.edit_exam_questions', exam_id=exam.id) }}">{{ exam.title }}</a></li>
+                    <li class="breadcrumb-item active">{{ 'Edit' if question else 'Add' }} Question</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" id="questionForm">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-question-circle"></i> Question Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Question Text -->
+                        <div class="mb-3">
+                            <label for="question_text" class="form-label">
+                                Question Text <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control" 
+                                      id="question_text" 
+                                      name="question_text" 
+                                      rows="4" 
+                                      required
+                                      placeholder="Enter your question here. Use $...$ for inline math or $$...$$ for display math">{{ question.question_text if question else '' }}</textarea>
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle"></i> 
+                                Use LaTeX for math: <code>$x^2$</code> for inline, <code>$$\frac{a}{b}$$</code> for display
+                            </small>
+                            
+                            <!-- Live Preview -->
+                            <label class="form-label mt-2">Live Preview:</label>
+                            <div class="latex-preview" id="question_preview"></div>
+                        </div>
+
+                        <!-- Image Upload Section -->
+                        <div class="image-upload-section" id="uploadArea">
+                            <div class="upload-icon">
+                                <i class="fas fa-image"></i>
+                            </div>
+                            <p class="upload-text">Add Image to Question (Optional)</p>
+                            <p class="upload-subtext">Upload diagrams, graphs, charts or illustrations</p>
+                            <input type="file" 
+                                   id="question_image" 
+                                   name="question_image" 
+                                   accept="image/*" 
+                                   style="display: none;"
+                                   onchange="previewImage(event)">
+                            <label for="question_image" class="file-input-label">
+                                <i class="fas fa-upload"></i> Choose Image
+                            </label>
+                            <p class="text-muted mt-3" style="font-size: 12px;">
+                                JPG, PNG, GIF • Max 5MB
+                            </p>
+                        </div>
+
+                        <!-- Current Image (if editing and image exists) -->
+                        {% if question and question.image %}
+                        <div class="current-image-section">
+                            <div class="current-image-label">
+                                <i class="fas fa-check-circle"></i> Current Image
+                            </div>
+                            <img src="{{ url_for('static', filename='uploads/questions/' + question.image) }}" 
+                                 alt="Question Image" 
+                                 class="image-preview">
+                            <div class="delete-current-image">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="delete_image" name="delete_image">
+                                    <label class="form-check-label text-danger" for="delete_image">
+                                        <i class="fas fa-trash"></i> Delete this image
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Image Preview (for new upload) -->
+                        <div class="image-preview-container" id="imagePreviewContainer">
+                            <img id="imagePreview" class="image-preview" src="" alt="Preview">
+                            <button type="button" class="remove-image-btn" onclick="removeImage()">
+                                <i class="fas fa-times"></i> Remove
+                            </button>
+                        </div>
+
+                        <!-- Question Type -->
+                        <div class="mb-3">
+                            <label for="question_type" class="form-label">
+                                Question Type <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" 
+                                    id="question_type" 
+                                    name="question_type" 
+                                    required
+                                    {% if question %}disabled{% endif %}>
+                                <option value="mcq" {% if question and question.question_type == 'mcq' %}selected{% endif %}>
+                                    Multiple Choice (MCQ)
+                                </option>
+                                <option value="true_false" {% if question and question.question_type == 'true_false' %}selected{% endif %}>
+                                    True/False
+                                </option>
+                                <option value="theory" {% if question and question.question_type == 'theory' %}selected{% endif %}>
+                                    Theory/Essay
+                                </option>
+                            </select>
+                            {% if question %}
+                            <input type="hidden" name="question_type" value="{{ question.question_type }}">
+                            {% endif %}
+                        </div>
+
+                        <!-- Marks -->
+                        <div class="mb-3">
+                            <label for="marks" class="form-label">
+                                Marks <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="marks" 
+                                   name="marks" 
+                                   step="0.5" 
+                                   min="0.5" 
+                                   value="{{ question.marks if question else '1' }}" 
+                                   required>
+                        </div>
+
+                        <!-- Instructions (Optional) -->
+                        <div class="mb-3">
+                            <label for="instructions" class="form-label">Instructions (Optional)</label>
+                            <textarea class="form-control" 
+                                      id="instructions" 
+                                      name="instructions" 
+                                      rows="2"
+                                      placeholder="Additional instructions for this question">{{ question.instructions if question else '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MCQ Options -->
+                <div class="card mb-4" id="mcq_options" style="display: none;">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-list"></i> Answer Options</h5>
+                    </div>
+                    <div class="card-body">
+                        {% for label in ['A', 'B', 'C', 'D'] %}
+                        <div class="mb-3 option-input">
+                            <label for="option_{{ label }}" class="form-label">
+                                Option {{ label }} <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control option-text" 
+                                      id="option_{{ label }}" 
+                                      name="option_{{ label }}" 
+                                      rows="2"
+                                      data-label="{{ label }}"
+                                      placeholder="Enter option {{ label }} (supports LaTeX)">{% if question and question.question_type == 'mcq' %}{% for opt in question.options %}{% if opt.option_label == label %}{{ opt.option_text }}{% endif %}{% endfor %}{% endif %}</textarea>
+                            
+                            <!-- Option Preview -->
+                            <div class="latex-preview mt-1" id="option_{{ label }}_preview"></div>
+                        </div>
+                        {% endfor %}
+
+                        <div class="mt-4">
+                            <label class="form-label">
+                                Correct Answer <span class="text-danger">*</span>
+                            </label>
+                            <div>
+                                {% for label in ['A', 'B', 'C', 'D'] %}
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" 
+                                           type="radio" 
+                                           name="correct_answer" 
+                                           id="correct_{{ label }}" 
+                                           value="{{ label }}"
+                                           {% if question and question.question_type == 'mcq' %}
+                                               {% for opt in question.options %}
+                                                   {% if opt.option_label == label and opt.is_correct %}checked{% endif %}
+                                               {% endfor %}
+                                           {% elif label == 'A' %}checked{% endif %}>
+                                    <label class="form-check-label" for="correct_{{ label }}">
+                                        Option {{ label }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- True/False Options -->
+                <div class="card mb-4" id="true_false_options" style="display: none;">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-check-circle"></i> Correct Answer</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" 
+                                   type="radio" 
+                                   name="correct_answer" 
+                                   id="answer_true" 
+                                   value="true"
+                                   {% if question and question.question_type == 'true_false' %}
+                                       {% for opt in question.options %}
+                                           {% if opt.option_text == 'True' and opt.is_correct %}checked{% endif %}
+                                       {% endfor %}
+                                   {% else %}checked{% endif %}>
+                            <label class="form-check-label" for="answer_true">True</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" 
+                                   type="radio" 
+                                   name="correct_answer" 
+                                   id="answer_false" 
+                                   value="false"
+                                   {% if question and question.question_type == 'true_false' %}
+                                       {% for opt in question.options %}
+                                           {% if opt.option_text == 'False' and opt.is_correct %}checked{% endif %}
+                                       {% endfor %}
+                                   {% endif %}>
+                            <label class="form-check-label" for="answer_false">False</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('teacher.edit_exam_questions', exam_id=exam.id) }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> {{ 'Update Question' if question else 'Add Question' }}
+                    </button>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-info-circle"></i> LaTeX Quick Guide</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6>Basic Syntax</h6>
+                        <p><strong>Inline:</strong> <code>$x^2 + y^2$</code></p>
+                        <p><strong>Display:</strong> <code>$$\frac{a}{b}$$</code></p>
+
+                        <hr>
+
+                        <h6>Common Symbols</h6>
+                        <table class="table table-sm">
+                            <tr><td><code>\frac{a}{b}</code></td><td id="frac_example"></td></tr>
+                            <tr><td><code>\sqrt{x}</code></td><td id="sqrt_example"></td></tr>
+                            <tr><td><code>x^2</code></td><td id="power_example"></td></tr>
+                            <tr><td><code>x_i</code></td><td id="sub_example"></td></tr>
+                            <tr><td><code>\sum_{i=1}^{n}</code></td><td id="sum_example"></td></tr>
+                            <tr><td><code>\int_{0}^{1}</code></td><td id="int_example"></td></tr>
+                        </table>
+
+                        <hr>
+
+                        <h6>Quick Insert</h6>
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertLatex('\\frac{a}{b}')">
+                                Insert Fraction
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertLatex('\\sqrt{x}')">
+                                Insert Square Root
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="insertLatex('x^{2}')">
+                                Insert Superscript
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script>
+    // Render LaTeX examples
+    document.addEventListener('DOMContentLoaded', function() {
+        renderExample('frac_example', '\\frac{a}{b}');
+        renderExample('sqrt_example', '\\sqrt{x}');
+        renderExample('power_example', 'x^2');
+        renderExample('sub_example', 'x_i');
+        renderExample('sum_example', '\\sum_{i=1}^{n}');
+        renderExample('int_example', '\\int_{0}^{1}');
+    });
+
+    function renderExample(id, latex) {
+        try {
+            katex.render(latex, document.getElementById(id), {
+                displayMode: false,
+                throwOnError: false
+            });
+        } catch (e) {
+            console.error('Error rendering example:', e);
+        }
+    }
+
+    // Live preview for question text
+    const questionText = document.getElementById('question_text');
+    const questionPreview = document.getElementById('question_preview');
+
+    questionText.addEventListener('input', function() {
+        renderLatex(this.value, questionPreview);
+    });
+
+    // Live preview for options
+    document.querySelectorAll('.option-text').forEach(textarea => {
+        const label = textarea.dataset.label;
+        const preview = document.getElementById(`option_${label}_preview`);
+        
+        textarea.addEventListener('input', function() {
+            renderLatex(this.value, preview);
+        });
+
+        // Initial render if editing
+        if (textarea.value) {
+            renderLatex(textarea.value, preview);
+        }
+    });
+
+    // Initial render for question if editing
+    if (questionText.value) {
+        renderLatex(questionText.value, questionPreview);
+    }
+
+    function renderLatex(text, targetElement) {
+        if (!text.trim()) {
+            targetElement.innerHTML = '';
+            return;
+        }
+
+        targetElement.textContent = text;
+        
+        try {
+            renderMathInElement(targetElement, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false}
+                ],
+                throwOnError: false
+            });
+        } catch (e) {
+            console.error('LaTeX rendering error:', e);
+        }
+    }
+
+    function insertLatex(latex) {
+        const questionText = document.getElementById('question_text');
+        const start = questionText.selectionStart;
+        const end = questionText.selectionEnd;
+        const text = questionText.value;
+        
+        questionText.value = text.substring(0, start) + '$' + latex + '$' + text.substring(end);
+        questionText.focus();
+        questionText.dispatchEvent(new Event('input'));
+        
+        const newPos = start + latex.length + 2;
+        questionText.setSelectionRange(newPos, newPos);
+    }
+
+    // Image preview functions
+    function previewImage(event) {
+        const file = event.target.files[0];
+        
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File size must be less than 5MB');
+                event.target.value = '';
+                return;
+            }
+            
+            if (!file.type.startsWith('image/')) {
+                alert('Please upload an image file');
+                event.target.value = '';
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('imagePreview').src = e.target.result;
+                document.getElementById('imagePreviewContainer').classList.add('show');
+                document.getElementById('uploadArea').style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+    
+    function removeImage() {
+        document.getElementById('question_image').value = '';
+        document.getElementById('imagePreview').src = '';
+        document.getElementById('imagePreviewContainer').classList.remove('show');
+        document.getElementById('uploadArea').style.display = 'block';
+    }
+
+    // Show/hide options based on question type
+    const questionTypeSelect = document.getElementById('question_type');
+    const mcqOptions = document.getElementById('mcq_options');
+    const trueFalseOptions = document.getElementById('true_false_options');
+
+    function updateQuestionType() {
+        const type = questionTypeSelect.value;
+        
+        mcqOptions.style.display = 'none';
+        trueFalseOptions.style.display = 'none';
+        
+        if (type === 'mcq') {
+            mcqOptions.style.display = 'block';
+        } else if (type === 'true_false') {
+            trueFalseOptions.style.display = 'block';
+        }
+    }
+
+    questionTypeSelect.addEventListener('change', updateQuestionType);
+    updateQuestionType(); // Initial call
+</script>
+{% endblock %}

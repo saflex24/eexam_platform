@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if class_obj else 'Create' }} Class{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            {% if class_obj %}
+                Edit Class: {{ class_obj.name }}
+            {% else %}
+                Create New Class
+            {% endif %}
+        </h2>
+        <a href="{{ url_for('admin.manage_classes') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Classes
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Class Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Class Name <span class="text-danger">*</span></label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="name" 
+                                   name="name" 
+                                   value="{{ class_obj.name if class_obj and class_obj.name else '' }}" 
+                                   required 
+                                   autofocus>
+                            <small class="form-text text-muted">e.g., Form 1, Year 10, Grade 12</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="code" class="form-label">Class Code <span class="text-danger">*</span></label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="code" 
+                                   name="code" 
+                                   value="{{ class_obj.code if class_obj and class_obj.code else '' }}" 
+                                   required>
+                            <small class="form-text text-muted">Unique identifier (e.g., F1A, Y10B)</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="section" class="form-label">Section</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="section" 
+                                   name="section" 
+                                   value="{{ class_obj.section if class_obj and class_obj.section else '' }}">
+                            <small class="form-text text-muted">Optional (e.g., A, B, C)</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="academic_year" class="form-label">Academic Year <span class="text-danger">*</span></label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="academic_year" 
+                                   name="academic_year" 
+                                   value="{{ class_obj.academic_year if class_obj and class_obj.academic_year else '2024/2025' }}" 
+                                   placeholder="2024/2025" 
+                                   required>
+                            <small class="form-text text-muted">Format: YYYY/YYYY</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" 
+                                      id="description" 
+                                      name="description" 
+                                      rows="3">{{ class_obj.description if class_obj and class_obj.description else '' }}</textarea>
+                            <small class="form-text text-muted">Optional notes</small>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('admin.manage_classes') }}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> {{ 'Update' if class_obj else 'Create' }} Class
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% if class_obj %}
+            <div class="card mt-3">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Class Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Total Students:</strong> {{ class_obj.total_strength }}</p>
+                            <p><strong>Status:</strong> 
+                                {% if class_obj.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inactive</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Created:</strong> {{ class_obj.created_at.strftime('%Y-%m-%d %H:%M') if class_obj.created_at else 'N/A' }}</p>
+                            <p><strong>Last Updated:</strong> {{ class_obj.updated_at.strftime('%Y-%m-%d %H:%M') if class_obj.updated_at else 'N/A' }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Import Results{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-check-circle"></i> {{ import_type }} Import Results</h2>
+            {% if exam %}
+            <p class="text-muted">Exam: <strong>{{ exam.title }}</strong></p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Import Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="alert alert-success">
+                                <h5><i class="fas fa-check"></i> Success</h5>
+                                <p class="mb-0"><strong>{{ results.success }}</strong> questions imported</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert alert-{{ 'warning' if results.failed > 0 else 'info' }}">
+                                <h5><i class="fas fa-times"></i> Failed</h5>
+                                <p class="mb-0"><strong>{{ results.failed }}</strong> questions failed</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if results.errors %}
+                    <div class="alert alert-danger">
+                        <h5><i class="fas fa-exclamation-triangle"></i> Errors</h5>
+                        <ul class="mb-0">
+                            {% for error in results.errors %}
+                            <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    {% if results.success > 0 %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i> 
+                        Successfully imported {{ results.success }} questions!
+                        {% if exam %}
+                        <br>Total questions in exam: <strong>{{ exam.total_questions }}</strong>
+                        <br>Total marks: <strong>{{ exam.total_marks }}</strong>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-3">
+                        {% if exam %}
+                        <a href="{{ url_for('teacher.import_questions', exam_id=exam.id) }}" class="btn btn-primary">
+                            <i class="fas fa-upload"></i> Import More Questions
+                        </a>
+                        <a href="{{ url_for('teacher.manage_exams') }}" class="btn btn-secondary">
+                            <i class="fas fa-list"></i> View Exams
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('teacher.dashboard') }}" class="btn btn-secondary">
+                            <i class="fas fa-home"></i> Dashboard
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

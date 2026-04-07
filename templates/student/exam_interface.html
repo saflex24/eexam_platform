@@ -1,0 +1,526 @@
+{% extends "base.html" %}
+
+{% block title %}{{ exam.title }} - E-Exam Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    .exam-timer {
+        font-size: 1.5rem;
+        font-weight: bold;
+        padding: 10px 20px;
+        border-radius: 5px;
+        background-color: #27ae60;
+        color: white;
+    }
+    .exam-timer.warning { background-color: #f39c12; }
+    .exam-timer.danger  { background-color: #e74c3c; }
+
+    .question-nav {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+        margin-bottom: 20px;
+    }
+    .question-num {
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid #ddd;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.3s;
+    }
+    .question-num:hover    { background-color: #f0f0f0; }
+    .question-num.current  { background-color: #3498db; color: white; border-color: #3498db; }
+    .question-num.answered { background-color: #27ae60; color: white; border-color: #27ae60; }
+    .question-num.marked   { background-color: #f39c12; color: white; border-color: #f39c12; }
+
+    .question-panel {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 5px;
+        min-height: 400px;
+    }
+    .options { display: flex; flex-direction: column; gap: 10px; }
+    .option {
+        padding: 15px;
+        border: 2px solid #ddd;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    .option:hover    { background-color: #f0f0f0; border-color: #3498db; }
+    .option.selected { background-color: #d4edff; border-color: #3498db; }
+
+    .proctoring-alert {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color: #e74c3c;
+        color: white;
+        padding: 15px;
+        border-radius: 5px;
+        z-index: 1000;
+        display: none;
+    }
+
+    /* ── AUTO-SUBMIT OVERLAY ── */
+    #autoSubmitOverlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.75);
+        z-index: 9998;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        color: white;
+        text-align: center;
+    }
+    #autoSubmitOverlay.show { display: flex; }
+    #autoSubmitOverlay .overlay-box {
+        background: #c0392b;
+        border-radius: 12px;
+        padding: 40px 50px;
+        max-width: 420px;
+    }
+    #autoSubmitOverlay h3  { font-size: 1.5rem; margin-bottom: 10px; }
+    #autoSubmitOverlay p   { font-size: 1rem; opacity: 0.9; }
+    #autoSubmitOverlay .spinner {
+        width: 48px; height: 48px;
+        border: 5px solid rgba(255,255,255,0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin: 20px auto 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── IMAGE STYLES ── */
+    .question-image-container { margin: 8px 0; display: inline-block; }
+    .question-image {
+        max-width: 100px; max-height: 50px;
+        object-fit: contain;
+        border: 1px solid #dee2e6;
+        border-radius: 4px; padding: 2px;
+        background: white;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        cursor: zoom-in; display: block;
+    }
+    .question-image:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.2); opacity: 0.9; }
+    .image-caption { font-size: 0.7rem; color: #6c757d; text-align: center; margin-top: 2px; font-style: italic; }
+
+    .img-zoom-modal {
+        display: none; position: fixed; inset: 0;
+        background: rgba(0,0,0,0.85); z-index: 9999;
+        align-items: center; justify-content: center; cursor: zoom-out;
+    }
+    .img-zoom-modal.active { display: flex; }
+    .img-zoom-modal img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: 8px; }
+    .img-zoom-close {
+        position: absolute; top: 15px; right: 20px;
+        color: white; font-size: 2rem; cursor: pointer;
+        background: rgba(0,0,0,0.5); border: none; border-radius: 50%;
+        width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+    }
+    .img-zoom-hint { position: absolute; bottom: 15px; color: rgba(255,255,255,0.7); font-size: 0.85rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Auto-submit overlay shown when student leaves page -->
+<div id="autoSubmitOverlay">
+    <div class="overlay-box">
+        <h3>⚠️ Exam Auto-Submitted</h3>
+        <p>You navigated away from the exam page.<br>Your answers have been automatically submitted.</p>
+        <div class="spinner"></div>
+        <p class="mt-3" style="font-size:0.85rem; opacity:0.7;">Redirecting to results…</p>
+    </div>
+</div>
+
+<!-- Image Zoom Modal -->
+<div class="img-zoom-modal" id="imgZoomModal" onclick="closeImageZoom()">
+    <button class="img-zoom-close" onclick="closeImageZoom()">&times;</button>
+    <img id="zoomedImage" src="" alt="Question Image">
+    <span class="img-zoom-hint"><i class="fas fa-search-minus"></i> Click anywhere to close</span>
+</div>
+
+<div class="proctoring-alert" id="proctoringAlert"></div>
+
+<div class="row">
+    <div class="col-md-9">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">{{ exam.title }}</h4>
+                <div class="exam-timer" id="timer">{{ exam.duration_minutes }}:00</div>
+            </div>
+            <div class="card-body">
+                <div class="question-panel">
+                    <div id="currentQuestion"></div>
+                </div>
+                <div class="mt-4 d-flex justify-content-between">
+                    <button id="prevBtn" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Previous
+                    </button>
+                    <div>
+                        <button id="markReviewBtn" class="btn btn-warning">
+                            <i class="fas fa-flag"></i> Mark for Review
+                        </button>
+                        <button id="nextBtn" class="btn btn-secondary">
+                            Next <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                    <button id="submitBtn" class="btn btn-danger"
+                            onclick="return confirm('Are you sure you want to submit?');">
+                        <i class="fas fa-check"></i> Submit Exam
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-list"></i> Questions</h5>
+            </div>
+            <div class="card-body">
+                <div class="question-nav" id="questionNav"></div>
+                <div class="mt-3">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="question-num answered" style="width:20px;height:20px;"></div>
+                        <small class="ms-2">Answered</small>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="question-num marked" style="width:20px;height:20px;"></div>
+                        <small class="ms-2">Marked</small>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <div class="question-num" style="width:20px;height:20px;"></div>
+                        <small class="ms-2">Not Answered</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="exam-info">
+                    <p><strong>Subject:</strong> {{ exam.subject }}</p>
+                    <p><strong>Total Questions:</strong> <span id="totalQCount">0</span></p>
+                    <p><strong>Total Marks:</strong> {{ exam.total_marks }}</p>
+                    <p><strong>Pass Marks:</strong> {{ exam.pass_marks }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ── State ────────────────────────────────────────────────
+    let currentQuestion  = 0;
+    let questions        = [];
+    let answers          = {};
+    let markedQuestions  = new Set();
+    let examSubmitted    = false;   // guard – only submit once
+
+    const examId      = {{ exam.id }};
+    const sessionId   = {{ session.id }};
+    const examDuration = {{ exam.duration_minutes }} * 60;
+    let timeLeft      = examDuration;
+
+    // ── Image zoom ───────────────────────────────────────────
+    function openImageZoom(src) {
+        document.getElementById('zoomedImage').src = src;
+        document.getElementById('imgZoomModal').classList.add('active');
+    }
+    function closeImageZoom() {
+        document.getElementById('imgZoomModal').classList.remove('active');
+        document.getElementById('zoomedImage').src = '';
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeImageZoom(); });
+
+    // ── AUTO-SUBMIT: save current answer then POST to API ────
+    async function autoSubmitExam(reason) {
+        if (examSubmitted) return;
+        examSubmitted = true;
+
+        // Show the overlay immediately
+        document.getElementById('autoSubmitOverlay').classList.add('show');
+
+        // Save whatever is on screen right now
+        saveAnswer();
+
+        try {
+            const resp = await fetch(`/student/api/exam/session/${sessionId}/auto-submit`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                // keepalive keeps the request alive even if page is unloading
+                keepalive: true,
+                body: JSON.stringify({ reason: reason, answers: answers })
+            });
+            const data = await resp.json();
+            if (data.redirect) {
+                window.location.href = data.redirect;
+            } else {
+                window.location.href = '/student/dashboard';
+            }
+        } catch (err) {
+            console.error('Auto-submit error:', err);
+            // Fallback – navigate away; the server will handle incomplete sessions
+            window.location.href = '/student/dashboard';
+        }
+    }
+
+    // ── LEAVE DETECTION 1: page becomes hidden ───────────────
+    // Fires when student switches tab, minimises window, or navigates away
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden && !examSubmitted) {
+            autoSubmitExam('visibility_hidden');
+        }
+    });
+
+    // ── LEAVE DETECTION 2: beforeunload (close / refresh / navigate) ──
+    // We can't do async here, so we fire a synchronous beacon as backup
+    window.addEventListener('beforeunload', (e) => {
+        if (examSubmitted) return;
+
+        // Synchronous beacon so the browser sends it even while unloading
+        const payload = JSON.stringify({ reason: 'beforeunload', answers: answers });
+        navigator.sendBeacon(
+            `/student/api/exam/session/${sessionId}/auto-submit`,
+            new Blob([payload], { type: 'application/json' })
+        );
+        examSubmitted = true;
+
+        // Show browser's "leave?" dialog as a last resort
+        e.preventDefault();
+        e.returnValue = 'Your exam will be auto-submitted if you leave. Are you sure?';
+    });
+
+    // ── Initialize exam ──────────────────────────────────────
+    async function initializeExam() {
+        try {
+            const response = await fetch(`/student/api/exam/${examId}/questions`);
+            const data = await response.json();
+            questions = data.questions;
+            document.getElementById('totalQCount').textContent = questions.length;
+            renderQuestionNav();
+            displayQuestion(0);
+            startTimer();
+            if ({{ exam.enable_proctoring | lower }}) {
+                enableProctoring();
+            }
+        } catch (error) {
+            console.error('Error loading questions:', error);
+        }
+    }
+
+    function renderQuestionNav() {
+        const nav = document.getElementById('questionNav');
+        nav.innerHTML = '';
+        questions.forEach((q, idx) => {
+            const div = document.createElement('div');
+            div.className = 'question-num';
+            div.textContent = idx + 1;
+            if (idx === currentQuestion)      div.classList.add('current');
+            if (answers[q.id])                div.classList.add('answered');
+            if (markedQuestions.has(q.id))    div.classList.add('marked');
+            div.addEventListener('click', () => {
+                saveAnswer();
+                currentQuestion = idx;
+                displayQuestion(idx);
+                updateNav();
+            });
+            nav.appendChild(div);
+        });
+    }
+
+    function displayQuestion(index) {
+        const q = questions[index];
+        let imageHtml = '';
+        if (q.image) {
+            imageHtml = `
+                <div class="question-image-container">
+                    <img src="${q.image}" alt="Question ${index+1} Image"
+                         class="question-image"
+                         onclick="openImageZoom('${q.image}')"
+                         title="Click to enlarge" loading="lazy">
+                    <div class="image-caption"><i class="fas fa-search-plus"></i> Click to enlarge</div>
+                </div>`;
+        }
+
+        let html = `
+            <h5>Question ${index+1} of ${questions.length}
+                <span class="badge bg-secondary ms-2" style="font-size:.75rem;">
+                    ${q.marks||1} mark${(q.marks||1)>1?'s':''}
+                </span>
+            </h5>
+            <div class="question-text mt-3"><p>${q.text}</p>${imageHtml}</div>`;
+
+        if (q.type === 'mcq' || q.type === 'true_false') {
+            html += '<div class="options mt-3">';
+            q.options.forEach(opt => {
+                const checked = answers[q.id] === opt.id ? 'checked' : '';
+                let optImg = '';
+                if (opt.image) {
+                    optImg = `<div class="question-image-container mt-2">
+                        <img src="${opt.image}" class="question-image"
+                             style="max-width:100px;max-height:70px;"
+                             onclick="openImageZoom('${opt.image}')" loading="lazy">
+                    </div>`;
+                }
+                html += `
+                    <label class="option ${checked ? 'selected' : ''}">
+                        <input type="radio" name="answer" value="${opt.id}"
+                               ${checked} onchange="updateOptionUI()">
+                        <strong>${opt.label}.</strong> ${opt.text}${optImg}
+                    </label>`;
+            });
+            html += '</div>';
+        } else if (q.type === 'theory') {
+            const value = answers[q.id] || '';
+            html += `<textarea class="form-control mt-3" rows="8"
+                               id="theoryAnswer"
+                               placeholder="Type your answer here…">${value}</textarea>`;
+        }
+
+        document.getElementById('currentQuestion').innerHTML = html;
+        currentQuestion = index;
+        updateNav();
+    }
+
+    function updateOptionUI() {
+        document.querySelectorAll('.option').forEach(opt => {
+            const input = opt.querySelector('input');
+            if (input.checked) {
+                opt.classList.add('selected');
+                answers[questions[currentQuestion].id] = parseInt(input.value);
+            } else {
+                opt.classList.remove('selected');
+            }
+        });
+        renderQuestionNav();
+    }
+
+    function saveAnswer() {
+        const q = questions[currentQuestion];
+        if (!q) return;
+        if (q.type === 'mcq' || q.type === 'true_false') {
+            const sel = document.querySelector('input[name="answer"]:checked');
+            if (sel) {
+                answers[q.id] = parseInt(sel.value);
+                submitAnswer(q.id, parseInt(sel.value));
+            }
+        } else if (q.type === 'theory') {
+            const ta = document.getElementById('theoryAnswer');
+            if (ta && ta.value) {
+                answers[q.id] = ta.value;
+                submitAnswer(q.id, ta.value);
+            }
+        }
+    }
+
+    async function submitAnswer(questionId, answer) {
+        try {
+            await fetch(`/student/api/exam/${examId}/submit-answer`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question_id: questionId, answer: answer })
+            });
+        } catch (err) {
+            console.error('Error submitting answer:', err);
+        }
+    }
+
+    function updateNav() {
+        renderQuestionNav();
+        const navItems = document.querySelectorAll('.question-num');
+        if (navItems[currentQuestion]) navItems[currentQuestion].classList.add('current');
+    }
+
+    document.getElementById('prevBtn').addEventListener('click', () => {
+        if (currentQuestion > 0) {
+            saveAnswer();
+            currentQuestion--;
+            displayQuestion(currentQuestion);
+        }
+    });
+
+    document.getElementById('nextBtn').addEventListener('click', () => {
+        if (currentQuestion < questions.length - 1) {
+            saveAnswer();
+            currentQuestion++;
+            displayQuestion(currentQuestion);
+        }
+    });
+
+    document.getElementById('markReviewBtn').addEventListener('click', () => {
+        const q = questions[currentQuestion];
+        markedQuestions.has(q.id) ? markedQuestions.delete(q.id) : markedQuestions.add(q.id);
+        renderQuestionNav();
+    });
+
+    document.getElementById('submitBtn').addEventListener('click', () => {
+        if (examSubmitted) return;
+        examSubmitted = true;
+        saveAnswer();
+        window.location.href = `/student/exam/session/${sessionId}/submit`;
+    });
+
+    // ── Timer ────────────────────────────────────────────────
+    function startTimer() {
+        const interval = setInterval(() => {
+            timeLeft--;
+            updateTimerDisplay();
+            if (timeLeft <= 0) {
+                clearInterval(interval);
+                if (!examSubmitted) {
+                    examSubmitted = true;
+                    alert('Time is up! Submitting your exam…');
+                    window.location.href = `/student/exam/session/${sessionId}/submit`;
+                }
+            }
+        }, 1000);
+    }
+
+    function updateTimerDisplay() {
+        const mins = Math.floor(timeLeft / 60);
+        const secs = timeLeft % 60;
+        const el   = document.getElementById('timer');
+        el.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+        if (timeLeft <= 60)       { el.classList.remove('warning'); el.classList.add('danger'); }
+        else if (timeLeft <= 300) { el.classList.add('warning'); }
+    }
+
+    // ── Proctoring ───────────────────────────────────────────
+    function enableProctoring() {
+        document.addEventListener('copy',  e => { e.preventDefault(); logProctoringEvent('copy', {}); });
+        document.addEventListener('paste', e => { e.preventDefault(); logProctoringEvent('paste', {}); });
+        // Note: visibilitychange is already used for auto-submit above;
+        // proctoring log is still recorded inside autoSubmitExam via the API.
+        window.addEventListener('blur', () => logProctoringEvent('focus_lost', {}));
+    }
+
+    async function logProctoringEvent(eventType, eventData) {
+        try {
+            await fetch(`/student/api/exam/${examId}/proctoring-event`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ event_type: eventType, event_data: eventData })
+            });
+        } catch (err) {
+            console.error('Proctoring log error:', err);
+        }
+    }
+
+    function showProctoringAlert(msg) {
+        const el = document.getElementById('proctoringAlert');
+        el.textContent = msg;
+        el.style.display = 'block';
+        setTimeout(() => { el.style.display = 'none'; }, 3000);
+    }
+
+    // ── Boot ─────────────────────────────────────────────────
+    initializeExam();
+</script>
+{% endblock %}

@@ -1,0 +1,442 @@
+{% extends "base.html" %}
+
+{% block title %}Student Exam Reports - {{ exam.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card shadow-sm border-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                        <div class="mb-2 mb-md-0">
+                            <h2 class="mb-1">
+                                <i class="fas fa-file-alt text-primary"></i>
+                                Student Exam Reports
+                            </h2>
+                            <p class="text-muted mb-0">
+                                <strong>{{ exam.title }}</strong> | 
+                                <span class="badge bg-info">{{ exam.subject }}</span> | 
+                                <i class="fas fa-clock"></i> {{ exam.duration }} minutes |
+                                <i class="fas fa-calendar"></i> {{ exam.created_at.strftime('%B %d, %Y') }}
+                            </p>
+                        </div>
+                        <div>
+                            <a href="{{ url_for('teacher.dashboard') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Dashboard
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card shadow-sm h-100 border-primary">
+                <div class="card-body text-center">
+                    <i class="fas fa-users fa-3x text-primary mb-2"></i>
+                    <h2 class="mb-0">{{ stats.total_students }}</h2>
+                    <p class="text-muted mb-0">Total Students</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card shadow-sm h-100 border-success">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle fa-3x text-success mb-2"></i>
+                    <h2 class="mb-0">{{ stats.passed }}</h2>
+                    <p class="text-muted mb-0">Passed ({{ "%.1f"|format(stats.pass_rate) }}%)</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card shadow-sm h-100 border-danger">
+                <div class="card-body text-center">
+                    <i class="fas fa-times-circle fa-3x text-danger mb-2"></i>
+                    <h2 class="mb-0">{{ stats.failed }}</h2>
+                    <p class="text-muted mb-0">Failed</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card shadow-sm h-100 border-info">
+                <div class="card-body text-center">
+                    <i class="fas fa-percentage fa-3x text-info mb-2"></i>
+                    <h2 class="mb-0">{{ "%.1f"|format(stats.avg_score) }}%</h2>
+                    <p class="text-muted mb-0">Average Score</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Actions -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">
+                        <i class="fas fa-tools"></i> Bulk Actions
+                    </h5>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{{ url_for('teacher.generate_all_reports', exam_id=exam.id) }}" 
+                           class="btn btn-success btn-lg">
+                            <i class="fas fa-file-archive"></i> Download All Reports (ZIP)
+                        </a>
+                        <button onclick="downloadSelected()" class="btn btn-primary btn-lg" id="downloadSelectedBtn">
+                            <i class="fas fa-download"></i> Download Selected
+                        </button>
+                        <button onclick="selectAll()" class="btn btn-outline-primary">
+                            <i class="fas fa-check-square"></i> Select All
+                        </button>
+                        <button onclick="deselectAll()" class="btn btn-outline-secondary">
+                            <i class="fas fa-square"></i> Deselect All
+                        </button>
+                        <button onclick="showPrintInstructions()" class="btn btn-outline-info">
+                            <i class="fas fa-info-circle"></i> Print Instructions
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Students List -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-list"></i> Student Reports 
+                            <span class="badge bg-secondary" id="selectedCount">0 selected</span>
+                        </h5>
+                        <div>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="searchInput" 
+                                   placeholder="Search students..."
+                                   onkeyup="filterTable()">
+                        </div>
+                    </div>
+                    
+                    {% if students_data %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped" id="studentsTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th style="width: 50px;">
+                                        <input type="checkbox" 
+                                               id="selectAllCheckbox" 
+                                               onchange="toggleAll(this)"
+                                               class="form-check-input">
+                                    </th>
+                                    <th>#</th>
+                                    <th>Student Name</th>
+                                    <th>Admission No.</th>
+                                    <th>Class</th>
+                                    <th>Score</th>
+                                    <th>Percentage</th>
+                                    <th>Grade</th>
+                                    <th>Status</th>
+                                    <th style="width: 150px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for data in students_data %}
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" 
+                                               class="student-checkbox form-check-input" 
+                                               value="{{ data.user.id }}"
+                                               data-student-name="{{ data.user.full_name }}"
+                                               onchange="updateSelectedCount()">
+                                    </td>
+                                    <td>{{ loop.index }}</td>
+                                    <td>
+                                        <strong>{{ data.user.full_name }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ data.user.email or 'No email' }}</small>
+                                    </td>
+                                    <td>
+                                        <code>{{ data.student.admission_number }}</code>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">
+                                            {{ data.class.name if data.class else 'N/A' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <strong>{{ data.result.marks_obtained }}</strong>/{{ data.result.total_marks }}
+                                    </td>
+                                    <td>
+                                        <span class="badge fs-6 
+                                              {% if data.result.percentage >= 80 %}bg-success
+                                              {% elif data.result.percentage >= 60 %}bg-info
+                                              {% elif data.result.percentage >= 50 %}bg-warning
+                                              {% else %}bg-danger{% endif %}">
+                                            {{ "%.2f"|format(data.result.percentage) }}%
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary fs-6">
+                                            {{ data.result.grade or 'N/A' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if data.result.is_passed %}
+                                            <span class="badge bg-success fs-6">
+                                                <i class="fas fa-check"></i> PASSED
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-danger fs-6">
+                                                <i class="fas fa-times"></i> FAILED
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('teacher.generate_student_report', exam_id=exam.id, student_id=data.user.id) }}" 
+                                               class="btn btn-sm btn-success" 
+                                               title="Download Report"
+                                               target="_blank">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                            <a href="{{ url_for('teacher.result_details', result_id=data.result.id) }}" 
+                                               class="btn btn-sm btn-info" 
+                                               title="View Details"
+                                               target="_blank">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info text-center py-5">
+                        <i class="fas fa-info-circle fa-3x mb-3"></i>
+                        <h5>No Students Have Taken This Exam Yet</h5>
+                        <p class="mb-0">Student reports will appear here once they complete the exam.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Print Instructions Modal -->
+<div class="modal fade" id="printInstructionsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-print"></i> How to Print Student Reports
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6 class="mb-3">Printing Individual Reports:</h6>
+                <ol>
+                    <li>Click the <span class="badge bg-success"><i class="fas fa-download"></i></span> button next to any student</li>
+                    <li>The report will download as a Word document (.docx)</li>
+                    <li>Open the downloaded file in Microsoft Word</li>
+                    <li>Click File → Print or press Ctrl+P (Cmd+P on Mac)</li>
+                    <li>Adjust print settings as needed and print</li>
+                </ol>
+
+                <hr>
+
+                <h6 class="mb-3">Printing Multiple Reports:</h6>
+                <ol>
+                    <li>Select students using the checkboxes</li>
+                    <li>Click "Download Selected" or "Download All Reports (ZIP)"</li>
+                    <li>Extract the ZIP file to a folder</li>
+                    <li>Open each document and print, or:
+                        <ul>
+                            <li><strong>Windows:</strong> Select all files → Right-click → Print</li>
+                            <li><strong>Mac:</strong> Select all files → File → Print Documents</li>
+                        </ul>
+                    </li>
+                </ol>
+
+                <hr>
+
+                <h6 class="mb-3">Customizing School Info:</h6>
+                <p>To add your school name and logo to reports:</p>
+                <ol>
+                    <li>Open <code>routes/teacher.py</code></li>
+                    <li>Find the <code>get_school_settings()</code> function</li>
+                    <li>Update the school information:
+                        <pre><code>return {
+    'school_name': 'Your School Name',
+    'school_address': 'Your Address',
+    'school_phone': 'Your Phone',
+    'school_email': 'your@email.com',
+    'school_logo_path': 'static/uploads/school_logo.png'
+}</code></pre>
+                    </li>
+                    <li>Save your school logo as <code>static/uploads/school_logo.png</code></li>
+                    <li>Restart the application</li>
+                </ol>
+
+                <hr>
+
+                <h6 class="mb-3">Tips:</h6>
+                <ul>
+                    <li><i class="fas fa-check text-success"></i> Each report is designed to fit within 4 pages</li>
+                    <li><i class="fas fa-check text-success"></i> Reports include detailed question analysis</li>
+                    <li><i class="fas fa-check text-success"></i> All options are clearly marked (correct/incorrect)</li>
+                    <li><i class="fas fa-check text-success"></i> Use "Print Selection" in Word to print specific pages</li>
+                    <li><i class="fas fa-check text-success"></i> Consider duplex (double-sided) printing to save paper</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Toggle all checkboxes
+function toggleAll(source) {
+    const checkboxes = document.querySelectorAll('.student-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = source.checked;
+    });
+    updateSelectedCount();
+}
+
+// Select all
+function selectAll() {
+    const checkboxes = document.querySelectorAll('.student-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+    });
+    document.getElementById('selectAllCheckbox').checked = true;
+    updateSelectedCount();
+}
+
+// Deselect all
+function deselectAll() {
+    const checkboxes = document.querySelectorAll('.student-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    document.getElementById('selectAllCheckbox').checked = false;
+    updateSelectedCount();
+}
+
+// Update selected count
+function updateSelectedCount() {
+    const checked = document.querySelectorAll('.student-checkbox:checked').length;
+    document.getElementById('selectedCount').textContent = checked + ' selected';
+}
+
+// Download selected reports
+function downloadSelected() {
+    const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+    
+    if (checkboxes.length === 0) {
+        alert('Please select at least one student to download reports.');
+        return;
+    }
+    
+    if (checkboxes.length === 1) {
+        // Just download the single file
+        const studentId = checkboxes[0].value;
+        const url = "{{ url_for('teacher.generate_student_report', exam_id=exam.id, student_id=0) }}".replace('0', studentId);
+        window.open(url, '_blank');
+    } else {
+        // For multiple, download all as ZIP
+        window.location.href = "{{ url_for('teacher.generate_all_reports', exam_id=exam.id) }}";
+    }
+}
+
+// Filter table by search
+function filterTable() {
+    const input = document.getElementById('searchInput');
+    const filter = input.value.toUpperCase();
+    const table = document.getElementById('studentsTable');
+    const tr = table.getElementsByTagName('tr');
+    
+    for (let i = 1; i < tr.length; i++) {
+        const td = tr[i].getElementsByTagName('td');
+        let found = false;
+        
+        for (let j = 0; j < td.length; j++) {
+            if (td[j]) {
+                const txtValue = td[j].textContent || td[j].innerText;
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    found = true;
+                    break;
+                }
+            }
+        }
+        
+        tr[i].style.display = found ? '' : 'none';
+    }
+}
+
+// Show print instructions modal
+function showPrintInstructions() {
+    const modal = new bootstrap.Modal(document.getElementById('printInstructionsModal'));
+    modal.show();
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateSelectedCount();
+});
+</script>
+
+<style>
+.card {
+    border-radius: 10px;
+}
+
+.table-responsive {
+    border-radius: 5px;
+}
+
+.btn-group .btn {
+    margin: 0 2px;
+}
+
+.badge {
+    font-size: 0.85rem;
+    padding: 0.35em 0.65em;
+}
+
+.fs-6 {
+    font-size: 0.95rem !important;
+}
+
+.gap-2 > * {
+    margin-right: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+}
+
+#searchInput {
+    max-width: 300px;
+}
+
+@media (max-width: 768px) {
+    .d-flex.gap-2 {
+        flex-direction: column;
+    }
+    
+    .gap-2 > * {
+        width: 100%;
+        margin-right: 0 !important;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Student Reports - E-Exam Platform{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-file-alt"></i> Generate Student Reports</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item active">Student Reports</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-filter"></i> Report Filters</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin.student_reports') }}">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="class_id" class="form-label">
+                                    <i class="fas fa-users"></i> Filter by Class
+                                </label>
+                                <select class="form-select" id="class_id" name="class_id">
+                                    <option value="">-- All Classes --</option>
+                                    {% for class in classes %}
+                                    <option value="{{ class.id }}">{{ class.name }} ({{ class.code }})</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="form-text text-muted">Select a specific class or leave blank for all classes</small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="exam_id" class="form-label">
+                                    <i class="fas fa-clipboard-list"></i> Filter by Exam
+                                </label>
+                                <select class="form-select" id="exam_id" name="exam_id">
+                                    <option value="">-- All Exams --</option>
+                                    {% for exam in exams %}
+                                    <option value="{{ exam.id }}">
+                                        {{ exam.title }} 
+                                        {% if exam.class_obj %}({{ exam.class_obj.name }}){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <small class="form-text text-muted">Select a specific exam or leave blank for overall performance</small>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="report_type" class="form-label">
+                                <i class="fas fa-chart-bar"></i> Report Type
+                            </label>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="report_type" 
+                                               id="report_summary" value="summary" checked>
+                                        <label class="form-check-label" for="report_summary">
+                                            <strong>Summary Report</strong>
+                                            <br><small class="text-muted">Basic student list with scores and statistics</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="report_type" 
+                                               id="report_detailed" value="detailed">
+                                        <label class="form-check-label" for="report_detailed">
+                                            <strong>Detailed Report</strong>
+                                            <br><small class="text-muted">Individual student breakdowns with question analysis</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="report_type" 
+                                               id="report_performance" value="performance">
+                                        <label class="form-check-label" for="report_performance">
+                                            <strong>Performance Analysis</strong>
+                                            <br><small class="text-muted">Charts and advanced statistics</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Note:</strong> You must select at least a class OR an exam to generate a report.
+                            Selecting both will generate a report for that specific class in that specific exam.
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-file-download"></i> Generate Report
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-question-circle"></i> Report Guide</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Report Types Explained</h6>
+                    
+                    <div class="mb-3">
+                        <strong>Summary Report</strong>
+                        <ul class="small">
+                            <li>List of all students</li>
+                            <li>Basic scores and percentages</li>
+                            <li>Pass/Fail status</li>
+                            <li>Overall statistics</li>
+                        </ul>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Detailed Report</strong>
+                        <ul class="small">
+                            <li>Question-by-question breakdown</li>
+                            <li>Individual student analysis</li>
+                            <li>Answer comparison</li>
+                            <li>Strengths and weaknesses</li>
+                        </ul>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Performance Analysis</strong>
+                        <ul class="small">
+                            <li>Charts and graphs</li>
+                            <li>Score distribution</li>
+                            <li>Comparative analysis</li>
+                            <li>Trends and insights</li>
+                        </ul>
+                    </div>
+
+                    <hr>
+
+                    <h6>Filter Combinations</h6>
+                    <ul class="small">
+                        <li><strong>Class only:</strong> All exams for that class</li>
+                        <li><strong>Exam only:</strong> All students who took that exam</li>
+                        <li><strong>Both:</strong> Specific class performance in specific exam</li>
+                    </ul>
+
+                    <hr>
+
+                    <h6>Output Format</h6>
+                    <p class="small">
+                        Reports are generated as Microsoft Word (.docx) documents and can be downloaded 
+                        from the outputs section after generation.
+                    </p>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-line"></i> Quick Stats</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Total Classes:</span>
+                        <strong>{{ classes|length }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Total Exams:</span>
+                        <strong>{{ exams|length }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Active Students:</span>
+                        <strong id="total-students">Loading...</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Load total students count
+fetch('/api/stats/students-count')
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('total-students').textContent = data.count;
+    })
+    .catch(() => {
+        document.getElementById('total-students').textContent = 'N/A';
+    });
+
+// Dynamic help text based on selections
+document.getElementById('class_id').addEventListener('change', updateHelpText);
+document.getElementById('exam_id').addEventListener('change', updateHelpText);
+
+function updateHelpText() {
+    const classSelect = document.getElementById('class_id');
+    const examSelect = document.getElementById('exam_id');
+    
+    const hasClass = classSelect.value !== '';
+    const hasExam = examSelect.value !== '';
+    
+    // You can add dynamic help text here if needed
+}
+</script>
+{% endblock %}

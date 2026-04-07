@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit Student' if student else 'Create Student' }} - E-Exam Platform{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2>{{ 'Edit Student' if student else 'Create New Student' }}</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin.manage_students') }}">Students</a></li>
+                    <li class="breadcrumb-item active">{{ 'Edit' if student else 'Create' }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Student Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="first_name" class="form-label">First Name *</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name" 
+                                       value="{{ student.user.first_name if student else '' }}" required>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="last_name" class="form-label">Last Name *</label>
+                                <input type="text" class="form-control" id="last_name" name="last_name" 
+                                       value="{{ student.user.last_name if student else '' }}" required>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="username" class="form-label">Username *</label>
+                                <input type="text" class="form-control" id="username" name="username" 
+                                       value="{{ student.user.username if student else '' }}" required>
+                                {% if student %}
+                                <small class="form-text text-muted">Current: {{ student.user.username }}</small>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="password" class="form-label">Password {% if not student %}*{% endif %}</label>
+                                <input type="password" class="form-control" id="password" name="password" 
+                                       {% if not student %}required{% endif %}>
+                                {% if student %}
+                                <small class="form-text text-muted">Leave blank to keep current password</small>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="email" class="form-label">Email (Optional)</label>
+                                <input type="email" class="form-control" id="email" name="email" 
+                                       value="{{ student.user.email if student and student.user.email else '' }}">
+                                <small class="form-text text-muted">Email address is optional</small>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="gender" class="form-label">Gender</label>
+                                <select class="form-select" id="gender" name="gender">
+                                    <option value="Male" {{ 'selected' if student and student.user.gender == 'Male' else '' }}>Male</option>
+                                    <option value="Female" {{ 'selected' if student and student.user.gender == 'Female' else '' }}>Female</option>
+                                    <option value="Other" {{ 'selected' if student and student.user.gender == 'Other' else '' }}>Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="admission_number" class="form-label">Admission Number *</label>
+                                <input type="text" class="form-control" id="admission_number" name="admission_number" 
+                                       value="{{ student.admission_number if student else '' }}" 
+                                       {{ 'readonly' if student else '' }} required>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="class_id" class="form-label">Class</label>
+                                <select class="form-select" id="class_id" name="class_id">
+                                    <option value="">-- No Class Assigned --</option>
+                                    {% for cls in classes %}
+                                    <option value="{{ cls.id }}" {{ 'selected' if student and student.class_id == cls.id else '' }}>
+                                        {{ cls.name }} ({{ cls.code }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('admin.manage_students') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> {{ 'Update Student' if student else 'Create Student' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Help</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Required Fields</h6>
+                    <ul>
+                        <li>First Name & Last Name</li>
+                        <li>Username</li>
+                        <li>Admission Number</li>
+                        {% if not student %}
+                        <li>Password (required for new students)</li>
+                        {% endif %}
+                    </ul>
+                    <hr>
+                    <h6>Optional Fields</h6>
+                    <ul>
+                        <li>Email address</li>
+                        <li>Class assignment</li>
+                        <li>Gender (defaults to Other)</li>
+                    </ul>
+                    <hr>
+                    <h6>Tips</h6>
+                    <ul>
+                        <li>Use unique admission numbers and usernames</li>
+                        <li>Email is optional but recommended</li>
+                        <li>Class assignment can be set later</li>
+                        {% if student %}
+                        <li>Leave password blank to keep current password</li>
+                        <li>Username can be changed if unique</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

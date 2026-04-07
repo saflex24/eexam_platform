@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+
+{% block title %}Result Details - {{ student_user.first_name }} {{ student_user.last_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        font-family: Tahoma, Geneva, Verdana, sans-serif;
+        font-size: 12pt;
+    }
+    
+    .result-details-container {
+        font-family: Tahoma, Geneva, Verdana, sans-serif;
+        font-size: 12pt;
+    }
+    
+    .result-details-container h2,
+    .result-details-container h3,
+    .result-details-container h4,
+    .result-details-container h5,
+    .result-details-container h6,
+    .result-details-container p,
+    .result-details-container .card,
+    .result-details-container .badge {
+        font-family: Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    .two-column-layout {
+        column-count: 2;
+        column-gap: 30px;
+    }
+    
+    .answer-card {
+        break-inside: avoid;
+        margin-bottom: 20px;
+        font-size: 12pt;
+        page-break-inside: avoid;
+    }
+    
+    .question-number {
+        font-weight: bold;
+        font-size: 12pt;
+    }
+    
+    .question-text {
+        font-weight: 600;
+        margin: 10px 0;
+        font-size: 12pt;
+        line-height: 1.5;
+    }
+    
+    .answer-text {
+        font-size: 12pt;
+        line-height: 1.5;
+    }
+    
+    .option-item {
+        padding: 8px 10px;
+        margin: 5px 0;
+        border-radius: 4px;
+        font-size: 12pt;
+    }
+    
+    .option-correct {
+        background-color: #d4edda;
+        border-left: 4px solid #28a745;
+        font-weight: 600;
+    }
+    
+    .option-incorrect {
+        background-color: #f8d7da;
+        border-left: 4px solid #dc3545;
+    }
+    
+    .option-student-answer {
+        font-weight: bold;
+    }
+    
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+        
+        .two-column-layout {
+            column-count: 2;
+            column-gap: 20px;
+        }
+        
+        .answer-card {
+            page-break-inside: avoid;
+        }
+        
+        nav, .sidebar, .btn, .breadcrumb {
+            display: none !important;
+        }
+        
+        body {
+            font-size: 12pt;
+        }
+    }
+    
+    @media (max-width: 992px) {
+        .two-column-layout {
+            column-count: 1;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4 result-details-container">
+    <div class="row mb-4 no-print">
+        <div class="col-12">
+            <a href="{{ url_for('student.dashboard') }}" class="btn btn-outline-secondary mb-3">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+            <h2><i class="fas fa-user-graduate"></i> Student Result Details</h2>
+        </div>
+    </div>
+
+    <!-- Student & Exam Info -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Student Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Name:</strong> {{ student_user.first_name }} {{ student_user.last_name }}</p>
+                            <p><strong>Email:</strong> {{ student_user.email }}</p>
+                            {% if student_profile %}
+                            <p><strong>Admission No:</strong> {{ student_profile.admission_number }}</p>
+                            {% else %}
+                            <p><strong>Admission No:</strong> N/A</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Exam:</strong> {{ result.exam.title }}</p>
+                            <p><strong>Subject:</strong> {{ result.exam.subject }}</p>
+                            <p><strong>Submitted:</strong> {{ result.submitted_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+                            <p><strong>Duration:</strong> {{ result.exam.duration_minutes }} minutes</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card text-center {% if result.is_passed %}border-success{% else %}border-danger{% endif %}">
+                <div class="card-body">
+                    <h6 class="text-muted">Score</h6>
+                    <h1 class="display-4 {% if result.is_passed %}text-success{% else %}text-danger{% endif %}">
+                        {{ "%.2f"|format(result.percentage) }}%
+                    </h1>
+                    <p class="mb-0">
+                        <strong>{{ result.marks_obtained }}/{{ result.total_marks }}</strong> marks
+                    </p>
+                    <hr>
+                    {% if result.is_passed %}
+                    <span class="badge bg-success" style="font-size: 1.2rem; padding: 10px 20px;">
+                        <i class="fas fa-check-circle"></i> PASSED
+                    </span>
+                    {% else %}
+                    <span class="badge bg-danger" style="font-size: 1.2rem; padding: 10px 20px;">
+                        <i class="fas fa-times-circle"></i> FAILED
+                    </span>
+                    {% endif %}
+                    {% if result.grade %}
+                    <p class="mt-3 mb-0"><strong>Grade:</strong> <span class="badge bg-primary" style="font-size: 1.1rem;">{{ result.grade }}</span></p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center border-success">
+                <div class="card-body">
+                    <h3 class="text-success">{{ correct_count }}</h3>
+                    <p class="mb-0 text-muted">Correct Answers</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-danger">
+                <div class="card-body">
+                    <h3 class="text-danger">{{ incorrect_count }}</h3>
+                    <p class="mb-0 text-muted">Incorrect Answers</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-warning">
+                <div class="card-body">
+                    <h3 class="text-warning">{{ unattempted_count }}</h3>
+                    <p class="mb-0 text-muted">Unattempted</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-info">
+                <div class="card-body">
+                    <h3 class="text-info">{{ result.total_time_minutes }}</h3>
+                    <p class="mb-0 text-muted">Minutes Used</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Button -->
+    <div class="row mb-3 no-print">
+        <div class="col-12 text-end">
+            <button class="btn btn-primary" onclick="window.print()">
+                <i class="fas fa-print"></i> Print Result
+            </button>
+        </div>
+    </div>
+
+    <!-- Answer Review Header -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-clipboard-list"></i> Detailed Answer Review</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Answer Review in Two Columns -->
+    <div class="row">
+        <div class="col-12">
+            {% if answers %}
+            <div class="two-column-layout">
+                {% for answer in answers %}
+                <div class="answer-card card mb-3 {% if answer.is_correct %}border-success{% elif answer.is_correct == False %}border-danger{% else %}border-secondary{% endif %}">
+                    <div class="card-header {% if answer.is_correct %}bg-success text-white{% elif answer.is_correct == False %}bg-danger text-white{% else %}bg-secondary text-white{% endif %}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="question-number">Question {{ loop.index }}</span>
+                            <span>
+                                {% if answer.is_correct %}
+                                <i class="fas fa-check-circle"></i> Correct
+                                {% elif answer.is_correct == False %}
+                                <i class="fas fa-times-circle"></i> Incorrect
+                                {% else %}
+                                <i class="fas fa-hourglass-half"></i> Not Graded
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="question-text">
+                            {{ answer.question.question_text }}
+                        </div>
+                        
+                        <p class="mb-2"><strong>Marks:</strong> {{ answer.marks_obtained or 0 }}/{{ answer.question.marks }}</p>
+                        
+                        {% if answer.question.question_type in ['mcq', 'true_false'] %}
+                        <hr>
+                        <div class="answer-text">
+                            <p class="mb-2"><strong>Options:</strong></p>
+                            {% for option in answer.question.options %}
+                            <div class="option-item 
+                                {% if option.is_correct %}option-correct{% endif %}
+                                {% if answer.selected_option and answer.selected_option.id == option.id and not option.is_correct %}option-incorrect{% endif %}
+                                {% if answer.selected_option and answer.selected_option.id == option.id %}option-student-answer{% endif %}">
+                                {{ option.option_label }}. {{ option.option_text }}
+                                {% if option.is_correct %}
+                                <i class="fas fa-check text-success float-end"></i> <span class="badge bg-success float-end me-2">Correct</span>
+                                {% endif %}
+                                {% if answer.selected_option and answer.selected_option.id == option.id %}
+                                <span class="badge bg-primary float-end me-2">Your Answer</span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                            
+                            {% if not answer.selected_option %}
+                            <div class="alert alert-warning mt-2 mb-0">
+                                <i class="fas fa-exclamation-triangle"></i> Not answered
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        {% if answer.question.question_type == 'theory' %}
+                        <hr>
+                        <p class="mb-2"><strong>Your Answer:</strong></p>
+                        <div class="bg-light p-3 rounded answer-text">
+                            {{ answer.theory_answer or 'Not answered' }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> No answers recorded for this exam.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Proctoring Report -->
+    {% if exam_session %}
+    <div class="row mt-4 no-print">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Proctoring Report</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <p><strong>Tab Switches:</strong> 
+                                <span class="badge {% if exam_session.tab_switches > 5 %}bg-danger{% else %}bg-secondary{% endif %}" style="font-size: 11pt;">
+                                    {{ exam_session.tab_switches }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>Copy Attempts:</strong> 
+                                <span class="badge {% if exam_session.copy_attempts > 3 %}bg-danger{% else %}bg-secondary{% endif %}" style="font-size: 11pt;">
+                                    {{ exam_session.copy_attempts }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>Paste Attempts:</strong> 
+                                <span class="badge {% if exam_session.paste_attempts > 3 %}bg-danger{% else %}bg-secondary{% endif %}" style="font-size: 11pt;">
+                                    {{ exam_session.paste_attempts }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>Webcam Captures:</strong> 
+                                <span class="badge bg-info" style="font-size: 11pt;">
+                                    {{ exam_session.webcam_captures }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                    {% if exam_session.tab_switches > 5 or exam_session.copy_attempts > 3 or exam_session.paste_attempts > 3 %}
+                    <div class="alert alert-danger mt-3 mb-0">
+                        <i class="fas fa-exclamation-triangle"></i> <strong>Warning:</strong> Suspicious activity detected during exam. Multiple violations recorded.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Back Button at Bottom -->
+    <div class="row mt-4 mb-4 no-print">
+        <div class="col-12">
+            <a href="{{ url_for('student.dashboard') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+            <a href="{{ url_for('student.my_results') }}" class="btn btn-outline-primary">
+                <i class="fas fa-list"></i> View All Results
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Import Students - E-Exam Platform{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0"><i class="fas fa-file-import"></i> Import Students</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-4">
+                    <strong>Instructions:</strong>
+                    <ul class="mb-0">
+                        <li>Download the template to see the required format</li>
+                        <li>Fill in student data in the CSV/Excel file</li>
+                        <li>Upload the file to import all students at once</li>
+                    </ul>
+                </div>
+
+                <div class="mb-4">
+                    <a href="{{ url_for('admin.download_student_template') }}" class="btn btn-secondary">
+                        <i class="fas fa-download"></i> Download Template
+                    </a>
+                </div>
+
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Select File (CSV or Excel)</label>
+                        <input type="file" class="form-control" id="file" name="file" accept=".csv,.xlsx,.xls" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload"></i> Import Students
+                    </button>
+                    <a href="{{ url_for('admin.manage_students') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back
+                    </a>
+                </form>
+
+                <hr class="my-4">
+
+                <h5>Template Format</h5>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead>
+                            <tr>
+                                <th>admission_number</th>
+                                <th>first_name</th>
+                                <th>last_name</th>
+                                <th>username</th>
+                                <th>email</th>
+                                <th>gender</th>
+                                <th>password</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>ADM001</td>
+                                <td>John</td>
+                                <td>Doe</td>
+                                <td>johndoe</td>
+                                <td>john@example.com</td>
+                                <td>Male</td>
+                                <td>SecurePass123!</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

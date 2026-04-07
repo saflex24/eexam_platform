@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Class Ranking - E-Exam Platform{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-trophy"></i> Class Ranking</h2>
+            <p class="text-muted">Your performance compared to classmates</p>
+        </div>
+    </div>
+
+    {% if student_class %}
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Your Class</h5>
+                    <h3 class="text-primary">{{ student_class.name }}</h3>
+                    <p class="text-muted">{{ student_class.section or 'No Section' }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Your Rank</h5>
+                    <h3 class="text-success">
+                        {% if your_rank %}
+                            #{{ your_rank }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </h3>
+                    <p class="text-muted">Out of {{ total_students }} students</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Average Score</h5>
+                    <h3 class="text-info">
+                        {% if your_average %}
+                            {{ "%.2f"|format(your_average) }}%
+                        {% else %}
+                            0.00%
+                        {% endif %}
+                    </h3>
+                    <p class="text-muted">Across all exams</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-list-ol"></i> Top Performers</h5>
+                </div>
+                <div class="card-body">
+                    {% if rankings %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Student Name</th>
+                                    <th>Admission Number</th>
+                                    <th>Exams Taken</th>
+                                    <th>Average Score</th>
+                                    <th>Total Marks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ranking in rankings %}
+                                <tr {% if ranking.student_id == current_user.student_profile.id %}class="table-primary"{% endif %}>
+                                    <td>
+                                        <strong>#{{ loop.index }}</strong>
+                                        {% if loop.index == 1 %}
+                                            <i class="fas fa-trophy text-warning"></i>
+                                        {% elif loop.index == 2 %}
+                                            <i class="fas fa-medal text-secondary"></i>
+                                        {% elif loop.index == 3 %}
+                                            <i class="fas fa-medal" style="color: #cd7f32;"></i>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ ranking.first_name }} {{ ranking.last_name }}
+                                        {% if ranking.student_id == current_user.student_profile.id %}
+                                            <span class="badge bg-primary">You</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ ranking.admission_number }}</td>
+                                    <td>{{ ranking.exam_count }}</td>
+                                    <td>
+                                        <div class="progress" style="height: 25px;">
+                                            <div class="progress-bar bg-success" role="progressbar" 
+                                                 style="width: {{ ranking.average_percentage }}%;" 
+                                                 aria-valuenow="{{ ranking.average_percentage }}" 
+                                                 aria-valuemin="0" aria-valuemax="100">
+                                                {{ "%.2f"|format(ranking.average_percentage) }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ "%.2f"|format(ranking.total_marks) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> No ranking data available yet. Complete some exams to see your ranking!
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> You are not enrolled in any class yet. Please contact your administrator.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .table-primary {
+        background-color: rgba(13, 110, 253, 0.1);
+        font-weight: bold;
+    }
+</style>
+{% endblock %}

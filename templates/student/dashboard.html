@@ -1,0 +1,471 @@
+{% extends "base.html" %}
+
+{% block title %}Student Dashboard - E-Exam Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ===== GENERAL DASHBOARD STYLES ===== */
+    .dashboard-container {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        padding: 10px 0;
+    }
+
+    /* ===== STAT CARDS - TOP ROW ===== */
+    .stat-card {
+        background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+        color: white;
+        padding: 22px 18px;
+        border-radius: 12px;
+        text-align: center;
+        margin-bottom: 24px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: -40px;
+        right: -40px;
+        width: 120px;
+        height: 120px;
+        background: rgba(255, 255, 255, 0.07);
+        border-radius: 50%;
+    }
+
+    .stat-card::after {
+        content: '';
+        position: absolute;
+        bottom: -30px;
+        left: -20px;
+        width: 90px;
+        height: 90px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 50%;
+    }
+
+    .stat-card h6 {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        opacity: 0.85;
+        margin-bottom: 8px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .stat-card h3 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Stat card color variants */
+    .stat-card.card-exams {
+        background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+        box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+    }
+    .stat-card.card-score {
+        background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%);
+        box-shadow: 0 4px 15px rgba(26, 188, 156, 0.3);
+    }
+    .stat-card.card-rank {
+        background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+        box-shadow: 0 4px 15px rgba(155, 89, 182, 0.3);
+    }
+    .stat-card.card-available {
+        background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+        box-shadow: 0 4px 15px rgba(230, 126, 34, 0.3);
+    }
+
+    /* ===== MAIN CARDS ===== */
+    .card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        margin-bottom: 24px;
+        transition: box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    }
+
+    .card-header {
+        background: #fff !important;
+        border-bottom: 2px solid #f0f0f0;
+        border-radius: 12px 12px 0 0 !important;
+        padding: 16px 20px;
+    }
+
+    .card-header h5 {
+        color: #2c3e50;
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin-bottom: 0;
+    }
+
+    .card-header h5 i {
+        color: #3498db;
+        margin-right: 8px;
+    }
+
+    .card-body {
+        padding: 20px;
+    }
+
+    /* ===== AVAILABLE EXAMS LIST ===== */
+    .list-group {
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .list-group-item {
+        border: none;
+        border-bottom: 1px solid #f0f0f0;
+        padding: 14px 16px;
+        transition: background 0.2s ease;
+        background: #fff;
+    }
+
+    .list-group-item:last-child {
+        border-bottom: none;
+    }
+
+    .list-group-item:hover {
+        background: #f8fbff;
+    }
+
+    .list-group-item strong {
+        color: #2c3e50;
+        font-size: 0.92rem;
+    }
+
+    .list-group-item .text-muted {
+        font-size: 0.78rem;
+        color: #7f8c8d !important;
+    }
+
+    .list-group-item .btn-success {
+        background: linear-gradient(135deg, #27ae60, #2ecc71);
+        border: none;
+        border-radius: 6px;
+        padding: 6px 14px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        transition: opacity 0.2s ease, transform 0.15s ease;
+    }
+
+    .list-group-item .btn-success:hover {
+        opacity: 0.9;
+        transform: scale(1.05);
+    }
+
+    /* ===== RECENT RESULTS TABLE ===== */
+    .table {
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 0;
+    }
+
+    .table thead {
+        background: #f4f6f8;
+    }
+
+    .table thead th {
+        color: #2c3e50;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        padding: 10px 14px;
+        border: none;
+    }
+
+    .table tbody tr {
+        border-bottom: 1px solid #f0f0f0;
+        transition: background 0.15s ease;
+    }
+
+    .table tbody tr:last-child {
+        border-bottom: none;
+    }
+
+    .table tbody tr:hover {
+        background: #f8fbff;
+    }
+
+    .table tbody td {
+        padding: 11px 14px;
+        font-size: 0.85rem;
+        color: #34495e;
+        border: none;
+        vertical-align: middle;
+    }
+
+    .table tbody td a {
+        color: #3498db;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.15s ease;
+    }
+
+    .table tbody td a:hover {
+        color: #2980b9;
+        text-decoration: underline;
+    }
+
+    /* ===== BADGES ===== */
+    .badge {
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+
+    .badge.bg-success {
+        background: #eafaf1 !important;
+        color: #27ae60 !important;
+    }
+
+    .badge.bg-danger {
+        background: #fdedec !important;
+        color: #e74c3c !important;
+    }
+
+    /* ===== BOTTOM ROW SUMMARY CARDS ===== */
+    .row.mt-4 .card {
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+        background: #fff;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .row.mt-4 .card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+    }
+
+    .row.mt-4 .card-header h5 i {
+        width: 32px;
+        height: 32px;
+        line-height: 32px;
+        border-radius: 8px;
+        text-align: center;
+        font-size: 0.85rem;
+        color: #fff !important;
+    }
+
+    .row.mt-4 .card-header h5 .icon-upcoming {
+        background: linear-gradient(135deg, #3498db, #2980b9);
+    }
+
+    .row.mt-4 .card-header h5 .icon-completed {
+        background: linear-gradient(135deg, #27ae60, #219a52);
+    }
+
+    .row.mt-4 .card-header h5 .icon-past {
+        background: linear-gradient(135deg, #9b59b6, #8e44ad);
+    }
+
+    .row.mt-4 .card-body p {
+        color: #2c3e50;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0;
+    }
+
+    .row.mt-4 .card-body p span {
+        color: #7f8c8d;
+        font-weight: 400;
+        font-size: 0.82rem;
+    }
+
+    /* ===== ALERT BOXES ===== */
+    .alert {
+        border: none;
+        border-radius: 8px;
+        padding: 14px 18px;
+        font-size: 0.85rem;
+    }
+
+    .alert.alert-info {
+        background: #eef6fd;
+        color: #2980b9;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+        .stat-card {
+            padding: 18px 14px;
+        }
+
+        .stat-card h3 {
+            font-size: 1.6rem;
+        }
+
+        .card-body {
+            padding: 16px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Stat Cards Row -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card card-exams">
+                <h6>Exams Taken</h6>
+                <h3>{{ total_exams_taken }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card card-score">
+                <h6>Average Score</h6>
+                <h3>{{ avg_score }}%</h3>
+            </div>
+        </div>
+        {% if class_rank %}
+        <div class="col-md-3">
+            <div class="stat-card card-rank">
+                <h6>Class Rank</h6>
+                <h3>#{{ class_rank }}/{{ class_students_count }}</h3>
+            </div>
+        </div>
+        {% endif %}
+        <div class="col-md-3">
+            <div class="stat-card card-available">
+                <h6>Available Exams</h6>
+                <h3>{{ available_exams|length }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Available Exams & Recent Results -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-play-circle"></i> Available Exams</h5>
+                </div>
+                <div class="card-body">
+                    {% if available_exams %}
+                    <div class="list-group">
+                        {% for exam in available_exams %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <strong>{{ exam.title }}</strong>
+                                <a href="{{ url_for('student.start_exam', exam_id=exam.id) }}" class="btn btn-sm btn-success">
+                                    <i class="fas fa-play"></i> Start
+                                </a>
+                            </div>
+                            <small class="text-muted">
+                                {{ exam.subject }} - {{ exam.duration_minutes }} min - Total: {{ exam.total_marks }} marks
+                            </small>
+                            {% if exam.creator %}
+                            <small class="d-block text-muted">Teacher: {{ exam.creator.full_name }}</small>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info" role="alert">
+                        No exams available at the moment
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Recent Results</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_results %}
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Exam</th>
+                                <th>Score</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for result in recent_results %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('student.view_result', result_id=result.id) }}">
+                                        {{ result.exam.title }}
+                                    </a>
+                                </td>
+                                <td>{{ result.marks_obtained }}/{{ result.total_marks }}</td>
+                                <td>
+                                    {% if result.is_passed %}
+                                    <span class="badge bg-success">PASSED</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">FAILED</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="alert alert-info" role="alert">
+                        No exam results yet
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Summary Cards -->
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-hourglass-end icon-upcoming"></i> Upcoming Exams</h5>
+                </div>
+                <div class="card-body">
+                    <p>{{ upcoming_exams|length }} <span>exams scheduled</span></p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-check-circle icon-completed"></i> Completed Exams</h5>
+                </div>
+                <div class="card-body">
+                    <p>{{ completed_exams|length }} <span>exams completed</span></p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-archive icon-past"></i> Past Exams</h5>
+                </div>
+                <div class="card-body">
+                    <p>{{ past_exams|length }} <span>exams</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

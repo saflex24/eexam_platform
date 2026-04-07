@@ -1,0 +1,611 @@
+{% extends "base.html" %}
+
+{% block title %}Advanced Analytics - E-Exam Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    .analytics-card {
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        margin-bottom: 25px;
+        transition: transform 0.3s;
+    }
+    
+    .analytics-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .metric-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .metric-card.blue {
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    }
+    
+    .metric-card.green {
+        background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+    }
+    
+    .metric-card.orange {
+        background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+    }
+    
+    .metric-card.red {
+        background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    }
+    
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 5px;
+    }
+    
+    .metric-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 400px;
+        margin-bottom: 20px;
+    }
+    
+    .performance-table {
+        font-size: 0.95rem;
+    }
+    
+    .performance-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+    }
+    
+    .trend-up {
+        color: #27ae60;
+    }
+    
+    .trend-down {
+        color: #e74c3c;
+    }
+    
+    .filter-section {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+    }
+    
+    .insight-item {
+        padding: 10px;
+        margin-bottom: 10px;
+        border-left: 4px solid;
+        background: #f8f9fa;
+        border-radius: 4px;
+    }
+    
+    .insight-item.success {
+        border-left-color: #27ae60;
+    }
+    
+    .insight-item.warning {
+        border-left-color: #f39c12;
+    }
+    
+    .insight-item.info {
+        border-left-color: #3498db;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-chart-line"></i> Advanced Student Performance Analytics</h2>
+            <p class="text-muted">Comprehensive insights into student performance and trends</p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-section">
+        <form method="GET" action="{{ url_for('admin.advanced_analytics') }}" id="filterForm">
+            <div class="row">
+                <div class="col-md-3">
+                    <label class="form-label"><i class="fas fa-school"></i> Class</label>
+                    <select name="class_id" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Classes</option>
+                        {% for cls in classes %}
+                        <option value="{{ cls.id }}" {% if selected_class == cls.id %}selected{% endif %}>
+                            {{ cls.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label"><i class="fas fa-book"></i> Subject</label>
+                    <select name="subject" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Subjects</option>
+                        {% for subject in subjects %}
+                        <option value="{{ subject }}" {% if selected_subject == subject %}selected{% endif %}>
+                            {{ subject }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label"><i class="fas fa-calendar"></i> Time Period</label>
+                    <select name="period" class="form-select" onchange="this.form.submit()">
+                        <option value="all" {% if selected_period == 'all' %}selected{% endif %}>All Time</option>
+                        <option value="week" {% if selected_period == 'week' %}selected{% endif %}>Last Week</option>
+                        <option value="month" {% if selected_period == 'month' %}selected{% endif %}>Last Month</option>
+                        <option value="quarter" {% if selected_period == 'quarter' %}selected{% endif %}>Last Quarter</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label"><i class="fas fa-file-alt"></i> Exam</label>
+                    <select name="exam_id" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Exams</option>
+                        {% for exam in exams %}
+                        <option value="{{ exam.id }}" {% if selected_exam == exam.id %}selected{% endif %}>
+                            {{ exam.title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value">{{ overall_stats.total_students }}</div>
+                <div class="metric-label">
+                    <i class="fas fa-users"></i> Total Students
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card blue">
+                <div class="metric-value">{{ overall_stats.avg_score }}%</div>
+                <div class="metric-label">
+                    <i class="fas fa-percentage"></i> Average Score
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card green">
+                <div class="metric-value">{{ overall_stats.pass_rate }}%</div>
+                <div class="metric-label">
+                    <i class="fas fa-check-circle"></i> Pass Rate
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card orange">
+                <div class="metric-value">{{ overall_stats.total_exams }}</div>
+                <div class="metric-label">
+                    <i class="fas fa-file-alt"></i> Total Exams
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 1 -->
+    <div class="row mb-4">
+        <!-- Performance Distribution -->
+        <div class="col-md-6">
+            <div class="card analytics-card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Performance Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="performanceDistChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grade Distribution -->
+        <div class="col-md-6">
+            <div class="card analytics-card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Grade Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="gradeDistChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 2 -->
+    <div class="row mb-4">
+        <!-- Performance Trend -->
+        <div class="col-md-8">
+            <div class="card analytics-card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-line"></i> Performance Trend Over Time</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Subject-wise Performance -->
+        <div class="col-md-4">
+            <div class="card analytics-card">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="mb-0"><i class="fas fa-book"></i> Subject Performance</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="subjectChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Performers -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card analytics-card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-trophy"></i> Top 10 Performers</h5>
+                </div>
+                <div class="card-body">
+                    {% if top_performers %}
+                    <div class="table-responsive">
+                        <table class="table performance-table">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Student</th>
+                                    <th>Class</th>
+                                    <th>Avg Score</th>
+                                    <th>Exams</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for performer in top_performers %}
+                                <tr>
+                                    <td>
+                                        {% if loop.index == 1 %}
+                                        <i class="fas fa-medal" style="color: gold;"></i>
+                                        {% elif loop.index == 2 %}
+                                        <i class="fas fa-medal" style="color: silver;"></i>
+                                        {% elif loop.index == 3 %}
+                                        <i class="fas fa-medal" style="color: #cd7f32;"></i>
+                                        {% else %}
+                                        {{ loop.index }}
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ performer.name }}</td>
+                                    <td>{{ performer.class_name }}</td>
+                                    <td>
+                                        <span class="badge bg-success">{{ performer.avg_score }}%</span>
+                                    </td>
+                                    <td>{{ performer.exam_count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> No performance data available
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Low Performers -->
+        <div class="col-md-6">
+            <div class="card analytics-card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Students Needing Attention</h5>
+                </div>
+                <div class="card-body">
+                    {% if low_performers %}
+                    <div class="table-responsive">
+                        <table class="table performance-table">
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Class</th>
+                                    <th>Avg Score</th>
+                                    <th>Failed</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for student in low_performers %}
+                                <tr>
+                                    <td>{{ student.name }}</td>
+                                    <td>{{ student.class_name }}</td>
+                                    <td>
+                                        <span class="badge bg-danger">{{ student.avg_score }}%</span>
+                                    </td>
+                                    <td>{{ student.failed_count }}/{{ student.exam_count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i> No students need immediate attention
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Class Comparison -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card analytics-card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Class-wise Performance Comparison</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 500px;">
+                        <canvas id="classComparisonChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Performance Table -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card analytics-card">
+                <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-table"></i> Detailed Performance Report</h5>
+                    <a href="{{ url_for('admin.export_analytics') }}?{{ request.query_string.decode() }}" 
+                       class="btn btn-sm btn-light">
+                        <i class="fas fa-file-excel"></i> Export to Excel
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if detailed_performance %}
+                    <div class="table-responsive">
+                        <table class="table table-striped performance-table" id="performanceTable">
+                            <thead>
+                                <tr>
+                                    <th>Student Name</th>
+                                    <th>Admission No.</th>
+                                    <th>Class</th>
+                                    <th>Exams</th>
+                                    <th>Avg Score</th>
+                                    <th>Highest</th>
+                                    <th>Lowest</th>
+                                    <th>Pass Rate</th>
+                                    <th>Trend</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for student in detailed_performance %}
+                                <tr>
+                                    <td>{{ student.name }}</td>
+                                    <td>{{ student.admission_number }}</td>
+                                    <td>{{ student.class_name }}</td>
+                                    <td>{{ student.exam_count }}</td>
+                                    <td>
+                                        <span class="badge {% if student.avg_score >= 75 %}bg-success{% elif student.avg_score >= 50 %}bg-warning{% else %}bg-danger{% endif %}">
+                                            {{ student.avg_score }}%
+                                        </span>
+                                    </td>
+                                    <td>{{ student.highest_score }}%</td>
+                                    <td>{{ student.lowest_score }}%</td>
+                                    <td>{{ student.pass_rate }}%</td>
+                                    <td>
+                                        {% if student.trend == 'improving' %}
+                                        <i class="fas fa-arrow-up trend-up"></i> Improving
+                                        {% elif student.trend == 'declining' %}
+                                        <i class="fas fa-arrow-down trend-down"></i> Declining
+                                        {% else %}
+                                        <i class="fas fa-minus text-muted"></i> Stable
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> No performance data available for the selected filters
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Insights -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card analytics-card">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-lightbulb"></i> Key Insights</h6>
+                </div>
+                <div class="card-body">
+                    {% if key_insights %}
+                    {% for insight in key_insights %}
+                    <div class="insight-item success">
+                        <i class="fas fa-check-circle text-success"></i> {{ insight }}
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-muted">No insights available</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card analytics-card">
+                <div class="card-header bg-warning text-white">
+                    <h6 class="mb-0"><i class="fas fa-exclamation-circle"></i> Areas of Concern</h6>
+                </div>
+                <div class="card-body">
+                    {% if concerns %}
+                    {% for concern in concerns %}
+                    <div class="insight-item warning">
+                        <i class="fas fa-exclamation-triangle text-warning"></i> {{ concern }}
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-muted">No concerns identified</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card analytics-card">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="fas fa-bullseye"></i> Recommendations</h6>
+                </div>
+                <div class="card-body">
+                    {% if recommendations %}
+                    {% for recommendation in recommendations %}
+                    <div class="insight-item info">
+                        <i class="fas fa-arrow-right text-success"></i> {{ recommendation }}
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-muted">No recommendations at this time</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+<script>
+    // Performance Distribution Chart
+    const perfDistCtx = document.getElementById('performanceDistChart').getContext('2d');
+    new Chart(perfDistCtx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ performance_dist_labels|tojson }},
+            datasets: [{
+                data: {{ performance_dist_data|tojson }},
+                backgroundColor: ['#27ae60', '#f39c12', '#e74c3c'],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+
+    // Grade Distribution Chart
+    const gradeDistCtx = document.getElementById('gradeDistChart').getContext('2d');
+    new Chart(gradeDistCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ grade_labels|tojson }},
+            datasets: [{
+                label: 'Number of Students',
+                data: {{ grade_data|tojson }},
+                backgroundColor: ['#27ae60', '#3498db', '#f39c12', '#e67e22', '#e74c3c']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    // Trend Chart
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: {{ trend_labels|tojson }},
+            datasets: [{
+                label: 'Average Score',
+                data: {{ trend_data|tojson }},
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, max: 100 } }
+        }
+    });
+
+    // Subject Chart
+    const subjectCtx = document.getElementById('subjectChart').getContext('2d');
+    new Chart(subjectCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ subject_labels|tojson }},
+            datasets: [{
+                label: 'Avg Score',
+                data: {{ subject_data|tojson }},
+                backgroundColor: '#667eea'
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { x: { beginAtZero: true, max: 100 } },
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    // Class Comparison Chart
+    const classCompCtx = document.getElementById('classComparisonChart').getContext('2d');
+    new Chart(classCompCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ class_labels|tojson }},
+            datasets: [
+                { label: 'Average Score', data: {{ class_avg_data|tojson }}, backgroundColor: '#3498db' },
+                { label: 'Pass Rate', data: {{ class_pass_data|tojson }}, backgroundColor: '#27ae60' }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, max: 100 } },
+            plugins: { legend: { position: 'top' } }
+        }
+    });
+</script>
+{% endblock %}

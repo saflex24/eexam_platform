@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+
+{% block title %}Enter Exam Passcode - {{ exam.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    
+    /* Hide navigation */
+    nav, .sidebar, header, footer {
+        display: none !important;
+    }
+    
+    .passcode-container {
+        max-width: 500px;
+        width: 100%;
+    }
+    
+    .passcode-card {
+        background: white;
+        border-radius: 24px;
+        padding: 50px 40px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        text-align: center;
+        animation: slideUp 0.5s ease-out;
+    }
+    
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .lock-icon {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 25px;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+    }
+    
+    .lock-icon i {
+        font-size: 36px;
+        color: white;
+    }
+    
+    .exam-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: #2d3748;
+        margin-bottom: 10px;
+    }
+    
+    .exam-details {
+        color: #718096;
+        font-size: 14px;
+        margin-bottom: 30px;
+    }
+    
+    .exam-details i {
+        margin-right: 5px;
+    }
+    
+    .passcode-info {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        border-left: 4px solid #667eea;
+        padding: 15px 20px;
+        border-radius: 10px;
+        margin-bottom: 30px;
+        text-align: left;
+    }
+    
+    .passcode-info h6 {
+        color: #667eea;
+        font-weight: 700;
+        font-size: 13px;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .passcode-info p {
+        color: #4a5568;
+        font-size: 13px;
+        margin: 0;
+        line-height: 1.6;
+    }
+    
+    .form-group {
+        margin-bottom: 25px;
+    }
+    
+    .form-label {
+        display: block;
+        text-align: left;
+        font-weight: 600;
+        color: #2d3748;
+        margin-bottom: 10px;
+        font-size: 14px;
+    }
+    
+    .passcode-input {
+        width: 100%;
+        padding: 16px 20px;
+        border: 3px solid #e2e8f0;
+        border-radius: 12px;
+        font-size: 18px;
+        font-weight: 600;
+        text-align: center;
+        letter-spacing: 3px;
+        transition: all 0.3s;
+        font-family: 'Courier New', monospace;
+    }
+    
+    .passcode-input:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        background: #f8fafc;
+    }
+    
+    .passcode-input::placeholder {
+        letter-spacing: normal;
+        font-family: inherit;
+        font-weight: normal;
+    }
+    
+    .submit-btn {
+        width: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 16px 30px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        margin-bottom: 15px;
+    }
+    
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 35px rgba(102, 126, 234, 0.5);
+    }
+    
+    .submit-btn:active {
+        transform: translateY(0);
+    }
+    
+    .submit-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .back-btn {
+        display: inline-block;
+        color: #718096;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    
+    .back-btn:hover {
+        color: #667eea;
+    }
+    
+    .back-btn i {
+        margin-right: 5px;
+    }
+    
+    .alert {
+        padding: 15px 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        animation: shake 0.5s;
+    }
+    
+    .alert-danger {
+        background: #fef2f2;
+        border-left: 4px solid #ef4444;
+        color: #dc2626;
+    }
+    
+    .alert-success {
+        background: #f0fdf4;
+        border-left: 4px solid #10b981;
+        color: #059669;
+    }
+    
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-10px); }
+        75% { transform: translateX(10px); }
+    }
+    
+    .security-note {
+        margin-top: 25px;
+        padding-top: 25px;
+        border-top: 2px solid #e2e8f0;
+    }
+    
+    .security-note p {
+        color: #718096;
+        font-size: 12px;
+        margin: 0;
+    }
+    
+    .security-note i {
+        color: #667eea;
+        margin-right: 5px;
+    }
+    
+    /* Loading state */
+    .submit-btn.loading {
+        position: relative;
+        color: transparent;
+    }
+    
+    .submit-btn.loading::after {
+        content: "";
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        top: 50%;
+        left: 50%;
+        margin-left: -10px;
+        margin-top: -10px;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="passcode-container">
+    <div class="passcode-card">
+        <div class="lock-icon">
+            <i class="fas fa-lock"></i>
+        </div>
+        
+        <h1 class="exam-title">{{ exam.title }}</h1>
+        <div class="exam-details">
+            <i class="fas fa-book"></i> {{ exam.subject }} •
+            <i class="fas fa-question-circle"></i> {{ exam.total_questions }} Questions •
+            <i class="fas fa-star"></i> {{ exam.total_marks }} Marks •
+            <i class="fas fa-clock"></i> {{ exam.duration_minutes }} Minutes
+        </div>
+        
+        <div class="passcode-info">
+            <h6><i class="fas fa-shield-alt"></i> Secure Exam Access</h6>
+            <p>This exam is password-protected. Please enter the passcode provided by your instructor to begin.</p>
+        </div>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        <i class="fas fa-{% if category == 'danger' %}exclamation-circle{% else %}check-circle{% endif %}"></i> {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form method="POST" action="{{ url_for('student.verify_passcode', session_id=session.id) }}" id="passcodeForm">
+            <div class="form-group">
+                <label class="form-label" for="passcode">
+                    <i class="fas fa-key"></i> Enter Passcode
+                </label>
+                <input 
+                    type="text" 
+                    class="passcode-input" 
+                    id="passcode" 
+                    name="passcode" 
+                    placeholder="Enter passcode here"
+                    required
+                    autocomplete="off"
+                    autofocus
+                    maxlength="50">
+            </div>
+            
+            <button type="submit" class="submit-btn" id="submitBtn">
+                <i class="fas fa-sign-in-alt"></i> Start Exam
+            </button>
+        </form>
+        
+        <a href="{{ url_for('student.dashboard') }}" class="back-btn">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+        
+        <div class="security-note">
+            <p>
+                <i class="fas fa-info-circle"></i>
+                For security reasons, you have limited attempts to enter the correct passcode.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Form submission with loading state
+    document.getElementById('passcodeForm').addEventListener('submit', function(e) {
+        const btn = document.getElementById('submitBtn');
+        const input = document.getElementById('passcode');
+        
+        if (input.value.trim() === '') {
+            e.preventDefault();
+            input.focus();
+            return;
+        }
+        
+        btn.classList.add('loading');
+        btn.disabled = true;
+    });
+    
+    // Auto-focus on input
+    window.addEventListener('load', function() {
+        document.getElementById('passcode').focus();
+    });
+    
+    // Remove spaces from passcode input
+    document.getElementById('passcode').addEventListener('input', function(e) {
+        this.value = this.value.trim();
+    });
+</script>
+{% endblock %}
