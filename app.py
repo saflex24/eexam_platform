@@ -217,140 +217,127 @@ def register_error_handlers(app):
 # ================================
 # APP INSTANCE
 # ================================
-app = create_app()
+def create_app(config_name=None):
+    """Application factory (Render + PyInstaller safe)"""
 
+    # ================================
+    # FIX 1: SAFE CONFIG SELECTION
+    # ================================
+    if not config_name:
+        config_name = os.getenv("FLASK_CONFIG", "production")
 
-# ================================
-# ENTRY POINT - PYINSTALLER COMPATIBLE
-# ================================
-if __name__ == "__main__":
-    
+    config_key = config_name.lower()
+
+    if config_key not in config:
+        logger.warning(f"Invalid config '{config_name}', falling back to 'default'")
+        config_key = "default"
+
+    # ================================
+    # INIT FLASK APP
+    # ================================
+    app = Flask(
+        __name__,
+        template_folder=resource_path("templates"),
+        static_folder=resource_path("static")
+    )
+
+    app.config.from_object(config[config_key])
+
+    # ================================
+    # FIX 2: FORCE DATABASE ON RENDER
+    # ================================
+    database_url = os.getenv("DATABASE_URL")
+
+    if database_url:
+        # Render provides postgres URL
+        if database_url.startswith("postgres://"):
+            database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+        app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+        logger.info("Using DATABASE_URL from environment")
+
+    # ================================
+    # PYINSTALLER OVERRIDE
+    # ================================
     if getattr(sys, 'frozen', False):
-        # ================================
-        # RUNNING AS PYINSTALLER EXE
-        # ================================
-        print("=" * 70)
-        print("E-EXAM PORTAL - PRODUCTION MODE".center(70))
-        print("=" * 70)
-        print()
-        print(f"Application Path: {application_path}")
-        
-        # Determine database type
-        db_uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
-        if 'sqlite' in db_uri:
-            print(f"Database: SQLite - {os.path.join(application_path, 'eexam.db')}")
-        elif 'postgresql' in db_uri:
-            print(f"Database: PostgreSQL - {db_uri.split('@')[1] if '@' in db_uri else 'configured'}")
-        else:
-            print(f"Database: {db_uri.split(':')[0] if ':' in db_uri else 'configured'}")
-        
-        print(f"Uploads: {app.config['UPLOAD_FOLDER']}")
-        print(f"Logs: {os.path.join(log_folder, 'app.log')}")
-        print()
-        print("Server starting at: http://localhost:5000")
-        print()
-        print("⚠️  To stop the server, press Ctrl+C")
-        print("=" * 70)
-        print()
-        
-        logger.info("=" * 70)
-        logger.info("E-EXAM PORTAL - PRODUCTION MODE STARTING")
-        logger.info("=" * 70)
-        logger.info(f"Application Path: {application_path}")
-        logger.info(f"Python Version: {sys.version}")
-        logger.info(f"Database URI: {app.config.get('SQLALCHEMY_DATABASE_URI', 'Not set')}")
-        logger.info("Starting production server (Waitress)...")
-        
-        # Auto-open browser
-        import webbrowser
-        import threading
-        import time
-        
-        def open_browser():
-            """Open browser after server starts"""
-            time.sleep(3)  # Wait for server to fully start
-            try:
-                webbrowser.open('http://localhost:5000')
-                logger.info("Browser opened automatically")
-            except Exception as e:
-                logger.error(f"Failed to open browser: {e}")
-                print("⚠️  Could not open browser automatically")
-                print("   Please open http://localhost:5000 manually")
-        
-        # Start browser in background thread
-        browser_thread = threading.Thread(target=open_browser, daemon=True)
-        browser_thread.start()
-        
-        # Use Waitress production WSGI server
+        db_path = os.path.join(application_path, 'eexam.db')
+        app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+
+        app.config['UPLOAD_FOLDER'] = os.path.join(application_path, 'uploads')
+        app.config['DEBUG'] = False
+        app.config['TESTING'] = False
+
+        logger.info("Running as PyInstaller EXE")
+
+    # ================================
+    # EXTENSIONS
+    # ================================
+    db.init_app(app)
+    migrate.init_app(app, db)
+    login_manager.init_app(app)
+
+    login_manager.login_view = "auth.login"
+    login_manager.login_message = "Please log in to access this page."
+
+    # Ensure upload folder exists
+    os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+
+    # ================================
+    # ERROR HANDLERS
+    # ================================
+    register_error_handlers(app)
+
+    # ================================
+    # MODELS
+    # ================================
+    from models.class_model import Class, StudentClass
+    from models.user import User, Role, Student, Teacher, ClassTeacher
+    from models.exam import (
+        Exam, Question, QuestionOption,
+        StudentAnswer, ExamResult, ExamSession, ProctoringLog
+    )
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.query.get(int(user_id))
+
+    # ================================
+    # BLUEPRINTS
+    # ================================
+    from routes.auth import auth_bp
+    from routes.admin import admin_bp
+    from routes.teacher import teacher_bp
+    from routes.student import student_bp
+
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(admin_bp, url_prefix="/admin")
+    app.register_blueprint(teacher_bp, url_prefix="/teacher")
+    app.register_blueprint(student_bp, url_prefix="/student")
+
+    # ================================
+    # HOME ROUTE
+    # ================================
+    @app.route("/")
+    def index():
+        if current_user.is_authenticated:
+            role = current_user.role.name
+            if role == "Admin":
+                return redirect(url_for("admin.dashboard"))
+            elif role == "Teacher":
+                return redirect(url_for("teacher.dashboard"))
+            elif role == "Student":
+                return redirect(url_for("student.dashboard"))
+        return redirect(url_for("auth.login"))
+
+    # ================================
+    # FIX 3: SAFE DB INIT (NO CRASH)
+    # ================================
+    with app.app_context():
         try:
-            from waitress import serve
-            logger.info("Waitress server starting on 0.0.0.0:5000")
-            print("✓ Starting Waitress production server...")
-            print()
-            serve(
-                app,
-                host='0.0.0.0',
-                port=5000,
-                threads=4,
-                channel_timeout=300,
-                cleanup_interval=30,
-                log_socket_errors=True
-            )
-        except ImportError:
-            print()
-            print("=" * 70)
-            print("❌ ERROR: Waitress not installed!".center(70))
-            print("=" * 70)
-            print()
-            print("Waitress is required for production mode.")
-            print("To install, run: pip install waitress")
-            print()
-            logger.error("Waitress not installed - cannot start production server")
-            input("Press Enter to exit...")
-            sys.exit(1)
-        except KeyboardInterrupt:
-            print()
-            print("=" * 70)
-            print("Server stopped by user".center(70))
-            print("=" * 70)
-            logger.info("Server stopped by user (Ctrl+C)")
-            sys.exit(0)
+            db.create_all()
+            logger.info("Database initialized successfully")
         except Exception as e:
-            print()
-            print("=" * 70)
-            print("❌ ERROR STARTING SERVER".center(70))
-            print("=" * 70)
-            print()
-            print(f"Error: {e}")
-            print()
-            print("Check logs/app.log for details")
-            logger.exception("Server failed to start")
-            input("Press Enter to exit...")
-            sys.exit(1)
-    
-    else:
-        # ================================
-        # RUNNING AS SCRIPT (DEVELOPMENT)
-        # ================================
-        print("=" * 70)
-        print("E-EXAM PORTAL - DEVELOPMENT MODE".center(70))
-        print("=" * 70)
-        print()
-        print("Server starting at: http://localhost:5000")
-        print()
-        print("⚠️  Debug mode is ON")
-        print("⚠️  Auto-reloader is ON")
-        print()
-        print("To stop the server, press Ctrl+C")
-        print("=" * 70)
-        print()
-        
-        logger.info("Starting development server (Flask)...")
-        
-        # Use Flask development server
-        app.run(
-            host="0.0.0.0",
-            port=5000,
-            debug=True,
-            use_reloader=True
-        )
+            logger.error(f"Database init failed: {e}")
+            logger.exception("DB ERROR")
+
+    return app
