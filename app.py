@@ -60,8 +60,8 @@ def create_app(config_name=None):
 
     app = Flask(
         __name__,
-        template_folder=resource_path("templates"),
-        static_folder=resource_path("static")
+        template_folder="templates",   # safer for Render
+        static_folder="static"
     )
 
     app.config.from_object(config[config_key])
@@ -135,6 +135,24 @@ def create_app(config_name=None):
             elif role == "Student":
                 return redirect(url_for("student.dashboard"))
         return redirect(url_for("auth.login"))
+
+    # ================================
+    # 🔥 TEMP FIX ADMIN PASSWORD
+    # ================================
+    @app.route("/fix-admin")
+    def fix_admin():
+        from models.user import User
+        from werkzeug.security import generate_password_hash
+
+        user = User.query.filter_by(username='admin').first()
+
+        if not user:
+            return "❌ Admin user not found"
+
+        user.password_hash = generate_password_hash("admin123@")
+        db.session.commit()
+
+        return "✅ Admin password reset successfully!"
 
     # ================================
     # SAFE DB INIT
