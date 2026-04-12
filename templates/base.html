@@ -59,7 +59,9 @@
 
 <body>
 
-<!-- NAVBAR -->
+<!-- ═══════════════════════════════════════
+     NAVBAR — always visible on every page
+═══════════════════════════════════════ -->
 <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="/"><i class="fas fa-book-open"></i> E-Exam Platform</a>
@@ -72,7 +74,7 @@
 
                 {% if current_user.is_authenticated %}
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                         <i class="fas fa-user-circle"></i> {{ current_user.full_name }}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
@@ -86,7 +88,14 @@
                         <li><a class="dropdown-item" href="{{ url_for('admin.admin_settings') }}"><i class="fas fa-cog"></i> Settings</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="{{ url_for('admin.activity_log') }}"><i class="fas fa-history"></i> Activity Log</a></li>
+                        {% elif current_user.role.name == 'Teacher' %}
+                        <li><a class="dropdown-item" href="{{ url_for('teacher.dashboard') }}"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-user"></i> Profile</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-cog"></i> Settings</a></li>
                         {% else %}
+                        <li><a class="dropdown-item" href="{{ url_for('student.dashboard') }}"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                        <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="#"><i class="fas fa-user"></i> Profile</a></li>
                         <li><a class="dropdown-item" href="#"><i class="fas fa-cog"></i> Settings</a></li>
                         {% endif %}
@@ -103,126 +112,136 @@
     </div>
 </nav>
 
-<!-- PAGE LAYOUT -->
+<!-- ═══════════════════════════════════════
+     FULL_PAGE BLOCK
+     — override this block in any template
+       that needs its own complete layout
+       (e.g. admin dashboard with custom sidebar)
+     — leave it alone in all other templates
+       and the normal sidebar + content renders
+═══════════════════════════════════════ -->
+{% block full_page %}
+
+<!-- Flash messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="container-fluid pt-2">
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+<!-- Default sidebar + content layout -->
 <div class="container-fluid">
     <div class="row">
 
         {% if current_user.is_authenticated %}
+        <!-- Sidebar -->
         <div class="col-md-3 col-lg-2 sidebar d-none d-md-block">
             <div class="nav flex-column">
                 {% if current_user.role.name == 'Admin' %}
                 <a class="nav-link" href="{{ url_for('admin.dashboard') }}"><i class="fas fa-chart-line"></i> Dashboard</a>
                 <a class="nav-link" href="{{ url_for('admin.manage_students') }}"><i class="fas fa-users"></i> Students</a>
-                <a class="nav-link" href="{{ url_for('admin.import_students') }}"><i class="fas fa-users"></i> Import Students</a>
-                <a class="nav-link" href="{{ url_for('admin.import_teachers') }}"><i class="fas fa-users"></i> Import Teachers</a>
-                <a class="nav-link" href="{{ url_for('admin.manage_classes') }}"><i class="fas fa-users"></i> Classes</a>
-                <a class="nav-link" href="{{ url_for('admin.manage_teachers') }}"><i class="fas fa-chalkboard-user"></i> Teachers</a>
+                <a class="nav-link" href="{{ url_for('admin.import_students') }}"><i class="fas fa-file-upload"></i> Import Students</a>
+                <a class="nav-link" href="{{ url_for('admin.import_teachers') }}"><i class="fas fa-file-upload"></i> Import Teachers</a>
+                <a class="nav-link" href="{{ url_for('admin.manage_classes') }}"><i class="fas fa-layer-group"></i> Classes</a>
+                <a class="nav-link" href="{{ url_for('admin.manage_teachers') }}"><i class="fas fa-chalkboard-teacher"></i> Teachers</a>
                 <a class="nav-link" href="{{ url_for('admin.manage_exams') }}"><i class="fas fa-file-alt"></i> Exams</a>
                 <a class="nav-link" href="{{ url_for('admin.advanced_analytics') }}"><i class="fas fa-chart-bar"></i> Analytics</a>
-                 <a class="nav-link" href="{{ url_for('admin.proctoring_reports') }}"><i class="fas fa-users"></i> Proctoring Reports</a>
+                <a class="nav-link" href="{{ url_for('admin.proctoring_reports') }}"><i class="fas fa-shield-alt"></i> Proctoring Reports</a>
+
                 {% elif current_user.role.name == 'Teacher' %}
-                <a class="nav-link" href="{{ url_for('teacher.dashboard') }}">Dashboard</a><a class="nav-link" href="{{ url_for('teacher.manage_exams') }}">
-                        <i class="fas fa-file-alt"></i> Exams
-                    </a>
-                    <a class="nav-link" href="{{ url_for('teacher.create_exam') }}">
-                        <i class="fas fa-plus-circle"></i> Create Exam
-                    </a>
-                    
-                    <a href="{{ url_for('teacher.analytics_performance') }}" class="nav-link">
-    <i class="fas fa-chart-line"></i> Student Performance Analytics
-</a>
+                <a class="nav-link" href="{{ url_for('teacher.dashboard') }}"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                <a class="nav-link" href="{{ url_for('teacher.manage_exams') }}"><i class="fas fa-file-alt"></i> Exams</a>
+                <a class="nav-link" href="{{ url_for('teacher.create_exam') }}"><i class="fas fa-plus-circle"></i> Create Exam</a>
+                <a class="nav-link" href="{{ url_for('teacher.analytics_performance') }}"><i class="fas fa-chart-line"></i> Analytics</a>
+
                 {% elif current_user.role.name == 'Student' %}
-                <a class="nav-link" href="{{ url_for('student.dashboard') }}">Dashboard</a>
-                <a class="nav-link" href="{{ url_for('student.my_results') }}">
-                        <i class="fas fa-list-check"></i> My Results
-                    </a>
-                    <a class="nav-link" href="{{ url_for('student.class_ranking') }}">
-                        <i class="fas fa-ranking-star"></i> Class Ranking
-                    </a>
+                <a class="nav-link" href="{{ url_for('student.dashboard') }}"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                <a class="nav-link" href="{{ url_for('student.my_results') }}"><i class="fas fa-list-check"></i> My Results</a>
+                <a class="nav-link" href="{{ url_for('student.class_ranking') }}"><i class="fas fa-ranking-star"></i> Class Ranking</a>
                 {% endif %}
             </div>
         </div>
 
+        <!-- Main content -->
         <div class="col-md-9 col-lg-10 main-content">
         {% else %}
         <div class="col-12 main-content">
         {% endif %}
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-            <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-        {% endwith %}
+            {% block content %}{% endblock %}
 
-        {% block content %}{% endblock %}
-
-        <!-- STUDENT PERFORMANCE INSIGHTS -->
-        {% if student_insights %}
-        <div class="mt-4">
-            <h3>Student Performance Insights</h3>
-            <div class="row">
-                {% for student in student_insights %}
-                <div class="col-md-6 col-lg-4 mb-3">
-                    <div class="card shadow-sm">
-                        <div class="card-header">
-                            <strong>{{ student.name }}</strong> - {{ student.class_name }}<br>
-                            <small>Admission #: {{ student.admission_number }}</small>
-                        </div>
-                        <div class="card-body">
-                            <p><strong>Average Score:</strong> {{ student.avg_score }}%</p>
-                            <p><strong>Pass Rate:</strong> {{ student.pass_rate }}%</p>
-                            <p><strong>Trend:</strong>
-                                {% if student.trend == 'improving' %}
-                                    <span class="text-success">Improving</span>
-                                {% elif student.trend == 'declining' %}
-                                    <span class="text-danger">Declining</span>
-                                {% else %}
-                                    <span class="text-muted">Stable</span>
+            <!-- Student performance insights (shared across pages) -->
+            {% if student_insights %}
+            <div class="mt-4">
+                <h3>Student Performance Insights</h3>
+                <div class="row">
+                    {% for student in student_insights %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card shadow-sm">
+                            <div class="card-header">
+                                <strong>{{ student.name }}</strong> - {{ student.class_name }}<br>
+                                <small>Admission #: {{ student.admission_number }}</small>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Average Score:</strong> {{ student.avg_score }}%</p>
+                                <p><strong>Pass Rate:</strong> {{ student.pass_rate }}%</p>
+                                <p><strong>Trend:</strong>
+                                    {% if student.trend == 'improving' %}
+                                        <span class="text-success">Improving</span>
+                                    {% elif student.trend == 'declining' %}
+                                        <span class="text-danger">Declining</span>
+                                    {% else %}
+                                        <span class="text-muted">Stable</span>
+                                    {% endif %}
+                                </p>
+                                {% if student.key_insights %}
+                                <p><strong>Key Insights:</strong></p>
+                                <ul class="list-unstyled">
+                                    {% for insight in student.key_insights %}
+                                    <li><i class="fas fa-check-circle text-success"></i> {{ insight }}</li>
+                                    {% endfor %}
+                                </ul>
                                 {% endif %}
-                            </p>
-
-                            {% if student.key_insights %}
-                            <p><strong>Key Insights:</strong></p>
-                            <ul class="list-unstyled">
-                                {% for insight in student.key_insights %}
-                                <li><i class="fas fa-check-circle text-success"></i> {{ insight }}</li>
-                                {% endfor %}
-                            </ul>
-                            {% endif %}
-
-                            {% if student.concerns %}
-                            <p><strong>Areas of Concern:</strong></p>
-                            <ul class="list-unstyled">
-                                {% for concern in student.concerns %}
-                                <li><i class="fas fa-exclamation-circle text-warning"></i> {{ concern }}</li>
-                                {% endfor %}
-                            </ul>
-                            {% endif %}
-
-                            {% if student.recommendations %}
-                            <p><strong>Recommendations:</strong></p>
-                            <ul class="list-unstyled">
-                                {% for rec in student.recommendations %}
-                                <li><i class="fas fa-lightbulb text-info"></i> {{ rec }}</li>
-                                {% endfor %}
-                            </ul>
-                            {% endif %}
+                                {% if student.concerns %}
+                                <p><strong>Areas of Concern:</strong></p>
+                                <ul class="list-unstyled">
+                                    {% for concern in student.concerns %}
+                                    <li><i class="fas fa-exclamation-circle text-warning"></i> {{ concern }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                                {% if student.recommendations %}
+                                <p><strong>Recommendations:</strong></p>
+                                <ul class="list-unstyled">
+                                    {% for rec in student.recommendations %}
+                                    <li><i class="fas fa-lightbulb text-info"></i> {{ rec }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
             </div>
-        </div>
-        {% endif %}
+            {% endif %}
 
-        </div>
-    </div>
-</div>
+        </div><!-- end main-content -->
+    </div><!-- end row -->
+</div><!-- end container-fluid -->
 
+{% endblock full_page %}
+
+<!-- Footer -->
 <div class="footer">
-    <p>&copy; 2024 E-Exam Platform</p>
+    <p>&copy; 2026 E-Exam Platform</p>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

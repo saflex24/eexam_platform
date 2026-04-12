@@ -1137,52 +1137,150 @@
     }
 
     // =============== TIMER FUNCTIONS ===============
-    function startTimer() {
+function startTimer() {
+    updateTimerDisplay();
+    timerInterval = setInterval(function() {
+        timeLeft--;
         updateTimerDisplay();
-        timerInterval = setInterval(function() {
-            timeLeft--;
-            updateTimerDisplay();
-            if (timeLeft === 300) {
-                document.getElementById('timer-box').classList.add('warning');
-                showNotification('⚠️ Warning: Only 5 minutes remaining!', 'warning');
-            }
-            if (timeLeft === 60) {
-                document.getElementById('timer-box').classList.remove('warning');
-                document.getElementById('timer-box').classList.add('critical');
-                showNotification('⏰ Final Minute! Your exam will auto-submit soon.', 'danger');
-            }
-            if (timeLeft <= 0) handleTimeExpired();
-        }, 1000);
-    }
+        
+        // Auto-save answers every 30 seconds AND at 5 minutes warning
+        if (timeLeft % 30 === 0 || timeLeft === 300) {
+            saveAnswersToLocalStorage();
+            syncAnswersToServer(); // NEW: Sync to server periodically
+        }
+        
+        if (timeLeft === 300) {
+            document.getElementById('timer-box').classList.add('warning');
+            showNotification('⚠️ Warning: Only 5 minutes remaining!', 'warning');
+        }
+        if (timeLeft === 60) {
+            document.getElementById('timer-box').classList.remove('warning');
+            document.getElementById('timer-box').classList.add('critical');
+            showNotification('⏰ Final Minute! Your exam will auto-submit soon.', 'danger');
+        }
+        if (timeLeft <= 0) {
+            handleTimeExpired();
+        }
+    }, 1000);
+}
 
-    function updateTimerDisplay() {
-        const minutes = Math.floor(timeLeft / 60);
-        const seconds = timeLeft % 60;
-        document.getElementById('time-display').textContent =
-            `${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
-    }
+function updateTimerDisplay() {
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+    document.getElementById('time-display').textContent =
+        `${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+}
 
-    function handleTimeExpired() {
-        clearInterval(timerInterval);
-        clearInterval(autoSaveInterval);
-        window.removeEventListener('beforeunload', preventUnload);
-        showNotification('⏰ Time expired! Submitting your exam automatically...', 'danger');
-        saveAnswersToLocalStorage();
-        setTimeout(forceSubmitExam, 2000);
+// NEW: Sync answers to server via API before auto-submit
+function syncAnswersToServer() {
+    const formData = new FormData(document.getElementById('examForm'));
+    const answers = {};
+    for (let [key, value] of formData.entries()) {
+        answers[key] = value;
     }
+    
+    fetch(`/student/api/exam/${window.EXAM_ID}/save-answers`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            session_id: sessionId,
+            answers: answers,
+            time_left: timeLeft
+        })
+    }).catch(err => console.log('Sync error (non-critical):', err));
+}
 
-    function forceSubmitExam() {
-        console.log('Force submitting exam due to time expiration...');
-        const addHidden = (name, value) => {
-            const el = document.createElement('input');
-            el.type = 'hidden'; el.name = name; el.value = value;
-            document.getElementById('examForm').appendChild(el);
-        };
-        addHidden('time_expired', 'true');
-        addHidden('time_spent', {{ exam.duration_minutes }} * 60);
-        document.getElementById('examForm').submit();
+function handleTimeExpired() {
+    // CRITICAL: Remove the beforeunload listener FIRST to prevent "Leave site?" prompt
+    window.removeEventListener('beforeunload', preventUnload);
+    
+    // Also clear any other intervals
+    clearInterval(timerInterval);
+    clearInterval(autoSaveInterval);
+    
+    showNotification('⏰ Time expired! Auto-submitting your exam...', 'danger');
+    
+    // IMMEDIATE auto-submit via API (no delay, no prompts)
+    performAutoSubmit('time_expired');
+}
+function performAutoSubmit(reason) {
+    if (window.autoSubmitInProgress) return;
+    window.autoSubmitInProgress = true;
+    
+    // Final save to localStorage
+    saveAnswersToLocalStorage();
+    
+    // Collect ALL current answers from the form
+    const formData = new FormData(document.getElementById('examForm'));
+    const answersPayload = {};
+    
+    // Also collect from textareas (theory questions)
+    document.querySelectorAll('textarea[name^="question_"]').forEach(textarea => {
+        if (textarea.value.trim()) {
+            answersPayload[textarea.name] = textarea.value.trim();
+        }
+    });
+    
+    // Collect from radio buttons (MCQ/True-False)
+    document.querySelectorAll('input[type="radio"]:checked').forEach(radio => {
+        answersPayload[radio.name] = radio.value;
+    });
+    
+    // Merge with formData to be safe
+    for (let [key, value] of formData.entries()) {
+        if (value && value.toString().trim()) {
+            answersPayload[key] = value;
+        }
     }
-
+    
+    console.log('Auto-submitting with answers:', Object.keys(answersPayload));
+    
+    // Call auto-submit API
+    fetch(`/student/api/exam/session/${sessionId}/auto-submit`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        keepalive: true,
+        body: JSON.stringify({
+            student_id: {{ current_user.id }},
+            reason: reason,
+            answers: answersPayload,
+            time_spent: ({{ exam.duration_minutes }} * 60) - timeLeft
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Auto-submit response:', data);
+        
+        // Clear localStorage
+        localStorage.removeItem(`exam_session_${sessionId}`);
+        
+        // Redirect to dashboard for time_expired
+        if (reason === 'time_expired') {
+            window.location.replace('/student/dashboard');  // Use replace to prevent back button
+        } else if (data.success && data.allow_view && data.result_id) {
+            window.location.replace(`/student/result/${data.result_id}`);
+        } else {
+            window.location.replace('/student/dashboard');
+        }
+    })
+    .catch(error => {
+        console.error('Auto-submit failed:', error);
+        // Emergency: try to at least save answers via beacon
+        navigator.sendBeacon(`/student/api/exam/session/${sessionId}/auto-submit`, 
+            new Blob([JSON.stringify({
+                student_id: {{ current_user.id }},
+                reason: reason + '_fallback',
+                answers: answersPayload
+            })], {type: 'application/json'}));
+        
+        // Redirect anyway
+        window.location.replace('/student/dashboard');
+    });
+}
+// Legacy function - kept for compatibility but redirects to auto-submit
+function forceSubmitExam() {
+    performAutoSubmit('manual_force');
+}
     // =============== AUTO-SAVE SYSTEM ===============
     function startAutoSave() {
         autoSaveInterval = setInterval(function() {
@@ -1362,29 +1460,36 @@
     }
 
     function submitExam() {
-        const unanswered = totalQuestions - answeredQuestions.size;
-        if (unanswered > 0 && !confirm(`You have ${unanswered} unanswered question(s). Are you sure you want to submit?`)) return;
-        if (!confirm('⚠️ Are you sure you want to submit your exam?\n\nThis action cannot be undone.')) return;
+    const unanswered = totalQuestions - answeredQuestions.size;
+    if (unanswered > 0 && !confirm(`You have ${unanswered} unanswered question(s). Are you sure you want to submit?`)) return;
+    if (!confirm('⚠️ Are you sure you want to submit your exam?\n\nThis action cannot be undone.')) return;
 
-        clearInterval(timerInterval);
-        clearInterval(autoSaveInterval);
-        window.removeEventListener('beforeunload', preventUnload);
+    // REMOVE beforeunload listener before submitting
+    window.removeEventListener('beforeunload', preventUnload);
+    
+    clearInterval(timerInterval);
+    clearInterval(autoSaveInterval);
+    autoSubmitTriggered = true;
 
-        const timeSpent = ({{ exam.duration_minutes }} * 60) - timeLeft;
-        const el = document.createElement('input');
-        el.type = 'hidden'; el.name = 'time_spent'; el.value = timeSpent;
-        document.getElementById('examForm').appendChild(el);
+    const timeSpent = ({{ exam.duration_minutes }} * 60) - timeLeft;
+    const el = document.createElement('input');
+    el.type = 'hidden'; el.name = 'time_spent'; el.value = timeSpent;
+    document.getElementById('examForm').appendChild(el);
 
-        localStorage.removeItem(`exam_session_${sessionId}`);
-        document.getElementById('examForm').submit();
-    }
+    localStorage.removeItem(`exam_session_${sessionId}`);
+    document.getElementById('examForm').submit();
+}
 
     // =============== HELPER FUNCTIONS ===============
-    function preventUnload(e) {
-        e.preventDefault();
-        e.returnValue = 'Your exam is in progress. Are you sure you want to leave?';
-        return e.returnValue;
+function preventUnload(e) {
+    // Only prevent if exam is still active and not auto-submitting
+    if (window.autoSubmitInProgress || autoSubmitTriggered) {
+        return; // Don't show prompt if auto-submit is happening
     }
+    e.preventDefault();
+    e.returnValue = 'Your exam is in progress. Are you sure you want to leave?';
+    return e.returnValue;
+}
 
     function showNotification(message, type = 'info') {
         const n = document.createElement('div');
@@ -1812,15 +1917,15 @@
 </script>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     AUTO-SUBMIT & FULLSCREEN PATCH
+     AUTO-SUBMIT & FULLSCREEN PATCH (CLEAN - NO PROMPTS)
 ═══════════════════════════════════════════════════════════════════════════ -->
 <script>
 (function() {
     'use strict';
 
-    const AUTO_SUBMIT_URL   = `/student/api/exam/session/${sessionId}/auto-submit`;
-    const TAB_SWITCH_LIMIT  = 3;
-    let tabSwitchCount      = 0;
+    const AUTO_SUBMIT_URL = `/student/api/exam/session/${sessionId}/auto-submit`;
+    const TAB_SWITCH_LIMIT = 3;
+    let tabSwitchCount = 0;
     let autoSubmitTriggered = false;
 
     // ── FULLSCREEN ──
@@ -1830,17 +1935,21 @@
         if (fullscreenRequested || !{{ exam.enable_proctoring|lower }}) return;
         const elem = document.documentElement;
         const doRequest = () => {
-            const p = elem.requestFullscreen       ? elem.requestFullscreen()
+            const p = elem.requestFullscreen ? elem.requestFullscreen()
                     : elem.webkitRequestFullscreen ? elem.webkitRequestFullscreen()
-                    : elem.msRequestFullscreen     ? elem.msRequestFullscreen()
+                    : elem.msRequestFullscreen ? elem.msRequestFullscreen()
                     : Promise.reject('Fullscreen not supported');
-            p.then(() => { fullscreenRequested = true; console.log('[Fullscreen] ✅ Activated'); })
+            p.then(() => { fullscreenRequested = true; })
              .catch(err => console.warn('[Fullscreen] Request failed:', err.message));
         };
         const gestures = ['click','keydown','touchstart'];
-        const handler  = () => { if (!fullscreenRequested) { doRequest(); gestures.forEach(ev => document.removeEventListener(ev, handler)); } };
+        const handler = () => { 
+            if (!fullscreenRequested) { 
+                doRequest(); 
+                gestures.forEach(ev => document.removeEventListener(ev, handler)); 
+            } 
+        };
         gestures.forEach(ev => document.addEventListener(ev, handler, {once: true}));
-        if (typeof showNotification === 'function') showNotification('Click anywhere to enter fullscreen mode', 'info');
     }
 
     document.addEventListener('fullscreenchange', () => {
@@ -1852,57 +1961,26 @@
 
     if ({{ exam.enable_proctoring|lower }}) enterFullscreen();
 
-    // ── AUTO-SUBMIT ──
-    function doAutoSubmit(reason) {
-        if (autoSubmitTriggered) return;
-        autoSubmitTriggered = true;
-        console.log('[AutoSubmit] Triggered:', reason);
-        saveAnswersToLocalStorage();
-        if (typeof timerInterval     !== 'undefined') clearInterval(timerInterval);
-        if (typeof autoSaveInterval  !== 'undefined') clearInterval(autoSaveInterval);
-
-        fetch(AUTO_SUBMIT_URL, {
-            method: 'POST',
-            headers: {'Content-Type':'application/json'},
-            keepalive: true,
-            body: JSON.stringify({ student_id: {{ current_user.id }}, reason })
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                const goTo = (data.allow_view && data.result_id) ? `/student/result/${data.result_id}` : '/student/dashboard';
-                setTimeout(() => { window.location.href = goTo; }, 800);
-            } else {
-                window.location.href = '/student/dashboard';
-            }
-        })
-        .catch(() => { window.location.href = `/student/exam/session/${sessionId}/submit`; });
-    }
-
+    // ── TAB SWITCH HANDLER ──
     window.PROCTORING_TAB_SWITCH_CALLBACK = function(count) {
         tabSwitchCount = count;
-        if (TAB_SWITCH_LIMIT === 0 || count >= TAB_SWITCH_LIMIT) doAutoSubmit('tab_switch_limit');
+        if (TAB_SWITCH_LIMIT === 0 || count >= TAB_SWITCH_LIMIT) {
+            // Remove beforeunload first to prevent prompt
+            window.removeEventListener('beforeunload', preventUnload);
+            performAutoSubmit('tab_switch_limit');
+        }
     };
 
-    window.addEventListener('pagehide', e => {
-        if (autoSubmitTriggered) return;
-        navigator.sendBeacon(AUTO_SUBMIT_URL, new Blob([JSON.stringify({student_id: {{ current_user.id }}, reason:'pagehide'})], {type:'application/json'}));
+    // ── CLEANUP: Remove beforeunload for manual submit buttons ──
+    document.querySelector('.submit-exam-btn')?.addEventListener('click', function() {
+        window.removeEventListener('beforeunload', preventUnload);
         autoSubmitTriggered = true;
     });
-
-    window.addEventListener('beforeunload', e => {
-        if (autoSubmitTriggered) return;
-        try {
-            navigator.sendBeacon(AUTO_SUBMIT_URL, new Blob([JSON.stringify({student_id: {{ current_user.id }}, reason:'beforeunload'})], {type:'application/json'}));
-        } catch(err) { console.warn('[AutoSubmit] sendBeacon failed:', err); }
-        e.preventDefault();
-        e.returnValue = 'Your exam will be auto-submitted if you leave. Are you sure?';
+    
+    document.querySelector('.modal-footer .btn-success')?.addEventListener('click', function() {
+        window.removeEventListener('beforeunload', preventUnload);
         autoSubmitTriggered = true;
     });
-
-    // Block auto-submit when manually submitting
-    document.querySelector('.submit-exam-btn')              ?.addEventListener('click', () => autoSubmitTriggered = true);
-    document.querySelector('.modal-footer .btn-success')    ?.addEventListener('click', () => autoSubmitTriggered = true);
 
     console.log('[AutoSubmit] System initialized | Tab switch limit:', TAB_SWITCH_LIMIT);
 })();

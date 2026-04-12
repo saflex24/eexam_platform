@@ -3,933 +3,865 @@
 {% block title %}Admin Dashboard - E-Exam Platform{% endblock %}
 
 {% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
-    
-    :root {
-        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-        --warning-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        --info-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        --dark-bg: #0f0f23;
-        --card-bg: rgba(255, 255, 255, 0.95);
-        --card-border: rgba(102, 126, 234, 0.1);
-        --text-primary: #1a1a2e;
-        --text-secondary: #64748b;
-        --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
-        --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.08);
-        --shadow-lg: 0 10px 40px rgba(102, 126, 234, 0.15);
-        --border-radius: 16px;
-        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    
-    body {
-        font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        position: relative;
-        min-height: 100vh;
-    }
-    
-    /* Animated background particles */
-    body::before {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-image: 
-            radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.05) 0%, transparent 50%),
-            radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.05) 0%, transparent 50%),
-            radial-gradient(circle at 40% 20%, rgba(17, 153, 142, 0.03) 0%, transparent 50%);
-        pointer-events: none;
-        z-index: 0;
-    }
-    
-    .content-wrapper {
-        position: relative;
-        z-index: 1;
-    }
-    
-    /* Dashboard Header */
-    .dashboard-header {
-        background: var(--card-bg);
-        backdrop-filter: blur(20px);
-        border-radius: var(--border-radius);
-        padding: 2rem;
-        margin-bottom: 2rem;
-        box-shadow: var(--shadow-md);
-        border: 1px solid var(--card-border);
-        animation: slideDown 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    
-    .dashboard-header h2 {
-        font-size: 2.5rem;
-        font-weight: 800;
-        background: var(--primary-gradient);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        margin: 0;
-        letter-spacing: -0.02em;
-    }
-    
-    .dashboard-header p {
-        color: var(--text-secondary);
-        margin: 0.5rem 0 0 0;
-        font-weight: 400;
-    }
-    
-    /* Stat Cards */
-    .stat-card {
-        background: var(--card-bg);
-        backdrop-filter: blur(20px);
-        border-radius: var(--border-radius);
-        padding: 1.75rem;
-        box-shadow: var(--shadow-sm);
-        border: 1px solid var(--card-border);
-        transition: var(--transition);
-        position: relative;
-        overflow: hidden;
-        animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-        animation-fill-mode: both;
-        height: 100%;
-    }
-    
-    .stat-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 4px;
-        background: var(--gradient);
-        transform: scaleX(0);
-        transform-origin: left;
-        transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    
-    .stat-card:hover {
-        transform: translateY(-8px);
-        box-shadow: var(--shadow-lg);
-    }
-    
-    .stat-card:hover::before {
-        transform: scaleX(1);
-    }
-    
-    .stat-card.card-1 { 
-        --gradient: var(--primary-gradient); 
-        animation-delay: 0.1s;
-    }
-    .stat-card.card-2 { 
-        --gradient: var(--success-gradient); 
-        animation-delay: 0.2s;
-    }
-    .stat-card.card-3 { 
-        --gradient: var(--warning-gradient); 
-        animation-delay: 0.3s;
-    }
-    .stat-card.card-4 { 
-        --gradient: var(--info-gradient); 
-        animation-delay: 0.4s;
-    }
-    
-    .stat-icon {
-        width: 56px;
-        height: 56px;
-        border-radius: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        margin-bottom: 1rem;
-        background: var(--gradient);
-        color: white;
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-        transition: var(--transition);
-    }
-    
-    .stat-card:hover .stat-icon {
-        transform: rotate(10deg) scale(1.1);
-    }
-    
-    .stat-card h6 {
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: var(--text-secondary);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin: 0 0 0.5rem 0;
-    }
-    
-    .stat-card h3 {
-        font-size: 2.25rem;
-        font-weight: 800;
-        color: var(--text-primary);
-        margin: 0;
-        font-family: 'JetBrains Mono', monospace;
-        letter-spacing: -0.02em;
-    }
-    
-    .stat-trend {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-        font-size: 0.875rem;
-        font-weight: 600;
-        margin-top: 0.75rem;
-        padding: 0.25rem 0.75rem;
-        border-radius: 50px;
-        background: rgba(17, 153, 142, 0.1);
-        color: #11998e;
-    }
-    
-    /* Dashboard Cards */
-    .dashboard-card {
-        background: var(--card-bg);
-        backdrop-filter: blur(20px);
-        border-radius: var(--border-radius);
-        box-shadow: var(--shadow-sm);
-        border: 1px solid var(--card-border);
-        overflow: hidden;
-        transition: var(--transition);
-        animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-        animation-delay: 0.5s;
-        animation-fill-mode: both;
-        height: 100%;
-    }
-    
-    .dashboard-card:hover {
-        box-shadow: var(--shadow-md);
-    }
-    
-    .card-header {
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
-        border-bottom: 1px solid var(--card-border);
-        padding: 1.5rem;
-    }
-    
-    .card-header h5 {
-        font-size: 1.125rem;
-        font-weight: 700;
-        color: var(--text-primary);
-        margin: 0;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-    
-    .card-header h5 i {
-        width: 36px;
-        height: 36px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 10px;
-        background: var(--primary-gradient);
-        color: white;
-        font-size: 1rem;
-    }
-    
-    .card-body {
-        padding: 1.5rem;
-    }
-    
-    /* Table Styles */
-    .table {
-        margin: 0;
-        font-size: 0.9375rem;
-    }
-    
-    .table thead th {
-        border-bottom: 2px solid var(--card-border);
-        font-weight: 700;
-        color: var(--text-primary);
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 0.05em;
-        padding: 1rem;
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.03) 0%, rgba(118, 75, 162, 0.03) 100%);
-    }
-    
-    .table tbody tr {
-        transition: var(--transition);
-        border-bottom: 1px solid var(--card-border);
-    }
-    
-    .table tbody tr:hover {
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.02) 0%, rgba(118, 75, 162, 0.02) 100%);
-        transform: scale(1.01);
-    }
-    
-    .table tbody td {
-        padding: 1rem;
-        vertical-align: middle;
-        color: var(--text-primary);
-    }
-    
-    /* Badges */
-    .badge {
-        padding: 0.5rem 1rem;
-        border-radius: 50px;
-        font-weight: 600;
-        font-size: 0.8125rem;
-        letter-spacing: 0.02em;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.375rem;
-    }
-    
-    .badge::before {
-        content: '';
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: currentColor;
-        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
-    
-    .bg-success {
-        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
-        color: white;
-        box-shadow: 0 4px 12px rgba(17, 153, 142, 0.25);
-    }
-    
-    .bg-danger {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
-        color: white;
-        box-shadow: 0 4px 12px rgba(245, 87, 108, 0.25);
-    }
-    
-    .bg-info {
-        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
-        color: white;
-        box-shadow: 0 4px 12px rgba(79, 172, 254, 0.25);
-    }
-    
-    /* Buttons */
-    .btn {
-        font-weight: 600;
-        border-radius: 12px;
-        padding: 0.75rem 1.5rem;
-        transition: var(--transition);
-        border: none;
-        position: relative;
-        overflow: hidden;
-        font-size: 0.9375rem;
-    }
-    
-    .btn::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 0;
-        height: 0;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.3);
-        transform: translate(-50%, -50%);
-        transition: width 0.6s, height 0.6s;
-    }
-    
-    .btn:hover::before {
-        width: 300px;
-        height: 300px;
-    }
-    
-    .btn-primary {
-        background: var(--primary-gradient);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-    }
-    
-    .btn-primary:hover {
-        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-        transform: translateY(-2px);
-    }
-    
-    .btn-secondary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        box-shadow: 0 4px 12px rgba(118, 75, 162, 0.3);
-    }
-    
-    .btn-info {
-        background: var(--info-gradient);
-        box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
-    }
-    
-    /* Chart Container */
-    #performanceChart {
-        height: 300px;
-        position: relative;
-    }
-    
-    /* Quick Actions */
-    .quick-action-link {
-        display: block;
-        padding: 1rem 1.25rem;
-        border-radius: 12px;
-        color: var(--text-primary);
-        text-decoration: none;
-        transition: var(--transition);
-        margin-bottom: 0.75rem;
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.03) 0%, rgba(118, 75, 162, 0.03) 100%);
-        border: 1px solid var(--card-border);
-        font-weight: 500;
-    }
-    
-    .quick-action-link:hover {
-        background: var(--primary-gradient);
-        color: white;
-        transform: translateX(8px);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
-    }
-    
-    .quick-action-link i {
-        margin-right: 0.75rem;
-        width: 24px;
-        text-align: center;
-    }
-    
-    /* Animations */
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    @keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translateY(-20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    @keyframes pulse {
-        0%, 100% {
-            opacity: 1;
-        }
-        50% {
-            opacity: 0.5;
-        }
-    }
-    
-    /* Performance Stats */
-    .performance-stat {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        padding: 1rem;
-        border-radius: 12px;
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
-        margin-bottom: 1rem;
-        border: 1px solid var(--card-border);
-    }
-    
-    .performance-stat-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: var(--primary-gradient);
-        color: white;
-        font-size: 1.25rem;
-    }
-    
-    .performance-stat-content strong {
-        display: block;
-        font-size: 0.875rem;
-        color: var(--text-secondary);
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 0.25rem;
-    }
-    
-    .performance-stat-content span {
-        font-size: 1.5rem;
-        font-weight: 800;
-        color: var(--text-primary);
-        font-family: 'JetBrains Mono', monospace;
-    }
-    
-    /* Responsive */
-    @media (max-width: 768px) {
-        .dashboard-header h2 {
-            font-size: 1.75rem;
-        }
-        
-        .stat-card h3 {
-            font-size: 1.75rem;
-        }
-        
-        .stat-card {
-            margin-bottom: 1rem;
-        }
-    }
-    
-    /* Loading state */
-    .skeleton {
-        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-        background-size: 200% 100%;
-        animation: loading 1.5s ease-in-out infinite;
-        border-radius: 8px;
-    }
-    
-    @keyframes loading {
-        0% {
-            background-position: 200% 0;
-        }
-        100% {
-            background-position: -200% 0;
-        }
-    }
+/* ── Reset & Base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --ink:        #111827;
+    --ink-2:      #374151;
+    --ink-3:      #6b7280;
+    --ink-4:      #9ca3af;
+    --surface:    #ffffff;
+    --surface-2:  #f9fafb;
+    --surface-3:  #f3f4f6;
+    --border:     #e5e7eb;
+    --border-2:   #d1d5db;
+    --accent:     #4f46e5;
+    --accent-2:   #6366f1;
+    --accent-soft:#eef2ff;
+    --green:      #059669;
+    --green-soft: #ecfdf5;
+    --amber:      #d97706;
+    --amber-soft: #fffbeb;
+    --red:        #dc2626;
+    --red-soft:   #fef2f2;
+    --blue:       #2563eb;
+    --blue-soft:  #eff6ff;
+    --radius-sm:  6px;
+    --radius:     10px;
+    --radius-lg:  14px;
+    --shadow-xs:  0 1px 2px rgba(0,0,0,.05);
+    --shadow-sm:  0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-md:  0 10px 15px -3px rgba(0,0,0,.08), 0 4px 6px -4px rgba(0,0,0,.04);
+    --font:       'DM Sans', system-ui, sans-serif;
+    --font-mono:  'DM Mono', monospace;
+    --ease:       cubic-bezier(.4,0,.2,1);
+}
+
+/* ── Dashboard body override ── */
+body {
+    font-family: var(--font);
+    background: var(--surface-2);
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ── Wrapper: sits below the base navbar ── */
+.adm-wrapper {
+    display: flex;
+    min-height: calc(100vh - 56px); /* 56px = base navbar height */
+}
+
+/* ── Sidebar ── */
+.adm-sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    position: sticky;
+    top: 56px;          /* stick below base navbar */
+    height: calc(100vh - 56px);
+    overflow-y: auto;
+}
+
+.sidebar-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    padding: 10px 10px 4px;
+    margin-top: 8px;
+}
+.sidebar-section-label:first-child { margin-top: 0; }
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--ink-3);
+    text-decoration: none;
+    transition: all .15s var(--ease);
+}
+.sidebar-link i { width: 16px; text-align: center; font-size: 13px; flex-shrink: 0; }
+.sidebar-link:hover { background: var(--surface-3); color: var(--ink); }
+.sidebar-link.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.sidebar-link.danger { color: var(--red); }
+.sidebar-link.danger:hover { background: var(--red-soft); }
+
+.sidebar-footer {
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+
+/* ── Main content area ── */
+.adm-main {
+    flex: 1;
+    min-width: 0;
+    padding: 28px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+}
+
+/* ── Page header ── */
+.page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.page-header-text h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: -.3px;
+    line-height: 1.3;
+}
+.page-header-text p { font-size: 13.5px; color: var(--ink-3); margin-top: 3px; }
+.page-header-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+/* ── Buttons ── */
+.btn {
+    height: 36px;
+    padding: 0 16px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: var(--font);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    transition: all .15s var(--ease);
+    text-decoration: none;
+    border: none;
+    white-space: nowrap;
+}
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: var(--accent-2); color: white; box-shadow: 0 0 0 3px rgba(79,70,229,.2); }
+.btn-ghost { background: var(--surface); border: 1px solid var(--border); color: var(--ink-2); }
+.btn-ghost:hover { background: var(--surface-3); color: var(--ink); border-color: var(--border-2); }
+
+/* ── KPI grid ── */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px 22px;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    box-shadow: var(--shadow-xs);
+    transition: box-shadow .2s var(--ease), transform .2s var(--ease);
+    animation: kpiIn .4s var(--ease) both;
+}
+.kpi-card:nth-child(1) { animation-delay: .05s; }
+.kpi-card:nth-child(2) { animation-delay: .10s; }
+.kpi-card:nth-child(3) { animation-delay: .15s; }
+.kpi-card:nth-child(4) { animation-delay: .20s; }
+.kpi-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+
+@keyframes kpiIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.kpi-icon {
+    width: 42px; height: 42px;
+    border-radius: var(--radius-sm);
+    display: grid; place-items: center;
+    font-size: 16px; flex-shrink: 0;
+}
+.kpi-icon.purple { background: var(--accent-soft); color: var(--accent); }
+.kpi-icon.green  { background: var(--green-soft);  color: var(--green); }
+.kpi-icon.amber  { background: var(--amber-soft);  color: var(--amber); }
+.kpi-icon.blue   { background: var(--blue-soft);   color: var(--blue); }
+
+.kpi-body { min-width: 0; flex: 1; }
+.kpi-label { font-size: 12px; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+.kpi-value { font-size: 26px; font-weight: 700; font-family: var(--font-mono); color: var(--ink); letter-spacing: -.5px; line-height: 1.1; }
+.kpi-meta { margin-top: 5px; font-size: 12px; color: var(--green); font-weight: 600; display: flex; align-items: center; gap: 4px; }
+
+/* ── Grid helpers ── */
+.two-col   { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+
+/* ── Card ── */
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xs);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: cardIn .5s var(--ease) both;
+    animation-delay: .25s;
+}
+@keyframes cardIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.card-head {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.card-head-left { display: flex; align-items: center; gap: 10px; }
+.card-head-icon {
+    width: 30px; height: 30px;
+    border-radius: var(--radius-sm);
+    display: grid; place-items: center;
+    font-size: 13px;
+    background: var(--surface-3);
+    color: var(--ink-2);
+}
+.card-title { font-size: 14px; font-weight: 700; color: var(--ink); letter-spacing: -.1px; }
+.card-body { padding: 20px; flex: 1; }
+.card-body.no-pad { padding: 0; }
+
+/* ── Data table ── */
+.data-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.data-table thead th {
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--ink-3);
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+}
+.data-table tbody tr { border-bottom: 1px solid var(--border); transition: background .1s var(--ease); }
+.data-table tbody tr:last-child { border-bottom: none; }
+.data-table tbody tr:hover { background: var(--surface-2); }
+.data-table tbody td { padding: 12px 16px; color: var(--ink-2); vertical-align: middle; }
+
+/* ── Badges ── */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 100px;
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.6;
+}
+.badge-green  { background: var(--green-soft);  color: var(--green); }
+.badge-red    { background: var(--red-soft);    color: var(--red); }
+.badge-amber  { background: var(--amber-soft);  color: var(--amber); }
+.badge-blue   { background: var(--blue-soft);   color: var(--blue); }
+.badge-purple { background: var(--accent-soft); color: var(--accent); }
+
+/* ── Stat row ── */
+.stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.stat-item {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+}
+.stat-item-label { font-size: 11px; font-weight: 700; color: var(--ink-4); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+.stat-item-value { font-size: 22px; font-weight: 700; font-family: var(--font-mono); color: var(--ink); letter-spacing: -.3px; }
+.stat-item-sub   { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+
+/* ── Performer list ── */
+.performer-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.performer-row:last-child { border-bottom: none; }
+.performer-rank {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--surface-3);
+    display: grid; place-items: center;
+    font-size: 11px; font-weight: 700; color: var(--ink-3); flex-shrink: 0;
+}
+.performer-rank.gold   { background: #fef3c7; color: #92400e; }
+.performer-rank.silver { background: #f3f4f6; color: #374151; }
+.performer-rank.bronze { background: #fde68a; color: #78350f; }
+.performer-avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    display: grid; place-items: center;
+    font-size: 13px; color: var(--accent); font-weight: 700; flex-shrink: 0;
+    border: 2px solid var(--border);
+}
+.performer-info { flex: 1; min-width: 0; }
+.performer-name { font-size: 13.5px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.performer-score { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--green); flex-shrink: 0; }
+
+/* ── Score bar ── */
+.score-bar-track { height: 4px; background: var(--surface-3); border-radius: 2px; overflow: hidden; margin-top: 4px; }
+.score-bar-fill  { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 2px; transition: width .6s var(--ease); }
+
+/* ── Action grid ── */
+.action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.action-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 13px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    font-size: 13px; font-weight: 500; color: var(--ink-2);
+    transition: all .15s var(--ease);
+    background: var(--surface);
+}
+.action-item i { font-size: 13px; color: var(--ink-4); transition: color .15s; }
+.action-item:hover { background: var(--accent-soft); border-color: rgba(79,70,229,.25); color: var(--accent); }
+.action-item:hover i { color: var(--accent); }
+
+/* ── Avatar initial ── */
+.av {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--accent-soft); color: var(--accent);
+    font-size: 11px; font-weight: 700;
+    display: inline-grid; place-items: center; flex-shrink: 0;
+}
+
+/* ── Status dot ── */
+.status-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+.status-dot.green { background: var(--green); }
+.status-dot.red   { background: var(--red); }
+
+/* ── Chart ── */
+.chart-area { position: relative; height: 220px; }
+
+/* ── Empty state ── */
+.empty-state { padding: 40px 24px; text-align: center; color: var(--ink-3); }
+.empty-state i { font-size: 28px; opacity: .35; display: block; margin-bottom: 10px; }
+.empty-state p { font-size: 13px; }
+
+/* ── Responsive ── */
+@media (max-width: 1100px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .two-col, .three-col { grid-template-columns: 1fr; }
+    .adm-main { padding: 20px; }
+}
+@media (max-width: 768px) {
+    .adm-sidebar { display: none; }
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+    .kpi-grid { grid-template-columns: 1fr; }
+}
 </style>
 {% endblock %}
 
-{% block content %}
-<div class="content-wrapper">
-    <!-- Dashboard Header -->
-    <div class="dashboard-header">
-        <h2>
-            <i class="fas fa-chart-line" style="margin-right: 0.5rem; font-size: 0.9em;"></i>
-            Admin Dashboard
-        </h2>
-        <p>Welcome back! Here's what's happening with your e-exam platform today.</p>
-    </div>
 
-    <!-- Stats Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3 mb-3">
-            <div class="stat-card card-1">
-                <div class="stat-icon">
-                    <i class="fas fa-user-graduate"></i>
-                </div>
-                <h6>Total Students</h6>
-                <h3>{{ total_students }}</h3>
-                <div class="stat-trend">
-                    <i class="fas fa-arrow-up"></i>
-                    <span>Active</span>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-3">
-            <div class="stat-card card-2">
-                <div class="stat-icon">
-                    <i class="fas fa-chalkboard-teacher"></i>
-                </div>
-                <h6>Total Teachers</h6>
-                <h3>{{ total_teachers }}</h3>
-                <div class="stat-trend">
-                    <i class="fas fa-check-circle"></i>
-                    <span>Active</span>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-3">
-            <div class="stat-card card-3">
-                <div class="stat-icon">
-                    <i class="fas fa-school"></i>
-                </div>
-                <h6>Total Classes</h6>
-                <h3>{{ total_classes }}</h3>
-                <div class="stat-trend">
-                    <i class="fas fa-layer-group"></i>
-                    <span>Groups</span>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-3">
-            <div class="stat-card card-4">
-                <div class="stat-icon">
-                    <i class="fas fa-clipboard-list"></i>
-                </div>
-                <h6>Total Exams</h6>
-                <h3>{{ total_exams }}</h3>
-                <div class="stat-trend">
-                    <i class="fas fa-tasks"></i>
-                    <span>Tests</span>
-                </div>
-            </div>
-        </div>
-    </div>
+{# ═══════════════════════════════════════════════════
+   Override full_page to skip the base sidebar entirely.
+   The base <nav> still renders above this block.
+═══════════════════════════════════════════════════ #}
+{% block full_page %}
 
-    <!-- Charts and Stats Row -->
-    <div class="row mb-4">
-        <div class="col-md-6 mb-3">
-            <div class="dashboard-card">
-                <div class="card-header">
-                    <h5>
-                        <i class="fas fa-chart-bar"></i>
-                        Exam Statistics
-                    </h5>
+{# Flash messages — floating so they don't disturb the layout #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div style="position:fixed;top:66px;right:16px;z-index:9999;min-width:300px;max-width:420px;">
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert" style="margin-bottom:8px;border-radius:8px;">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+<!-- Dashboard shell: sidebar + main, positioned below the base navbar -->
+<div class="adm-wrapper">
+
+    <!-- ── Custom sidebar ── -->
+    <aside class="adm-sidebar">
+
+        <span class="sidebar-section-label">Overview</span>
+        <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link active">
+            <i class="fas fa-chart-line"></i> Dashboard
+        </a>
+        <a href="{{ url_for('admin.analytics') }}" class="sidebar-link">
+            <i class="fas fa-chart-area"></i> Analytics
+        </a>
+        <a href="{{ url_for('admin.advanced_analytics') }}" class="sidebar-link">
+            <i class="fas fa-chart-bar"></i> Advanced Analytics
+        </a>
+
+        <span class="sidebar-section-label">People</span>
+        <a href="{{ url_for('admin.manage_students') }}" class="sidebar-link">
+            <i class="fas fa-user-graduate"></i> Students
+        </a>
+        <a href="{{ url_for('admin.manage_teachers') }}" class="sidebar-link">
+            <i class="fas fa-chalkboard-teacher"></i> Teachers
+        </a>
+        <a href="{{ url_for('admin.manage_classes') }}" class="sidebar-link">
+            <i class="fas fa-layer-group"></i> Classes
+        </a>
+
+        <span class="sidebar-section-label">Exams</span>
+        <a href="{{ url_for('admin.manage_exams') }}" class="sidebar-link">
+            <i class="fas fa-file-alt"></i> All Exams
+        </a>
+        <a href="{{ url_for('admin.proctoring_reports') }}" class="sidebar-link">
+            <i class="fas fa-shield-alt"></i> Proctoring Reports
+        </a>
+
+        <span class="sidebar-section-label">Reports</span>
+        <a href="{{ url_for('admin.student_reports') }}" class="sidebar-link">
+            <i class="fas fa-file-chart-line"></i> Student Reports
+        </a>
+        <a href="{{ url_for('admin.activity_log') }}" class="sidebar-link">
+            <i class="fas fa-history"></i> Activity Log
+        </a>
+
+        <span class="sidebar-section-label">Import</span>
+        <a href="{{ url_for('admin.import_students') }}" class="sidebar-link">
+            <i class="fas fa-file-upload"></i> Import Students
+        </a>
+        <a href="{{ url_for('admin.import_teachers') }}" class="sidebar-link">
+            <i class="fas fa-file-upload"></i> Import Teachers
+        </a>
+
+        <div class="sidebar-footer">
+            <a href="{{ url_for('admin.admin_settings') }}" class="sidebar-link">
+                <i class="fas fa-cog"></i> Settings
+            </a>
+            <a href="{{ url_for('auth.logout') }}" class="sidebar-link danger">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+    </aside>
+
+    <!-- ── Main content ── -->
+    <main class="adm-main">
+
+        <!-- Page header -->
+        <div class="page-header">
+            <div class="page-header-text">
+                <h1>Admin Dashboard</h1>
+                <p>Welcome back — here's a snapshot of the platform today.</p>
+            </div>
+            <div class="page-header-actions">
+                <a href="{{ url_for('admin.create_student') }}" class="btn btn-ghost">
+                    <i class="fas fa-user-plus"></i> Add Student
+                </a>
+                <a href="{{ url_for('admin.create_teacher') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add Teacher
+                </a>
+            </div>
+        </div>
+
+        <!-- KPI row -->
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-icon purple"><i class="fas fa-user-graduate"></i></div>
+                <div class="kpi-body">
+                    <div class="kpi-label">Students</div>
+                    <div class="kpi-value">{{ total_students }}</div>
+                    <div class="kpi-meta"><i class="fas fa-circle" style="font-size:7px;"></i> Enrolled</div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon green"><i class="fas fa-chalkboard-teacher"></i></div>
+                <div class="kpi-body">
+                    <div class="kpi-label">Teachers</div>
+                    <div class="kpi-value">{{ total_teachers }}</div>
+                    <div class="kpi-meta"><i class="fas fa-circle" style="font-size:7px;"></i> Active</div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon amber"><i class="fas fa-layer-group"></i></div>
+                <div class="kpi-body">
+                    <div class="kpi-label">Classes</div>
+                    <div class="kpi-value">{{ total_classes }}</div>
+                    <div class="kpi-meta"><i class="fas fa-circle" style="font-size:7px;"></i> Running</div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon blue"><i class="fas fa-clipboard-list"></i></div>
+                <div class="kpi-body">
+                    <div class="kpi-label">Exams</div>
+                    <div class="kpi-value">{{ total_exams }}</div>
+                    <div class="kpi-meta"><i class="fas fa-circle" style="font-size:7px;"></i> Total</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 2: Chart + Top Performers -->
+        <div class="two-col">
+
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-head-left">
+                        <div class="card-head-icon"><i class="fas fa-chart-line"></i></div>
+                        <span class="card-title">Exam Performance</span>
+                    </div>
                 </div>
                 <div class="card-body">
-                    <div class="performance-stat">
-                        <div class="performance-stat-icon">
-                            <i class="fas fa-percentage"></i>
+                    <div class="stat-row" style="margin-bottom:20px;">
+                        <div class="stat-item">
+                            <div class="stat-item-label">Avg Score</div>
+                            <div class="stat-item-value">{{ avg_score }}%</div>
+                            <div class="stat-item-sub">across all exams</div>
                         </div>
-                        <div class="performance-stat-content">
-                            <strong>Average Score</strong>
-                            <span>{{ avg_score }}%</span>
+                        <div class="stat-item">
+                            <div class="stat-item-label">Submissions</div>
+                            <div class="stat-item-value">{{ total_submissions }}</div>
+                            <div class="stat-item-sub">total attempts</div>
                         </div>
                     </div>
-                    <div class="performance-stat">
-                        <div class="performance-stat-icon" style="background: var(--success-gradient);">
-                            <i class="fas fa-paper-plane"></i>
-                        </div>
-                        <div class="performance-stat-content">
-                            <strong>Total Submissions</strong>
-                            <span>{{ total_submissions }}</span>
-                        </div>
+                    <div class="chart-area">
+                        <canvas id="performanceChart"></canvas>
                     </div>
-                    <div id="performanceChart"></div>
                 </div>
             </div>
-        </div>
-        <div class="col-md-6 mb-3">
-            <div class="dashboard-card">
-                <div class="card-header">
-                    <h5>
-                        <i class="fas fa-star"></i>
-                        Top Performers
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Student Name</th>
-                                <th>Avg Score</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for student, avg_score in top_students %}
-                            <tr>
-                                <td>
-                                    <i class="fas fa-user-circle" style="color: #667eea; margin-right: 0.5rem;"></i>
-                                    {{ student.user.full_name }}
-                                </td>
-                                <td>
-                                    <span class="badge bg-success">
-                                        {{ avg_score|round(2) }}%
-                                    </span>
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="2" class="text-center" style="padding: 3rem; color: var(--text-secondary);">
-                                    <i class="fas fa-chart-line" style="font-size: 3rem; opacity: 0.3; display: block; margin-bottom: 1rem;"></i>
-                                    <strong>No data available yet</strong>
-                                    <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem;">Performance data will appear here once students complete exams</p>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Recent Results -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="dashboard-card">
-                <div class="card-header">
-                    <h5>
-                        <i class="fas fa-history"></i>
-                        Recent Results
-                    </h5>
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-head-left">
+                        <div class="card-head-icon"><i class="fas fa-trophy"></i></div>
+                        <span class="card-title">Top Performers</span>
+                    </div>
+                    <a href="{{ url_for('admin.student_reports') }}" class="btn btn-ghost" style="height:30px;font-size:12px;">
+                        View all
+                    </a>
                 </div>
                 <div class="card-body">
-                    <div style="overflow-x: auto;">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Student</th>
-                                    <th>Exam</th>
-                                    <th>Subject</th>
-                                    <th>Score</th>
-                                    <th>Percentage</th>
-                                    <th>Status</th>
-                                    <th>Date</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for result in recent_results %}
-                                <tr>
-                                    <td>
-                                        <i class="fas fa-user-circle" style="color: #667eea; margin-right: 0.5rem;"></i>
-                                        <strong>{{ result.student_user.full_name }}</strong>
-                                    </td>
-                                    <td>{{ result.exam.title }}</td>
-                                    <td>
-                                        <span style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%); padding: 0.375rem 0.75rem; border-radius: 8px; font-weight: 600; font-size: 0.8125rem;">
-                                            {{ result.exam.subject }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 600;">
-                                            {{ result.marks_obtained }}/{{ result.total_marks }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span style="font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #667eea;">
-                                            {{ result.percentage }}%
-                                        </span>
-                                    </td>
-                                    <td>
-                                        {% if result.is_passed %}
-                                        <span class="badge bg-success">PASSED</span>
-                                        {% else %}
-                                        <span class="badge bg-danger">FAILED</span>
-                                        {% endif %}
-                                    </td>
-                                    <td style="color: var(--text-secondary); font-size: 0.875rem;">
-                                        <i class="fas fa-clock" style="margin-right: 0.375rem;"></i>
-                                        {{ result.submitted_at.strftime('%Y-%m-%d %H:%M') }}
-                                    </td>
-                                </tr>
+                    {% for student, score in top_students %}
+                    <div class="performer-row">
+                        <div class="performer-rank {% if loop.index == 1 %}gold{% elif loop.index == 2 %}silver{% elif loop.index == 3 %}bronze{% endif %}">
+                            {{ loop.index }}
+                        </div>
+                        <div class="performer-avatar">
+                            {{ student.user.full_name[0]|upper }}
+                        </div>
+                        <div class="performer-info">
+                            <div class="performer-name">{{ student.user.full_name }}</div>
+                            <div class="score-bar-track">
+                                <div class="score-bar-fill" style="width:{{ score|round(0)|int }}%;"></div>
+                            </div>
+                        </div>
+                        <div class="performer-score">{{ score|round(1) }}%</div>
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-trophy"></i>
+                        <p>No performance data yet.<br>Results appear once students complete exams.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 3: Recent results -->
+        <div class="card">
+            <div class="card-head">
+                <div class="card-head-left">
+                    <div class="card-head-icon"><i class="fas fa-history"></i></div>
+                    <span class="card-title">Recent Results</span>
+                </div>
+                <a href="{{ url_for('admin.student_reports') }}" class="btn btn-ghost" style="height:30px;font-size:12px;">
+                    All results
+                </a>
+            </div>
+            <div class="card-body no-pad">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Exam</th>
+                            <th>Subject</th>
+                            <th>Score</th>
+                            <th>Percentage</th>
+                            <th>Status</th>
+                            <th>Submitted</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in recent_results %}
+                        <tr>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:9px;">
+                                    <div class="av">{{ result.student_user.full_name[0]|upper }}</div>
+                                    <span style="font-weight:600;font-size:13.5px;">{{ result.student_user.full_name }}</span>
+                                </div>
+                            </td>
+                            <td style="font-size:13px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                {{ result.exam.title }}
+                            </td>
+                            <td><span class="badge badge-purple">{{ result.exam.subject }}</span></td>
+                            <td style="font-family:var(--font-mono);font-size:13px;font-weight:600;">
+                                {{ result.marks_obtained }}/{{ result.total_marks }}
+                            </td>
+                            <td style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--accent);">
+                                {{ result.percentage }}%
+                            </td>
+                            <td>
+                                {% if result.is_passed %}
+                                <span class="badge badge-green"><span class="status-dot green"></span>Passed</span>
                                 {% else %}
-                                <tr>
-                                    <td colspan="7" class="text-center" style="padding: 3rem; color: var(--text-secondary);">
-                                        <i class="fas fa-clipboard-check" style="font-size: 3rem; opacity: 0.3; display: block; margin-bottom: 1rem;"></i>
-                                        <strong>No results yet</strong>
-                                        <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem;">Exam results will appear here once students complete their tests</p>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                                <span class="badge badge-red"><span class="status-dot red"></span>Failed</span>
+                                {% endif %}
+                            </td>
+                            <td style="font-size:12.5px;color:var(--ink-3);">
+                                {{ result.submitted_at.strftime('%d %b %Y, %H:%M') }}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7">
+                                <div class="empty-state">
+                                    <i class="fas fa-clipboard-check"></i>
+                                    <p>No results yet. They'll appear once students complete their tests.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Row 4: Quick actions + System tools -->
+        <div class="two-col">
+
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-head-left">
+                        <div class="card-head-icon"><i class="fas fa-bolt"></i></div>
+                        <span class="card-title">Quick Actions</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="action-grid">
+                        <a href="{{ url_for('admin.manage_users') }}" class="action-item">
+                            <i class="fas fa-users"></i> Manage Users
+                        </a>
+                        <a href="{{ url_for('admin.create_class') }}" class="action-item">
+                            <i class="fas fa-plus-circle"></i> Create Class
+                        </a>
+                        <a href="{{ url_for('admin.create_student') }}" class="action-item">
+                            <i class="fas fa-user-plus"></i> Add Student
+                        </a>
+                        <a href="{{ url_for('admin.create_teacher') }}" class="action-item">
+                            <i class="fas fa-chalkboard-teacher"></i> Add Teacher
+                        </a>
+                        <a href="{{ url_for('admin.student_reports') }}" class="action-item">
+                            <i class="fas fa-file-alt"></i> Student Reports
+                        </a>
+                        <a href="{{ url_for('admin.proctoring_reports') }}" class="action-item">
+                            <i class="fas fa-shield-alt"></i> Proctoring
+                        </a>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Quick Actions Row -->
-    <div class="row">
-        <div class="col-md-6 mb-3">
-            <div class="dashboard-card">
-                <div class="card-header">
-                    <h5>
-                        <i class="fas fa-bolt"></i>
-                        Quick Actions
-                    </h5>
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-head-left">
+                        <div class="card-head-icon"><i class="fas fa-tools"></i></div>
+                        <span class="card-title">System Tools</span>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <a href="{{ url_for('admin.manage_users') }}" class="quick-action-link">
-                        <i class="fas fa-users"></i> Manage Users
+                <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
+                    <a href="{{ url_for('admin.import_students') }}" class="btn btn-ghost" style="height:40px;justify-content:flex-start;">
+                        <i class="fas fa-file-upload" style="color:var(--accent);"></i> Import Students (CSV/Excel)
                     </a>
-                    <a href="{{ url_for('admin.create_class') }}" class="quick-action-link">
-                        <i class="fas fa-plus-circle"></i> Create New Class
+                    <a href="{{ url_for('admin.import_teachers') }}" class="btn btn-ghost" style="height:40px;justify-content:flex-start;">
+                        <i class="fas fa-file-upload" style="color:var(--accent);"></i> Import Teachers (CSV/Excel)
                     </a>
-                    <a href="{{ url_for('admin.create_student') }}" class="quick-action-link">
-                        <i class="fas fa-user-plus"></i> Add Student
+                    <a href="{{ url_for('admin.analytics') }}" class="btn btn-ghost" style="height:40px;justify-content:flex-start;">
+                        <i class="fas fa-chart-pie" style="color:var(--blue);"></i> View Analytics
                     </a>
-                    
-                    <a href="{{ url_for('admin.create_teacher') }}" class="quick-action-link">
-                        <i class="fas fa-chalkboard-teacher"></i> Add Teacher
-                    </a>
-                 <a href="{{ url_for('admin.student_reports') }}" class="quick-action-link">
-                        <i class="fas fa-chalkboard-teacher"></i> Student Reports
-                    </a>
-                    
-                    
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6 mb-3">
-            <div class="dashboard-card">
-                <div class="card-header">
-                    <h5>
-                        <i class="fas fa-tools"></i>
-                        System Tools
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <a href="{{ url_for('admin.import_students') }}" class="btn btn-secondary mb-2 w-100">
-                        <i class="fas fa-file-upload"></i> Import Students
-                    </a>
-                    <a href="{{ url_for('admin.import_teachers') }}" class="btn btn-secondary mb-2 w-100">
-                        <i class="fas fa-file-upload"></i> Import Teachers
-                    </a>
-                    <a href="{{ url_for('admin.analytics') }}" class="btn btn-info mb-2 w-100">
-                        <i class="fas fa-chart-pie"></i> View Analytics
-                    </a>
-                    
-                    <a href="{{ url_for('admin.student_reports') }}" class="btn btn-primary w-100">
+                    <a href="{{ url_for('admin.student_reports') }}" class="btn btn-primary" style="height:40px;justify-content:flex-start;">
                         <i class="fas fa-file-alt"></i> Generate Reports
                     </a>
-                    <div class="quick-action-card">
-   
-</div>
+                    <a href="{{ url_for('admin.admin_profile') }}" class="btn btn-ghost" style="height:40px;justify-content:flex-start;">
+                        <i class="fas fa-user-circle" style="color:var(--ink-3);"></i> Admin Profile
+                    </a>
+                    <a href="{{ url_for('admin.admin_settings') }}" class="btn btn-ghost" style="height:40px;justify-content:flex-start;">
+                        <i class="fas fa-cog" style="color:var(--ink-3);"></i> Platform Settings
+                    </a>
                 </div>
             </div>
         </div>
-    </div>
-</div>
-{% endblock %}
+
+        <!-- Student performance insights (if present) -->
+        {% if student_insights %}
+        <div class="card">
+            <div class="card-head">
+                <div class="card-head-left">
+                    <div class="card-head-icon"><i class="fas fa-lightbulb"></i></div>
+                    <span class="card-title">Student Performance Insights</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="three-col">
+                    {% for student in student_insights %}
+                    <div style="border:1px solid var(--border);border-radius:var(--radius);padding:16px;background:var(--surface-2);">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                            <div class="av">{{ student.name[0]|upper }}</div>
+                            <div>
+                                <div style="font-weight:700;font-size:13.5px;color:var(--ink);">{{ student.name }}</div>
+                                <div style="font-size:12px;color:var(--ink-3);">{{ student.class_name }} · #{{ student.admission_number }}</div>
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:8px;margin-bottom:12px;">
+                            <div class="stat-item" style="flex:1;">
+                                <div class="stat-item-label">Avg Score</div>
+                                <div class="stat-item-value" style="font-size:18px;">{{ student.avg_score }}%</div>
+                            </div>
+                            <div class="stat-item" style="flex:1;">
+                                <div class="stat-item-label">Pass Rate</div>
+                                <div class="stat-item-value" style="font-size:18px;">{{ student.pass_rate }}%</div>
+                            </div>
+                        </div>
+                        <div style="margin-bottom:8px;">
+                            <span style="font-size:12px;font-weight:600;color:var(--ink-3);">Trend: </span>
+                            {% if student.trend == 'improving' %}
+                            <span class="badge badge-green">Improving</span>
+                            {% elif student.trend == 'declining' %}
+                            <span class="badge badge-red">Declining</span>
+                            {% else %}
+                            <span class="badge badge-amber">Stable</span>
+                            {% endif %}
+                        </div>
+                        {% if student.key_insights %}
+                        <div style="font-size:12px;font-weight:600;color:var(--ink-3);margin-bottom:4px;">Key Insights</div>
+                        {% for insight in student.key_insights %}
+                        <div style="display:flex;gap:6px;font-size:12.5px;color:var(--ink-2);margin-bottom:3px;">
+                            <i class="fas fa-check-circle" style="color:var(--green);margin-top:3px;font-size:11px;flex-shrink:0;"></i>{{ insight }}
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                        {% if student.concerns %}
+                        <div style="font-size:12px;font-weight:600;color:var(--ink-3);margin:8px 0 4px;">Concerns</div>
+                        {% for concern in student.concerns %}
+                        <div style="display:flex;gap:6px;font-size:12.5px;color:var(--ink-2);margin-bottom:3px;">
+                            <i class="fas fa-exclamation-circle" style="color:var(--amber);margin-top:3px;font-size:11px;flex-shrink:0;"></i>{{ concern }}
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                        {% if student.recommendations %}
+                        <div style="font-size:12px;font-weight:600;color:var(--ink-3);margin:8px 0 4px;">Recommendations</div>
+                        {% for rec in student.recommendations %}
+                        <div style="display:flex;gap:6px;font-size:12.5px;color:var(--ink-2);margin-bottom:3px;">
+                            <i class="fas fa-lightbulb" style="color:var(--blue);margin-top:3px;font-size:11px;flex-shrink:0;"></i>{{ rec }}
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    </main>
+</div><!-- end adm-wrapper -->
+
+{% endblock full_page %}
+
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-    // Performance chart with beautiful gradient
-    const ctx = document.getElementById('performanceChart');
-    if (ctx) {
-        const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 300);
-        gradient.addColorStop(0, 'rgba(102, 126, 234, 0.4)');
-        gradient.addColorStop(0.5, 'rgba(118, 75, 162, 0.2)');
-        gradient.addColorStop(1, 'rgba(102, 126, 234, 0.05)');
-        
-        new Chart(ctx, {
+document.addEventListener('DOMContentLoaded', function () {
+
+    /* ── Performance chart ── */
+    const canvas = document.getElementById('performanceChart');
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+        gradient.addColorStop(0,   'rgba(79,70,229,.18)');
+        gradient.addColorStop(0.6, 'rgba(79,70,229,.05)');
+        gradient.addColorStop(1,   'rgba(79,70,229,0)');
+
+        new Chart(canvas, {
             type: 'line',
             data: {
-                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5'],
+                labels: ['Week 1','Week 2','Week 3','Week 4','Week 5'],
                 datasets: [{
-                    label: 'Average Score (%)',
-                    data: [65, 70, 75, 72, 78],
-                    borderColor: '#667eea',
+                    label: 'Avg Score (%)',
+                    data: [65,70,75,72,78],
+                    borderColor: '#4f46e5',
                     backgroundColor: gradient,
                     tension: 0.4,
                     fill: true,
-                    pointRadius: 6,
-                    pointHoverRadius: 8,
-                    pointBackgroundColor: '#667eea',
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: '#4f46e5',
                     pointBorderColor: '#fff',
-                    pointBorderWidth: 3,
-                    pointHoverBackgroundColor: '#764ba2',
-                    pointHoverBorderColor: '#fff',
-                    borderWidth: 3
+                    pointBorderWidth: 2,
+                    borderWidth: 2.5
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top',
-                        labels: {
-                            font: {
-                                family: "'Outfit', sans-serif",
-                                size: 13,
-                                weight: '600'
-                            },
-                            color: '#1a1a2e',
-                            padding: 15,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
+                    legend: { display: false },
                     tooltip: {
-                        backgroundColor: 'rgba(26, 26, 46, 0.95)',
+                        backgroundColor: '#111827',
                         titleColor: '#fff',
-                        bodyColor: '#fff',
-                        padding: 12,
-                        borderColor: '#667eea',
-                        borderWidth: 2,
+                        bodyColor: '#e5e7eb',
+                        padding: 10,
+                        borderColor: '#4f46e5',
+                        borderWidth: 1,
                         displayColors: false,
-                        titleFont: {
-                            family: "'Outfit', sans-serif",
-                            size: 14,
-                            weight: '700'
-                        },
-                        bodyFont: {
-                            family: "'JetBrains Mono', monospace",
-                            size: 13,
-                            weight: '600'
-                        },
-                        callbacks: {
-                            label: function(context) {
-                                return context.parsed.y + '%';
-                            }
-                        }
+                        callbacks: { label: c => c.parsed.y + '%' }
                     }
                 },
                 scales: {
                     y: {
-                        beginAtZero: true,
-                        max: 100,
-                        grid: {
-                            color: 'rgba(102, 126, 234, 0.1)',
-                            borderDash: [5, 5]
-                        },
-                        ticks: {
-                            font: {
-                                family: "'JetBrains Mono', monospace",
-                                size: 12,
-                                weight: '500'
-                            },
-                            color: '#64748b',
-                            callback: function(value) {
-                                return value + '%';
-                            }
-                        }
+                        beginAtZero: false, min: 50, max: 100,
+                        grid: { color: 'rgba(0,0,0,.05)', drawBorder: false },
+                        ticks: { font: { family:"'DM Mono',monospace", size:11 }, color:'#9ca3af', callback: v => v+'%' },
+                        border: { display: false }
                     },
                     x: {
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            font: {
-                                family: "'Outfit', sans-serif",
-                                size: 12,
-                                weight: '600'
-                            },
-                            color: '#64748b'
-                        }
+                        grid: { display: false },
+                        ticks: { font: { family:"'DM Sans',sans-serif", size:12 }, color:'#9ca3af' },
+                        border: { display: false }
                     }
                 },
-                interaction: {
-                    intersect: false,
-                    mode: 'index'
-                }
+                interaction: { intersect: false, mode: 'index' }
             }
         });
     }
-    
-    // Add smooth scroll animation
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-            e.preventDefault();
-            const target = document.querySelector(this.getAttribute('href'));
-            if (target) {
-                target.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            }
-        });
+
+    /* ── Animate score bars ── */
+    document.querySelectorAll('.score-bar-fill').forEach(bar => {
+        const target = bar.style.width;
+        bar.style.width = '0%';
+        setTimeout(() => { bar.style.width = target; }, 400);
     });
-    
-    // Add loading animation for stat cards
-    document.addEventListener('DOMContentLoaded', function() {
-        const statCards = document.querySelectorAll('.stat-card');
-        statCards.forEach((card, index) => {
-            setTimeout(() => {
-                card.style.opacity = '0';
-                card.style.transform = 'translateY(20px)';
-                
-                requestAnimationFrame(() => {
-                    card.style.transition = 'opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
-                    card.style.opacity = '1';
-                    card.style.transform = 'translateY(0)';
-                });
-            }, index * 100);
-        });
-    });
+});
 </script>
 {% endblock %}
