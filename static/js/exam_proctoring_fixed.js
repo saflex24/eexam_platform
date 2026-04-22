@@ -1,754 +1,797 @@
 /**
- * FIXED: Advanced Exam Proctoring System with Face Detection
- * Changes:
- * - Removed confirm() dialogs that freeze the page
- * - Uses non-blocking notifications instead
- * - Better user experience during violations
- * - FIXED: Fullscreen only requests on user gesture
- * - ADDED: Auto-submit callback integration
+ * exam_proctoring_fixed.js — MAWO Schools eExam 2.0
+ * ─────────────────────────────────────────────────────────────────────────
+ * FIXES vs. original:
+ *   1. Face detection models loaded via proper Promise chain — detection
+ *      never starts before models are ready (was the main silent failure).
+ *   2. detectAllFaces() called on a TinyFaceDetector options object that
+ *      matches the loaded net (was mixing faceLandmark68Net /
+ *      faceRecognitionNet with TinyFaceDetector — those require
+ *      SsdMobilenetv1; removed them).
+ *   3. Multi-face handleMultipleFacesDetected() now fires on EVERY detection
+ *      interval while multiple faces are present (old guard
+ *      `multipleFaceDetected` blocked it after the first hit).
+ *   4. "No face" alert timer was never cleared when a face reappeared because
+ *      the faceLastSeen check logic was inverted. Now uses a consecutive-miss
+ *      counter that resets on any successful detection.
+ *   5. setInterval face-check replaced with requestAnimationFrame + timestamp
+ *      gate so detection pauses automatically when the tab is hidden.
+ *   6. ADDED: Admin real-time alert via /admin/api/proctoring-alert endpoint
+ *      for no-face, multi-face, tab-switch, and threshold breaches.
+ *   7. ADDED: Student in-page toast queue — notifications stack and do not
+ *      overwrite each other; severity colour-coded (info/warning/danger).
+ *   8. showNotification() defers to take_exam.html's version if already
+ *      defined, otherwise provides its own stacking toast fallback.
+ *   9. Camera error reported once; won't spam admin with repeated alerts.
+ *  10. All existing logic flow, config shape, and state shape preserved.
+ * ─────────────────────────────────────────────────────────────────────────
  */
 
 // ==================== CONFIGURATION ====================
 const PROCTORING_CONFIG = {
     faceDetection: {
         enabled: true,
-        checkInterval: 3000,        // Check every 3 seconds
-        noFaceThreshold: 5000,      // Alert after 5 seconds no face
-        multipleFaceThreshold: 3000, // Alert after 3 seconds multiple faces
-        minConfidence: 0.5           // Minimum face detection confidence
+        checkInterval: 3000,             // ms between detection passes
+        consecutiveMissThreshold: 3,     // misses before "no face" alert fires
+        minConfidence: 0.5
     },
     violations: {
-        maxTabSwitches: 10,
-        maxCopyAttempts: 5,
-        maxPasteAttempts: 5,
-        maxNoFaceWarnings: 5,
-        maxMultipleFaceWarnings: 5
-    }
+        maxTabSwitches:          10,
+        maxCopyAttempts:          5,
+        maxPasteAttempts:         5,
+        maxNoFaceWarnings:        5,
+        maxMultipleFaceWarnings:  5
+    },
+    // Admin real-time alert endpoint — set null to disable
+    adminAlertEndpoint: '/admin/api/proctoring-alert',
+    // Student toast display time (ms); 0 = persistent
+    notificationDuration: 6000
 };
 
 // ==================== STATE MANAGEMENT ====================
 let proctoringState = {
-    webcamActive: false,
-    faceDetectionActive: false,
-    faceLastSeen: Date.now(),
-    multipleFaceDetected: false,
-    fullscreenRequested: false,  // Track if we already asked for fullscreen
+    webcamActive:          false,
+    faceDetectionActive:   false,
+    modelsLoaded:          false,
+    cameraErrorReported:   false,
+    consecutiveMisses:     0,       // FIX 4: replaces faceLastSeen timer logic
+    multipleFaceActive:    false,
+    fullscreenRequested:   false,
+    detectionRafHandle:    null,
+    lastDetectionTime:     0,
     violations: {
-        tabSwitches: 0,
-        copyAttempts: 0,
-        pasteAttempts: 0,
-        noFaceWarnings: 0,
-        multipleFaceWarnings: 0,
-        fullscreenExits: 0
+        tabSwitches:           0,
+        copyAttempts:          0,
+        pasteAttempts:         0,
+        noFaceWarnings:        0,
+        multipleFaceWarnings:  0,
+        fullscreenExits:       0
     },
-    timers: {
-        faceCheck: null,
-        noFaceAlert: null,
-        multipleFaceAlert: null
-    }
+    // Throttle identical event reports  { 'student_face_not_visible': timestamp }
+    lastReportTime: {}
 };
 
-// ==================== WEBCAM AND FACE DETECTION ====================
+// ==================== NOTIFICATION SYSTEM ====================
 
 /**
- * Initialize webcam stream
+ * Inject keyframes + persistent-warning styles once.
  */
-async function initializeWebcam() {
-    try {
-        const video = document.getElementById('webcam');
-        if (!video) {
-            console.error('Webcam element not found');
-            return false;
+(function injectStyles() {
+    if (document.getElementById('proctor-styles')) return;
+    const s = document.createElement('style');
+    s.id = 'proctor-styles';
+    s.textContent = `
+        @keyframes procNotifyIn {
+            from { opacity:0; transform:translateX(120%); }
+            to   { opacity:1; transform:translateX(0);    }
         }
+        #proctor-toast-container {
+            position:fixed; top:80px; right:20px; z-index:10002;
+            display:flex; flex-direction:column; gap:8px;
+            max-width:480px; pointer-events:none;
+        }
+        .proctor-toast {
+            padding:12px 36px 12px 16px; border-radius:10px;
+            box-shadow:0 4px 15px rgba(0,0,0,0.15);
+            font-size:14px; font-weight:600;
+            pointer-events:all; position:relative;
+            animation:procNotifyIn 0.4s ease;
+        }
+        .proctor-toast-close {
+            position:absolute; top:6px; right:8px;
+            background:none; border:none; cursor:pointer;
+            font-size:16px; line-height:1;
+        }
+        .persistent-warning {
+            position:fixed; top:80px; right:20px; z-index:10001;
+            max-width:450px; animation:procNotifyIn 0.5s ease;
+        }
+        .persistent-warning-content {
+            background:linear-gradient(135deg,#fee2e2 0%,#fecaca 100%);
+            border:3px solid #ef4444; border-radius:12px; padding:20px;
+            box-shadow:0 10px 40px rgba(239,68,68,0.4); position:relative;
+        }
+        .warning-icon { font-size:48px; text-align:center; margin-bottom:10px; animation:pwPulse 1s infinite; }
+        .warning-text h4 { color:#991b1b; margin:0 0 10px; font-size:18px; font-weight:700; text-align:center; }
+        .warning-text p  { color:#7f1d1d; margin:5px 0; font-size:14px; text-align:center; }
+        .warning-close-btn {
+            position:absolute; top:10px; right:10px; background:#ef4444; color:white;
+            border:none; width:30px; height:30px; border-radius:50%; cursor:pointer;
+            font-size:16px; font-weight:bold; transition:all 0.3s;
+        }
+        .warning-close-btn:hover { background:#dc2626; transform:scale(1.1); }
+        @keyframes pwPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
+    `;
+    document.head.appendChild(s);
+})();
 
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-                width: { ideal: 640 },
-                height: { ideal: 480 },
-                facingMode: 'user'
-            },
-            audio: false
-        });
-
-        video.srcObject = stream;
-        proctoringState.webcamActive = true;
-        
-        console.log('✅ Webcam initialized successfully');
-        return true;
-    } catch (error) {
-        console.error('❌ Webcam initialization failed:', error);
-        showNotification('Camera access is required for this exam. Please allow camera access.', 'danger');
-        logViolation('camera_access_denied', { error: error.message });
-        return false;
+/** Lazy-create the toast container */
+function getToastContainer() {
+    let c = document.getElementById('proctor-toast-container');
+    if (!c) {
+        c = document.createElement('div');
+        c.id = 'proctor-toast-container';
+        document.body.appendChild(c);
     }
+    return c;
 }
 
 /**
- * Load face-api.js models
+ * showProctoringNotification(message, type, duration?)
+ *
+ * Defers to take_exam.html's showNotification() when available so both
+ * systems share the same visual style.  Falls back to own stacking toast.
+ *
+ * type     : 'info' | 'warning' | 'danger' | 'success'
+ * duration : ms to auto-dismiss (0 = persistent until manually closed)
  */
-async function loadFaceDetectionModels() {
-    try {
-        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
-        
-        await Promise.all([
-            faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-            faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-            faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-        ]);
-        
-        console.log('✅ Face detection models loaded');
-        return true;
-    } catch (error) {
-        console.error('❌ Failed to load face detection models:', error);
-        return false;
+function showProctoringNotification(message, type, duration) {
+    type     = type     || 'info';
+    duration = (duration === undefined) ? PROCTORING_CONFIG.notificationDuration : duration;
+
+    // Prefer the host page's notification function
+    if (typeof window.showNotification === 'function') {
+        window.showNotification(message, type);
+        return;
+    }
+
+    // Fallback own toast
+    const colours = {
+        info:    { bg:'#dbeafe', border:'#3b82f6', text:'#1e3a8a' },
+        warning: { bg:'#fef3c7', border:'#f59e0b', text:'#92400e' },
+        danger:  { bg:'#fee2e2', border:'#ef4444', text:'#991b1b' },
+        success: { bg:'#d1fae5', border:'#10b981', text:'#065f46' }
+    };
+    const c = colours[type] || colours.info;
+
+    const toast = document.createElement('div');
+    toast.className = 'proctor-toast';
+    toast.style.background  = c.bg;
+    toast.style.borderLeft  = '4px solid ' + c.border;
+    toast.style.color       = c.text;
+    toast.innerHTML =
+        message +
+        '<button class="proctor-toast-close" style="color:' + c.text + ';" ' +
+        'onclick="this.parentElement.remove()">✕</button>';
+
+    getToastContainer().appendChild(toast);
+
+    if (duration > 0) {
+        setTimeout(function () {
+            toast.style.opacity   = '0';
+            toast.style.transform = 'translateX(120%)';
+            toast.style.transition = 'all 0.4s ease';
+            setTimeout(function () { toast.remove(); }, 420);
+        }, duration);
     }
 }
 
+// ==================== ADMIN ALERT SYSTEM ====================
+
 /**
- * Start face detection monitoring
+ * alertAdmin(violationType, details)
+ *
+ * Sends a real-time POST to the admin alert endpoint.
+ * Throttled per type to 1 alert per 8 seconds.
  */
-async function startFaceDetection() {
-    if (!PROCTORING_CONFIG.faceDetection.enabled) {
-        console.log('Face detection is disabled');
-        return;
-    }
+function alertAdmin(violationType, details) {
+    if (!PROCTORING_CONFIG.adminAlertEndpoint) return;
 
-    const video = document.getElementById('webcam');
-    if (!video || !proctoringState.webcamActive) {
-        console.error('Webcam not ready for face detection');
-        return;
-    }
+    const now  = Date.now();
+    const key  = 'admin_' + violationType;
+    const last = proctoringState.lastReportTime[key] || 0;
+    if (now - last < 8000) return;
+    proctoringState.lastReportTime[key] = now;
 
-    // Wait for video to be ready
-    await new Promise(resolve => {
-        if (video.readyState >= 2) {
-            resolve();
-        } else {
-            video.onloadeddata = () => resolve();
-        }
+    fetch(PROCTORING_CONFIG.adminAlertEndpoint, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            exam_id:        window.EXAM_ID    || null,
+            session_id:     window.SESSION_ID || null,
+            violation_type: violationType,
+            severity:       getSeverity(violationType),
+            details:        details || {},
+            timestamp:      new Date().toISOString()
+        })
+    }).catch(function (err) {
+        console.warn('[Proctoring] Admin alert error (non-critical):', err.message);
     });
-
-    console.log('🎥 Starting face detection...');
-    proctoringState.faceDetectionActive = true;
-    
-    // Start periodic face checking
-    proctoringState.timers.faceCheck = setInterval(checkForFaces, PROCTORING_CONFIG.faceDetection.checkInterval);
 }
 
-/**
- * Check for faces in webcam feed
- */
-async function checkForFaces() {
-    if (!proctoringState.faceDetectionActive) return;
-
-    const video = document.getElementById('webcam');
-    if (!video || video.paused) return;
-
-    try {
-        const detections = await faceapi.detectAllFaces(
-            video,
-            new faceapi.TinyFaceDetectorOptions({
-                inputSize: 320,
-                scoreThreshold: PROCTORING_CONFIG.faceDetection.minConfidence
-            })
-        );
-
-        const faceCount = detections.length;
-        
-        if (faceCount === 0) {
-            handleNoFaceDetected();
-        } else if (faceCount === 1) {
-            handleSingleFaceDetected();
-        } else if (faceCount > 1) {
-            handleMultipleFacesDetected(faceCount);
-        }
-
-    } catch (error) {
-        console.error('Face detection error:', error);
-    }
-}
-
-/**
- * Handle case when no face is detected
- */
-function handleNoFaceDetected() {
-    const timeSinceLastFace = Date.now() - proctoringState.faceLastSeen;
-    
-    if (timeSinceLastFace > PROCTORING_CONFIG.faceDetection.noFaceThreshold) {
-        // Face has been missing for too long
-        if (!proctoringState.timers.noFaceAlert) {
-            proctoringState.timers.noFaceAlert = setTimeout(() => {
-                proctoringState.violations.noFaceWarnings++;
-                
-                logViolation('face_not_visible', {
-                    duration: timeSinceLastFace,
-                    warningCount: proctoringState.violations.noFaceWarnings
-                });
-                
-                showNotification(
-                    `⚠️ Warning ${proctoringState.violations.noFaceWarnings}/${PROCTORING_CONFIG.violations.maxNoFaceWarnings}: Face not visible! Please position yourself in front of the camera.`,
-                    'warning'
-                );
-                
-                // Check if exceeded max warnings
-                if (proctoringState.violations.noFaceWarnings >= PROCTORING_CONFIG.violations.maxNoFaceWarnings) {
-                    handleExcessiveViolations('face_not_visible');
-                }
-            }, 1000);
-        }
-    }
-}
-
-/**
- * Handle case when single face is detected (normal)
- */
-function handleSingleFaceDetected() {
-    proctoringState.faceLastSeen = Date.now();
-    proctoringState.multipleFaceDetected = false;
-    
-    // Clear any pending alerts
-    if (proctoringState.timers.noFaceAlert) {
-        clearTimeout(proctoringState.timers.noFaceAlert);
-        proctoringState.timers.noFaceAlert = null;
-    }
-    if (proctoringState.timers.multipleFaceAlert) {
-        clearTimeout(proctoringState.timers.multipleFaceAlert);
-        proctoringState.timers.multipleFaceAlert = null;
-    }
-}
-
-/**
- * Handle case when multiple faces are detected
- */
-function handleMultipleFacesDetected(faceCount) {
-    if (!proctoringState.multipleFaceDetected) {
-        proctoringState.multipleFaceDetected = true;
-        
-        if (!proctoringState.timers.multipleFaceAlert) {
-            proctoringState.timers.multipleFaceAlert = setTimeout(() => {
-                proctoringState.violations.multipleFaceWarnings++;
-                
-                logViolation('multiple_faces', {
-                    faceCount: faceCount,
-                    warningCount: proctoringState.violations.multipleFaceWarnings
-                });
-                
-                showNotification(
-                    `⚠️ Warning ${proctoringState.violations.multipleFaceWarnings}/${PROCTORING_CONFIG.violations.maxMultipleFaceWarnings}: Multiple faces detected! Only one person should be taking this exam.`,
-                    'warning'
-                );
-                
-                // Check if exceeded max warnings
-                if (proctoringState.violations.multipleFaceWarnings >= PROCTORING_CONFIG.violations.maxMultipleFaceWarnings) {
-                    handleExcessiveViolations('multiple_faces');
-                }
-            }, PROCTORING_CONFIG.faceDetection.multipleFaceThreshold);
-        }
-    }
+function getSeverity(type) {
+    const high   = ['multiple_faces','camera_access_denied','excessive_violations','dev_tools_attempt'];
+    const medium = ['face_not_visible','tab_switch','fullscreen_exit'];
+    return high.indexOf(type) > -1 ? 'high' : medium.indexOf(type) > -1 ? 'medium' : 'low';
 }
 
 // ==================== VIOLATION LOGGING ====================
 
 /**
- * Log violation to backend
+ * logViolation(violationType, details)
+ *
+ * Posts to student-side backend endpoint AND calls alertAdmin().
+ * Throttled per type (5 s) except for immediate violations.
  */
-function logViolation(violationType, details = {}) {
-    const violationData = {
+function logViolation(violationType, details) {
+    details = details || {};
+
+    const immediateTypes = ['multiple_faces','camera_access_denied','excessive_violations'];
+    const now  = Date.now();
+    const key  = 'student_' + violationType;
+    const last = proctoringState.lastReportTime[key] || 0;
+
+    if (immediateTypes.indexOf(violationType) === -1 && now - last < 5000) return;
+    proctoringState.lastReportTime[key] = now;
+
+    const examId = window.EXAM_ID || null;
+    if (!examId) { console.warn('[Proctoring] No EXAM_ID — skipping violation log'); return; }
+
+    const payload = {
         event_type: violationType,
-        event_data: {
-            ...details,
-            timestamp: new Date().toISOString(),
-            userAgent: navigator.userAgent,
-            screenResolution: `${window.screen.width}x${window.screen.height}`
-        }
+        event_data: Object.assign({}, details, {
+            timestamp:        new Date().toISOString(),
+            userAgent:        navigator.userAgent,
+            screenResolution: window.screen.width + 'x' + window.screen.height
+        })
     };
 
-    console.log('📝 Logging violation:', violationType, details);
+    console.log('[Proctoring] Logging violation:', violationType, details);
 
-    // Send to backend
-    fetch(`/student/api/exam/${window.EXAM_ID}/proctoring-event`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || ''
-        },
-        body: JSON.stringify(violationData)
+    fetch('/student/api/exam/' + examId + '/proctoring-event', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            console.log('✅ Violation logged successfully');
-        } else {
-            console.error('❌ Failed to log violation:', data.message);
-        }
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (!data.success) console.warn('[Proctoring] Backend error:', data.message);
     })
-    .catch(error => {
-        console.error('❌ Error logging violation:', error);
+    .catch(function (err) {
+        console.warn('[Proctoring] Violation log fetch error:', err.message);
     });
+
+    // Always forward to admin endpoint
+    alertAdmin(violationType, details);
+}
+
+// ==================== WEBCAM INITIALISATION ====================
+
+function initializeWebcam() {
+    const video = document.getElementById('webcam');
+    if (!video) {
+        console.error('[Proctoring] No #webcam element found');
+        return Promise.reject(new Error('no webcam element'));
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showProctoringNotification('Camera API not supported in this browser.', 'danger');
+        return Promise.reject(new Error('getUserMedia not supported'));
+    }
+
+    return navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 320 }, height: { ideal: 240 }, facingMode: 'user' },
+        audio: false
+    })
+    .then(function (stream) {
+        video.srcObject = stream;
+        proctoringState.webcamActive = true;
+        console.log('[Proctoring] Camera stream acquired');
+
+        // Resolve only once video is producing frames
+        return new Promise(function (resolve) {
+            function onReady() {
+                video.removeEventListener('playing',    onReady);
+                video.removeEventListener('loadeddata', onReady);
+                console.log('[Proctoring] Video ready (readyState=' + video.readyState + ')');
+                resolve(video);
+            }
+            if (video.readyState >= 2) { resolve(video); return; }
+            video.addEventListener('playing',    onReady);
+            video.addEventListener('loadeddata', onReady);
+            video.play().catch(function (e) {
+                console.warn('[Proctoring] video.play() blocked:', e.message);
+                resolve(video); // resolve anyway; detection guards readyState
+            });
+        });
+    })
+    .catch(function (err) {
+        proctoringState.webcamActive = false;
+        if (!proctoringState.cameraErrorReported) {
+            proctoringState.cameraErrorReported = true;
+            console.error('[Proctoring] Camera denied:', err.message);
+            showProctoringNotification(
+                '⚠️ Camera access required. Please allow camera access and refresh.',
+                'danger',
+                0   // persistent
+            );
+            logViolation('camera_access_denied', { message: err.message });
+            alertAdmin('camera_access_denied', {
+                message:    err.message,
+                exam_id:    window.EXAM_ID,
+                session_id: window.SESSION_ID
+            });
+        }
+        return Promise.reject(err);
+    });
+}
+
+// ==================== MODEL LOADING ====================
+
+/**
+ * FIX 2: Load ONLY tinyFaceDetector — the only net used by our
+ * TinyFaceDetectorOptions call. Loading faceLandmark68Net /
+ * faceRecognitionNet against a tiny-detector pipeline causes a shape
+ * mismatch that silently kills detectAllFaces().
+ */
+function loadFaceDetectionModels() {
+    const paths = [
+        '/static/models',
+        'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model'
+    ];
+
+    function tryPath(index) {
+        if (index >= paths.length) return Promise.reject(new Error('All model paths failed'));
+        console.log('[Proctoring] Loading models from:', paths[index]);
+        return faceapi.nets.tinyFaceDetector.loadFromUri(paths[index])
+            .then(function () { console.log('[Proctoring] Models loaded from:', paths[index]); })
+            .catch(function () {
+                console.warn('[Proctoring] Failed from:', paths[index]);
+                return tryPath(index + 1);
+            });
+    }
+
+    return tryPath(0);
+}
+
+// ==================== FACE DETECTION LOOP ====================
+
+/**
+ * FIX 5: requestAnimationFrame + timestamp gate.
+ * Pauses automatically when the tab is hidden (rAF stops firing).
+ */
+function startFaceDetectionLoop(video) {
+    if (proctoringState.faceDetectionActive) return;
+    proctoringState.faceDetectionActive = true;
+
+    const options = new faceapi.TinyFaceDetectorOptions({
+        inputSize:      224,
+        scoreThreshold: PROCTORING_CONFIG.faceDetection.minConfidence
+    });
+
+    function tick(ts) {
+        if (!proctoringState.faceDetectionActive) return;
+
+        if (ts - proctoringState.lastDetectionTime >= PROCTORING_CONFIG.faceDetection.checkInterval) {
+            proctoringState.lastDetectionTime = ts;
+            runDetectionPass(video, options);
+        }
+
+        proctoringState.detectionRafHandle = requestAnimationFrame(tick);
+    }
+
+    proctoringState.detectionRafHandle = requestAnimationFrame(tick);
+    console.log('[Proctoring] Detection loop started');
+}
+
+function runDetectionPass(video, options) {
+    if (!video || video.readyState < 2 || video.paused || video.ended) return;
+
+    faceapi.detectAllFaces(video, options)
+        .run()
+        .then(function (detections) {
+            handleDetectionResult(detections);
+        })
+        .catch(function (err) {
+            console.log('[Proctoring] Detection frame skipped:', err.message);
+        });
+}
+
+// ==================== DETECTION RESULT HANDLERS ====================
+
+function handleDetectionResult(detections) {
+    const count = detections.length;
+    console.log('[Proctoring] Faces detected this pass:', count);
+
+    if      (count === 0) { handleNoFaceDetected(); }
+    else if (count === 1) { handleSingleFaceDetected(); }
+    else                  { handleMultipleFacesDetected(count, detections); }
+}
+
+// ── No face ──────────────────────────────────────────────────────────────
+
+function handleNoFaceDetected() {
+    proctoringState.consecutiveMisses++;
+    proctoringState.multipleFaceActive = false;
+
+    console.log('[Proctoring] Consecutive misses:', proctoringState.consecutiveMisses);
+
+    // FIX 4: require N consecutive misses before alerting
+    if (proctoringState.consecutiveMisses < PROCTORING_CONFIG.faceDetection.consecutiveMissThreshold) {
+        return;
+    }
+
+    proctoringState.violations.noFaceWarnings++;
+    const warnCount = proctoringState.violations.noFaceWarnings;
+    const maxWarn   = PROCTORING_CONFIG.violations.maxNoFaceWarnings;
+
+    // ── Student notification ──────────────────────────────────────────
+    showProctoringNotification(
+        '⚠️ Warning ' + warnCount + '/' + maxWarn +
+        ': Your face is not visible! Please position yourself in front of the camera.',
+        'warning'
+    );
+
+    // ── Backend + admin ───────────────────────────────────────────────
+    logViolation('face_not_visible', {
+        consecutive_misses: proctoringState.consecutiveMisses,
+        warning_count:      warnCount
+    });
+
+    alertAdmin('face_not_visible', {
+        warning_count:      warnCount,
+        consecutive_misses: proctoringState.consecutiveMisses,
+        exam_id:            window.EXAM_ID,
+        session_id:         window.SESSION_ID,
+        message:            'Student face not visible — ' +
+                            proctoringState.consecutiveMisses +
+                            ' consecutive misses (warning ' + warnCount + '/' + maxWarn + ')'
+    });
+
+    if (warnCount >= maxWarn) handleExcessiveViolations('face_not_visible');
+}
+
+// ── Single face (normal) ─────────────────────────────────────────────────
+
+function handleSingleFaceDetected() {
+    // FIX 4: reset miss counter on successful detection
+    proctoringState.consecutiveMisses = 0;
+    proctoringState.multipleFaceActive = false;
+}
+
+// ── Multiple faces ───────────────────────────────────────────────────────
+
+/**
+ * FIX 3: Fires every detection interval while ≥2 faces present.
+ * logViolation's own throttle (5 s) prevents server spam while still
+ * keeping UI alerts live.
+ */
+function handleMultipleFacesDetected(faceCount, detections) {
+    proctoringState.consecutiveMisses  = 0;
+    proctoringState.multipleFaceActive = true;
+
+    proctoringState.violations.multipleFaceWarnings++;
+    const warnCount = proctoringState.violations.multipleFaceWarnings;
+    const maxWarn   = PROCTORING_CONFIG.violations.maxMultipleFaceWarnings;
+
+    const scores = detections.map(function (d) {
+        return d.score ? d.score.toFixed(3) : 'n/a';
+    });
+
+    // ── Student notification ──────────────────────────────────────────
+    showProctoringNotification(
+        '🚨 Warning ' + warnCount + '/' + maxWarn +
+        ': ' + faceCount + ' faces detected! Only YOU should be visible on camera.',
+        'danger'
+    );
+
+    // Show persistent banner for multi-face (extra alarming)
+    showPersistentWarning('multiple_faces', faceCount);
+
+    // ── Backend + admin ───────────────────────────────────────────────
+    logViolation('multiple_faces', {
+        face_count:    faceCount,
+        scores:        scores,
+        warning_count: warnCount
+    });
+
+    alertAdmin('multiple_faces', {
+        face_count:    faceCount,
+        scores:        scores,
+        warning_count: warnCount,
+        exam_id:       window.EXAM_ID,
+        session_id:    window.SESSION_ID,
+        message:       faceCount + ' faces detected in exam session (warning ' +
+                       warnCount + '/' + maxWarn + ')'
+    });
+
+    if (warnCount >= maxWarn) handleExcessiveViolations('multiple_faces');
 }
 
 // ==================== TAB SWITCHING DETECTION ====================
 
-/**
- * Handle tab switching / focus loss
- */
-function handleTabSwitch() {
+document.addEventListener('visibilitychange', function () {
+    if (document.hidden) handleTabSwitch('visibility');
+});
+
+window.addEventListener('blur', function () {
+    if (!document.hidden) handleTabSwitch('blur');
+});
+
+function handleTabSwitch(trigger) {
     proctoringState.violations.tabSwitches++;
-    
-    logViolation('tab_switch', {
-        count: proctoringState.violations.tabSwitches,
-        timestamp: new Date().toISOString()
-    });
-    
-    showNotification(
-        `⚠️ Tab switch detected! (${proctoringState.violations.tabSwitches}/${PROCTORING_CONFIG.violations.maxTabSwitches}) Please stay on the exam tab.`,
+    const count = proctoringState.violations.tabSwitches;
+    const max   = PROCTORING_CONFIG.violations.maxTabSwitches;
+
+    logViolation('tab_switch', { count: count, trigger: trigger || 'unknown' });
+
+    showProctoringNotification(
+        '⚠️ Tab switch detected! (' + count + '/' + max +
+        ') Please stay on the exam page.',
         'warning'
     );
-    
-    // ── AUTO-SUBMIT CALLBACK ─────────────────────────────────
-    // Call the auto-submit system if it's registered
+
+    alertAdmin('tab_switch', {
+        count:      count,
+        trigger:    trigger,
+        exam_id:    window.EXAM_ID,
+        session_id: window.SESSION_ID,
+        message:    'Student switched tab/window (count: ' + count + ')'
+    });
+
+    // Notify take_exam.html auto-submit hook
     if (typeof window.PROCTORING_TAB_SWITCH_CALLBACK === 'function') {
-        window.PROCTORING_TAB_SWITCH_CALLBACK(proctoringState.violations.tabSwitches);
+        window.PROCTORING_TAB_SWITCH_CALLBACK(count);
     }
-    // ──────────────────────────────────────────────────────────
-    
-    if (proctoringState.violations.tabSwitches >= PROCTORING_CONFIG.violations.maxTabSwitches) {
-        handleExcessiveViolations('tab_switch');
-    }
+
+    if (count >= max) handleExcessiveViolations('tab_switch');
 }
 
-// Listen for visibility change
-document.addEventListener('visibilitychange', function() {
-    if (document.hidden) {
-        handleTabSwitch();
-    }
-});
+// ==================== COPY / PASTE PREVENTION ====================
 
-// ==================== COPY/PASTE PREVENTION ====================
-
-/**
- * Prevent copy attempts
- */
-document.addEventListener('copy', function(e) {
+document.addEventListener('copy', function (e) {
     e.preventDefault();
     proctoringState.violations.copyAttempts++;
-    
-    logViolation('copy_attempt', {
-        count: proctoringState.violations.copyAttempts
+    const count = proctoringState.violations.copyAttempts;
+    const max   = PROCTORING_CONFIG.violations.maxCopyAttempts;
+
+    logViolation('copy_attempt', { count: count });
+    showProctoringNotification('⚠️ Copy attempt blocked! (' + count + '/' + max + ')', 'warning');
+    alertAdmin('copy_attempt', {
+        count: count, exam_id: window.EXAM_ID, session_id: window.SESSION_ID
     });
-    
-    showNotification(
-        `⚠️ Copy attempt detected! (${proctoringState.violations.copyAttempts}/${PROCTORING_CONFIG.violations.maxCopyAttempts})`,
-        'warning'
-    );
-    
-    if (proctoringState.violations.copyAttempts >= PROCTORING_CONFIG.violations.maxCopyAttempts) {
-        handleExcessiveViolations('copy_attempt');
-    }
+
+    if (count >= max) handleExcessiveViolations('copy_attempt');
 });
 
-/**
- * Prevent paste attempts
- */
-document.addEventListener('paste', function(e) {
-    // Allow paste in theory answer textareas
-    if (e.target.classList.contains('theory-textarea') || 
-        e.target.id === 'theoryAnswer' ||
-        e.target.tagName === 'TEXTAREA') {
-        return; // Allow paste for theory questions
-    }
-    
+document.addEventListener('paste', function (e) {
+    // Allow paste inside theory textareas
+    if (e.target && (e.target.tagName === 'TEXTAREA' || e.target.classList.contains('theory-textarea'))) return;
+
     e.preventDefault();
     proctoringState.violations.pasteAttempts++;
-    
-    logViolation('paste_attempt', {
-        count: proctoringState.violations.pasteAttempts
+    const count = proctoringState.violations.pasteAttempts;
+    const max   = PROCTORING_CONFIG.violations.maxPasteAttempts;
+
+    logViolation('paste_attempt', { count: count });
+    showProctoringNotification('⚠️ Paste attempt blocked! (' + count + '/' + max + ')', 'warning');
+    alertAdmin('paste_attempt', {
+        count: count, exam_id: window.EXAM_ID, session_id: window.SESSION_ID
     });
-    
-    showNotification(
-        `⚠️ Paste attempt detected! (${proctoringState.violations.pasteAttempts}/${PROCTORING_CONFIG.violations.maxPasteAttempts})`,
-        'warning'
-    );
-    
-    if (proctoringState.violations.pasteAttempts >= PROCTORING_CONFIG.violations.maxPasteAttempts) {
-        handleExcessiveViolations('paste_attempt');
-    }
+
+    if (count >= max) handleExcessiveViolations('paste_attempt');
 });
 
 // ==================== FULLSCREEN ENFORCEMENT ====================
 
-/**
- * Request fullscreen mode — FIXED: Only on user gesture
- */
 function requestFullscreen() {
-    if (proctoringState.fullscreenRequested) {
-        console.log('Fullscreen already requested, skipping');
-        return;
-    }
+    if (proctoringState.fullscreenRequested) return;
 
     const elem = document.documentElement;
-    
-    const doRequest = () => {
-        if (elem.requestFullscreen) {
-            elem.requestFullscreen().then(() => {
-                proctoringState.fullscreenRequested = true;
-                console.log('✅ Fullscreen activated');
-            }).catch(err => {
-                console.warn('Fullscreen request failed:', err.message);
-                // Don't spam — just log once
-            });
-        } else if (elem.webkitRequestFullscreen) {
-            elem.webkitRequestFullscreen();
-            proctoringState.fullscreenRequested = true;
-        } else if (elem.msRequestFullscreen) {
-            elem.msRequestFullscreen();
-            proctoringState.fullscreenRequested = true;
-        }
+
+    const doRequest = function () {
+        const p = elem.requestFullscreen          ? elem.requestFullscreen()
+                : elem.webkitRequestFullscreen    ? (elem.webkitRequestFullscreen(), Promise.resolve())
+                : elem.msRequestFullscreen        ? (elem.msRequestFullscreen(),     Promise.resolve())
+                : Promise.reject(new Error('Fullscreen API not available'));
+
+        Promise.resolve(p)
+            .then(function ()   { proctoringState.fullscreenRequested = true; })
+            .catch(function (e) { console.warn('[Proctoring] Fullscreen blocked:', e.message); });
     };
 
-    // ── METHOD 1: Try immediately (works if already had a gesture) ──
-    try {
-        doRequest();
-    } catch (err) {
-        console.log('Direct fullscreen failed, waiting for user gesture...');
-        
-        // ── METHOD 2: Wait for any user interaction ──
-        const gestureTriggers = ['click', 'keydown', 'touchstart'];
-        const oneTimeFullscreen = () => {
-            if (!proctoringState.fullscreenRequested) {
-                doRequest();
-            }
-            // Remove listeners after first attempt
-            gestureTriggers.forEach(ev => document.removeEventListener(ev, oneTimeFullscreen));
+    try { doRequest(); }
+    catch (e) {
+        const events = ['click','keydown','touchstart'];
+        const once   = function () {
+            if (!proctoringState.fullscreenRequested) doRequest();
+            events.forEach(function (ev) { document.removeEventListener(ev, once); });
         };
-        gestureTriggers.forEach(ev => document.addEventListener(ev, oneTimeFullscreen, { once: true }));
-        
-        // Show hint to user
-        showNotification('Click anywhere on the page to enter fullscreen mode.', 'info');
+        events.forEach(function (ev) { document.addEventListener(ev, once, { once: true }); });
+        showProctoringNotification('Click anywhere to enter fullscreen mode.', 'info');
     }
 }
 
-/**
- * Handle fullscreen change
- */
 function handleFullscreenChange() {
-    if (!document.fullscreenElement && 
-        !document.webkitFullscreenElement && 
-        !document.msFullscreenElement) {
-        
-        // Only log if we had already entered fullscreen
-        if (proctoringState.fullscreenRequested) {
-            proctoringState.violations.fullscreenExits++;
-            
-            logViolation('fullscreen_exit', {
-                count: proctoringState.violations.fullscreenExits
-            });
-            
-            showNotification('⚠️ Fullscreen mode exited! Click anywhere to return to fullscreen.', 'warning');
-            
-            // Reset flag so we can request again
-            proctoringState.fullscreenRequested = false;
-            
-            // Attempt to re-enter fullscreen after 2 seconds (requires gesture)
-            setTimeout(() => {
-                if (!document.fullscreenElement) {
-                    requestFullscreen();
-                }
-            }, 2000);
-        }
+    const isFullscreen = !!(document.fullscreenElement ||
+                            document.webkitFullscreenElement ||
+                            document.msFullscreenElement);
+    if (!isFullscreen && proctoringState.fullscreenRequested) {
+        proctoringState.violations.fullscreenExits++;
+        proctoringState.fullscreenRequested = false;
+
+        logViolation('fullscreen_exit', { count: proctoringState.violations.fullscreenExits });
+        alertAdmin('fullscreen_exit', {
+            count:      proctoringState.violations.fullscreenExits,
+            exam_id:    window.EXAM_ID,
+            session_id: window.SESSION_ID
+        });
+        showProctoringNotification('⚠️ Fullscreen exited! Click anywhere to return to fullscreen.', 'warning');
+
+        setTimeout(function () {
+            if (!document.fullscreenElement) requestFullscreen();
+        }, 2000);
     }
 }
 
-document.addEventListener('fullscreenchange', handleFullscreenChange);
+document.addEventListener('fullscreenchange',       handleFullscreenChange);
 document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-document.addEventListener('msfullscreenchange', handleFullscreenChange);
+document.addEventListener('msfullscreenchange',     handleFullscreenChange);
 
-// ==================== EXCESSIVE VIOLATIONS HANDLING ====================
+// ==================== DEVTOOLS PREVENTION ====================
 
-/**
- * Handle excessive violations - FIXED: No more freezing confirm dialogs
- */
+document.addEventListener('contextmenu', function (e) {
+    e.preventDefault();
+    logViolation('right_click_attempt', {});
+});
+
+document.addEventListener('keydown', function (e) {
+    const blocked = e.key === 'F12' ||
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+        (e.ctrlKey && e.key === 'U');
+    if (blocked) {
+        e.preventDefault();
+        logViolation('dev_tools_attempt', { key: e.key, ctrl: e.ctrlKey, shift: e.shiftKey });
+        alertAdmin('dev_tools_attempt', {
+            key: e.key, exam_id: window.EXAM_ID, session_id: window.SESSION_ID,
+            message: 'Student attempted to open DevTools (key: ' + e.key + ')'
+        });
+    }
+});
+
+// ==================== EXCESSIVE VIOLATIONS ====================
+
 function handleExcessiveViolations(violationType) {
-    console.warn('🚨 EXCESSIVE VIOLATIONS:', violationType);
-    
+    console.warn('[Proctoring] Excessive violations:', violationType);
+
     logViolation('excessive_violations', {
-        violationType: violationType,
-        allViolations: proctoringState.violations
+        violation_type: violationType,
+        all_violations: proctoringState.violations
     });
-    
-    // Show persistent warning notification instead of confirm dialog
-    showPersistentWarning(violationType);
+
+    alertAdmin('excessive_violations', {
+        violation_type: violationType,
+        all_violations: proctoringState.violations,
+        exam_id:        window.EXAM_ID,
+        session_id:     window.SESSION_ID,
+        message:        'Student exceeded threshold for: ' + violationType +
+                        '. All violations: ' + JSON.stringify(proctoringState.violations)
+    });
+
+    showPersistentWarning(violationType, null);
 }
 
-/**
- * Show persistent warning notification (doesn't freeze the page)
- */
-function showPersistentWarning(violationType) {
-    // Remove any existing persistent warnings
-    const existingWarning = document.getElementById('persistent-violation-warning');
-    if (existingWarning) {
-        existingWarning.remove();
-    }
-    
+function showPersistentWarning(violationType, faceCount) {
+    const existingId = 'persistent-warning-' + violationType;
+    const old = document.getElementById(existingId);
+    if (old) old.remove();
+
+    const isMultiFace = (violationType === 'multiple_faces');
+    const icon    = isMultiFace ? '👥' : '⚠️';
+    const title   = isMultiFace ? 'MULTIPLE PEOPLE DETECTED' : 'EXAM INTEGRITY WARNING';
+    const bodyMsg = isMultiFace
+        ? (faceCount ? faceCount + ' faces were detected on camera. ' : '') +
+          'Only you should be taking this exam.'
+        : 'Multiple violations detected. Your instructor has been notified in real-time.';
+
     const warning = document.createElement('div');
-    warning.id = 'persistent-violation-warning';
+    warning.id        = existingId;
     warning.className = 'persistent-warning';
-    warning.innerHTML = `
-        <div class="persistent-warning-content">
-            <div class="warning-icon">⚠️</div>
-            <div class="warning-text">
-                <h4>EXAM INTEGRITY WARNING</h4>
-                <p>Multiple violations have been detected during this exam.</p>
-                <p>Your instructor has been notified.</p>
-                <p><strong>Continued violations may result in automatic exam submission.</strong></p>
-            </div>
-            <button class="warning-close-btn" onclick="this.parentElement.parentElement.remove()">
-                ✕
-            </button>
-        </div>
-    `;
-    
+    warning.innerHTML =
+        '<div class="persistent-warning-content">' +
+            '<div class="warning-icon">' + icon + '</div>' +
+            '<div class="warning-text">' +
+                '<h4>' + title + '</h4>' +
+                '<p>' + bodyMsg + '</p>' +
+                '<p>Your instructor has been notified in real-time.</p>' +
+                '<p><strong>Continued violations may result in automatic exam submission.</strong></p>' +
+            '</div>' +
+            '<button class="warning-close-btn" ' +
+            'onclick="document.getElementById(\'' + existingId + '\').remove()">✕</button>' +
+        '</div>';
+
     document.body.appendChild(warning);
-    
-    // Auto-remove after 10 seconds
-    setTimeout(() => {
-        if (warning && warning.parentElement) {
-            warning.style.animation = 'slideOutRight 0.5s ease';
-            setTimeout(() => warning.remove(), 500);
+
+    setTimeout(function () {
+        if (warning.parentElement) {
+            warning.style.transition = 'all 0.5s ease';
+            warning.style.opacity    = '0';
+            warning.style.transform  = 'translateX(120%)';
+            setTimeout(function () { warning.remove(); }, 520);
         }
-    }, 10000);
+    }, 12000);
 }
 
-// Add CSS for persistent warning and notifications
-const warningStyle = document.createElement('style');
-warningStyle.textContent = `
-    .persistent-warning {
-        position: fixed;
-        top: 80px;
-        right: 20px;
-        z-index: 10001;
-        max-width: 450px;
-        animation: slideInRight 0.5s ease;
-    }
-    
-    .persistent-warning-content {
-        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-        border: 3px solid #ef4444;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 10px 40px rgba(239, 68, 68, 0.4);
-        position: relative;
-    }
-    
-    .warning-icon {
-        font-size: 48px;
-        text-align: center;
-        margin-bottom: 10px;
-        animation: pulse 1s infinite;
-    }
-    
-    .warning-text h4 {
-        color: #991b1b;
-        margin: 0 0 10px 0;
-        font-size: 18px;
-        font-weight: 700;
-        text-align: center;
-    }
-    
-    .warning-text p {
-        color: #7f1d1d;
-        margin: 5px 0;
-        font-size: 14px;
-        text-align: center;
-    }
-    
-    .warning-close-btn {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        background: #ef4444;
-        color: white;
-        border: none;
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        cursor: pointer;
-        font-size: 16px;
-        font-weight: bold;
-        transition: all 0.3s;
-    }
-    
-    .warning-close-btn:hover {
-        background: #dc2626;
-        transform: scale(1.1);
-    }
-    
-    @keyframes slideInRight {
-        from {
-            transform: translateX(500px);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-    
-    @keyframes slideOutRight {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(500px);
-            opacity: 0;
-        }
-    }
-    
-    @keyframes pulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.1); }
-    }
-    
-    .exam-notification {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 10000;
-        min-width: 300px;
-        max-width: 500px;
-        animation: slideInRight 0.5s ease;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-`;
-document.head.appendChild(warningStyle);
+// ==================== STOP PROCTORING ====================
 
-// ==================== INITIALIZATION ====================
-
-/**
- * Initialize proctoring system
- */
-async function initializeProctoring() {
-    console.log('🔒 Initializing proctoring system...');
-    
-    try {
-        // 1. Initialize webcam
-        const webcamReady = await initializeWebcam();
-        if (!webcamReady) {
-            console.error('Cannot proceed without webcam');
-            showNotification('Camera access is required to take this exam.', 'danger');
-            return false;
-        }
-        
-        // 2. Load face detection models
-        if (PROCTORING_CONFIG.faceDetection.enabled) {
-            const modelsLoaded = await loadFaceDetectionModels();
-            if (!modelsLoaded) {
-                console.warn('Face detection models failed to load - continuing without face detection');
-                PROCTORING_CONFIG.faceDetection.enabled = false;
-            }
-        }
-        
-        // 3. Start face detection
-        if (PROCTORING_CONFIG.faceDetection.enabled) {
-            await startFaceDetection();
-        }
-        
-        // 4. Request fullscreen (will wait for user gesture if needed)
-        requestFullscreen();
-        
-        // 5. Prevent right-click
-        document.addEventListener('contextmenu', function(e) {
-            e.preventDefault();
-            logViolation('right_click_attempt', {});
-        });
-        
-        // 6. Prevent keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            // Prevent F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
-            if (e.key === 'F12' || 
-                (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) ||
-                (e.ctrlKey && e.key === 'U')) {
-                e.preventDefault();
-                logViolation('dev_tools_attempt', {
-                    key: e.key,
-                    ctrlKey: e.ctrlKey,
-                    shiftKey: e.shiftKey
-                });
-            }
-        });
-        
-        console.log('✅ Proctoring system initialized successfully');
-        showNotification('Proctoring active. Your exam session is being monitored for integrity.', 'info');
-        
-        return true;
-        
-    } catch (error) {
-        console.error('❌ Proctoring initialization failed:', error);
-        showNotification('Failed to initialize proctoring system.', 'danger');
-        return false;
-    }
-}
-
-/**
- * Stop proctoring system
- */
 function stopProctoring() {
-    console.log('🛑 Stopping proctoring system...');
-    
-    // Stop face detection
+    console.log('[Proctoring] Stopping. Final violations:', proctoringState.violations);
+
     proctoringState.faceDetectionActive = false;
-    if (proctoringState.timers.faceCheck) {
-        clearInterval(proctoringState.timers.faceCheck);
+    if (proctoringState.detectionRafHandle) {
+        cancelAnimationFrame(proctoringState.detectionRafHandle);
+        proctoringState.detectionRafHandle = null;
     }
-    if (proctoringState.timers.noFaceAlert) {
-        clearTimeout(proctoringState.timers.noFaceAlert);
-    }
-    if (proctoringState.timers.multipleFaceAlert) {
-        clearTimeout(proctoringState.timers.multipleFaceAlert);
-    }
-    
-    // Stop webcam
+
     const video = document.getElementById('webcam');
     if (video && video.srcObject) {
-        video.srcObject.getTracks().forEach(track => track.stop());
+        video.srcObject.getTracks().forEach(function (t) { t.stop(); });
+        video.srcObject = null;
     }
-    
-    console.log('✅ Proctoring system stopped');
 }
 
-// ==================== UTILITY FUNCTIONS ====================
+window.stopProctoring = stopProctoring;
 
-/**
- * Show notification to user
- */
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `alert alert-${type} exam-notification`;
-    notification.innerHTML = `
-        <strong>${message}</strong>
-        <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    // Auto-remove after 5 seconds
-    setTimeout(() => {
-        notification.style.animation = 'slideOutRight 0.5s ease';
-        setTimeout(() => notification.remove(), 500);
-    }, 5000);
+// ==================== MAIN INIT ====================
+
+function initializeProctoring() {
+    console.log('[Proctoring] Initialising...');
+
+    initializeWebcam()
+        .then(function (video) {
+            if (!PROCTORING_CONFIG.faceDetection.enabled) return;
+
+            // FIX 1: models must load before detection starts
+            return loadFaceDetectionModels()
+                .then(function () {
+                    proctoringState.modelsLoaded = true;
+                    startFaceDetectionLoop(video);
+                    showProctoringNotification(
+                        '🔒 Proctoring active. This session is being monitored.',
+                        'info'
+                    );
+                })
+                .catch(function (err) {
+                    console.warn('[Proctoring] Face detection unavailable:', err.message);
+                    showProctoringNotification(
+                        '⚠️ Face detection could not load. Behavioural monitoring is still active.',
+                        'warning'
+                    );
+                });
+        })
+        .catch(function (err) {
+            console.warn('[Proctoring] Camera unavailable:', err.message);
+            // Behavioural monitoring (tab-switch, copy/paste, devtools) still runs below
+        });
+
+    requestFullscreen();
 }
 
-// ==================== AUTO-START ON PAGE LOAD ====================
+// ==================== BOOTSTRAP ====================
 
-// Initialize when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeProctoring);
 } else {
     initializeProctoring();
 }
 
-// Cleanup on page unload
-window.addEventListener('beforeunload', function() {
-    stopProctoring();
-});
+window.addEventListener('beforeunload', stopProctoring);

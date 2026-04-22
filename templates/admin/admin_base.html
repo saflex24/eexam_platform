@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block full_page %}
+
+<div class="admin-layout">
+
+    <!-- SIDEBAR -->
+    <div class="admin-sidebar">
+
+        <div class="brand">
+            <i class="fas fa-graduation-cap"></i> Admin Panel
+        </div>
+
+        <a href="{{ url_for('admin.dashboard') }}" class="nav-item">
+            <i class="fas fa-chart-line"></i> Dashboard
+        </a>
+
+        <a href="{{ url_for('admin.manage_students') }}" class="nav-item">
+            <i class="fas fa-user-graduate"></i> Students
+        </a>
+
+        <a href="{{ url_for('admin.manage_teachers') }}" class="nav-item">
+            <i class="fas fa-chalkboard-teacher"></i> Teachers
+        </a>
+
+        <a href="{{ url_for('admin.manage_classes') }}" class="nav-item">
+            <i class="fas fa-layer-group"></i> Classes
+        </a>
+
+        <a href="{{ url_for('admin.manage_exams') }}" class="nav-item">
+            <i class="fas fa-file-alt"></i> Exams
+        </a>
+
+        <a href="{{ url_for('admin.advanced_analytics') }}" class="nav-item">
+            <i class="fas fa-chart-bar"></i> Analytics
+        </a>
+
+        <a href="{{ url_for('admin.proctoring_reports') }}" class="nav-item">
+            <i class="fas fa-shield-alt"></i> Proctoring
+        </a>
+
+        <a href="{{ url_for('admin.admin_settings') }}" class="nav-item">
+            <i class="fas fa-cog"></i> Settings
+        </a>
+
+        <a href="{{ url_for('auth.logout') }}" class="nav-item danger">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="admin-main">
+        {% block content %}{% endblock %}
+    </div>
+
+</div>
+
+<style>
+.admin-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar */
+.admin-sidebar {
+    width: 240px;
+    background: #111827;
+    color: white;
+    padding: 15px;
+    position: sticky;
+    top: 0;
+}
+
+.admin-sidebar .brand {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+.nav-item {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    margin: 4px 0;
+    color: #d1d5db;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: 0.2s;
+}
+
+.nav-item:hover {
+    background: rgba(255,255,255,0.08);
+    color: white;
+}
+
+.nav-item.active {
+    background: #4f46e5;
+    color: white;
+}
+
+.nav-item.danger {
+    color: #f87171;
+}
+
+/* Main */
+.admin-main {
+    flex: 1;
+    padding: 25px;
+    background: #f3f4f6;
+}
+</style>
+
+{% endblock %}

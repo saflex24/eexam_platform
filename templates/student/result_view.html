@@ -3,6 +3,20 @@
 {% block title %}Result Details - {{ student_user.first_name }} {{ student_user.last_name }}{% endblock %}
 
 {% block extra_css %}
+<script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true
+        },
+        options: {
+            skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+        }
+    };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+
 <style>
     body {
         font-family: Tahoma, Geneva, Verdana, sans-serif;
@@ -367,4 +381,13 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Re-trigger MathJax after page fully loads to catch dynamically inserted content
+    document.addEventListener("DOMContentLoaded", function () {
+        if (window.MathJax) {
+            MathJax.typesetPromise();
+        }
+    });
+</script>
 {% endblock %}

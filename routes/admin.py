@@ -1,13 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════════
-# ADMIN ROUTES - FIXED VERSION
-# Fixed:
-#   • Random question/option ordering via ExamSession.question_order JSON
-#   • result_details_view: correct unanswered count, correct-answer lookup for MCQ
-#   • generate_result_pdf: respects per-session question & option order
-#   • generate_detailed_report: fixed selected_option / correct_answer access
-#   • exam_results: added missing User join for search
-#   • log_proctoring_violation: fixed indentation (was unreachable)
-#   • All existing logic flow preserved
+# ADMIN ROUTES
 # ═══════════════════════════════════════════════════════════════════════════
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file, make_response
@@ -54,9 +46,7 @@ def get_ordered_questions(exam_id, exam_session=None):
     if exam_session and hasattr(exam_session, 'question_order') and exam_session.question_order:
         try:
             ordered_ids = json.loads(exam_session.question_order)
-            # Return only IDs that still exist
             ordered = [base_qs[qid] for qid in ordered_ids if qid in base_qs]
-            # Append any questions not listed (safety net)
             listed = set(ordered_ids)
             extras = sorted(
                 [q for q in base_qs.values() if q.id not in listed],
@@ -66,15 +56,12 @@ def get_ordered_questions(exam_id, exam_session=None):
         except (json.JSONDecodeError, KeyError, TypeError):
             pass
 
-    # Default: sort by order then id
     return sorted(base_qs.values(), key=lambda q: (q.order or 0, q.id))
 
 
 def get_ordered_options(question, exam_session=None):
     """
     Return QuestionOption objects in the order the student actually saw them.
-    If ExamSession stored option_order as a JSON dict {str(question_id): [option_ids]},
-    use that; otherwise fall back to option_label sort.
     """
     options = list(question.options)
 
@@ -102,7 +89,6 @@ def get_correct_answer_text(question):
             o = correct_opts[0]
             return f"{o.option_label}. {o.option_text}"
         return 'N/A'
-    # Theory / short-answer: use correct_answer field if it exists
     return getattr(question, 'correct_answer', None) or 'N/A'
 
 
@@ -150,8 +136,8 @@ def dashboard():
 
         top_students = []
         try:
-            active_students   = Student.query.filter_by(is_active=True).all()
-            student_averages  = []
+            active_students  = Student.query.filter_by(is_active=True).all()
+            student_averages = []
             for student in active_students:
                 student_results = ExamResult.query.filter_by(student_id=student.user_id).all()
                 if student_results:
@@ -198,7 +184,7 @@ def advanced_analytics():
         results_query = ExamResult.query
 
         if selected_class:
-            students   = Student.query.filter_by(class_id=selected_class, is_active=True).all()
+            students    = Student.query.filter_by(class_id=selected_class, is_active=True).all()
             student_ids = [s.user_id for s in students]
             results_query = (results_query.filter(ExamResult.student_id.in_(student_ids))
                              if student_ids
@@ -290,8 +276,8 @@ def advanced_analytics():
         for r in all_results:
             student_performances[r.student_id].append(r)
 
-        top_performers  = []
-        low_performers  = []
+        top_performers   = []
+        low_performers   = []
         student_insights = []
 
         for student_id, results in student_performances.items():
@@ -421,16 +407,16 @@ def export_analytics():
             exam    = Exam.query.get(result.exam_id)
             if student and exam:
                 export_data.append({
-                    'Student Name':    student.user.full_name,
+                    'Student Name':     student.user.full_name,
                     'Admission Number': student.admission_number,
-                    'Class':           student.class_info.name if student.class_info else 'N/A',
-                    'Exam':            exam.title,
-                    'Subject':         exam.subject,
-                    'Total Marks':     result.total_marks,
-                    'Marks Obtained':  result.marks_obtained,
-                    'Percentage':      round(result.percentage, 2),
-                    'Status':          'Pass' if result.is_passed else 'Fail',
-                    'Submitted At':    result.submitted_at.strftime('%Y-%m-%d %H:%M')
+                    'Class':            student.class_info.name if student.class_info else 'N/A',
+                    'Exam':             exam.title,
+                    'Subject':          exam.subject,
+                    'Total Marks':      result.total_marks,
+                    'Marks Obtained':   result.marks_obtained,
+                    'Percentage':       round(result.percentage, 2),
+                    'Status':           'Pass' if result.is_passed else 'Fail',
+                    'Submitted At':     result.submitted_at.strftime('%Y-%m-%d %H:%M')
                 })
 
         df     = pd.DataFrame(export_data)
@@ -621,10 +607,10 @@ def edit_admin_profile():
                 if file and file.filename:
                     try:
                         from werkzeug.utils import secure_filename
-                        filename    = secure_filename(file.filename)
-                        timestamp   = datetime.now().strftime('%Y%m%d_%H%M%S')
-                        filename    = f"admin_{admin_user.id}_{timestamp}_{filename}"
-                        upload_dir  = os.path.join('static', 'uploads', 'profile_pictures')
+                        filename   = secure_filename(file.filename)
+                        timestamp  = datetime.now().strftime('%Y%m%d_%H%M%S')
+                        filename   = f"admin_{admin_user.id}_{timestamp}_{filename}"
+                        upload_dir = os.path.join('static', 'uploads', 'profile_pictures')
                         os.makedirs(upload_dir, exist_ok=True)
                         file.save(os.path.join(upload_dir, filename))
                         admin_user.profile_picture = filename
@@ -698,14 +684,14 @@ def admin_settings():
             return redirect(url_for('admin.admin_settings'))
 
         settings = {
-            'email_notifications':       True,
-            'auto_approve_students':     False,
-            'enable_proctoring':         True,
-            'default_pass_percentage':   60,
+            'email_notifications':        True,
+            'auto_approve_students':      False,
+            'enable_proctoring':          True,
+            'default_pass_percentage':    60,
             'allow_student_registration': True,
             'require_email_verification': False,
-            'max_exam_duration':         180,
-            'allow_exam_retake':         False
+            'max_exam_duration':          180,
+            'allow_exam_retake':          False
         }
         return render_template('admin/settings.html', settings=settings)
     except Exception as e:
@@ -795,9 +781,9 @@ def time_ago(timestamp):
         return "N/A"
     diff    = datetime.utcnow() - timestamp
     seconds = diff.total_seconds()
-    if seconds < 60:      return "Just now"
-    if seconds < 3600:    return f"{int(seconds // 60)} minutes ago"
-    if seconds < 86400:   return f"{int(seconds // 3600)} hours ago"
+    if seconds < 60:    return "Just now"
+    if seconds < 3600:  return f"{int(seconds // 60)} minutes ago"
+    if seconds < 86400: return f"{int(seconds // 3600)} hours ago"
     return f"{int(seconds // 86400)} days ago"
 
 
@@ -1022,10 +1008,10 @@ def edit_teacher(id):
             else:
                 teacher.user.email = None
 
-            teacher.user.gender      = request.form.get('gender', 'Other')
-            teacher.subject          = request.form.get('subject', '').strip()
-            teacher.qualification    = request.form.get('qualification', '').strip()
-            teacher.specialization   = request.form.get('specialization', '').strip()
+            teacher.user.gender    = request.form.get('gender', 'Other')
+            teacher.subject        = request.form.get('subject', '').strip()
+            teacher.qualification  = request.form.get('qualification', '').strip()
+            teacher.specialization = request.form.get('specialization', '').strip()
 
             new_username = request.form.get('username', '').strip()
             if new_username and new_username != teacher.user.username:
@@ -1133,9 +1119,9 @@ def edit_user(user_id):
                 flash(f'Password updated for {user.username}!', 'success')
 
             if student_profile:
-                student_profile.contact_number  = request.form.get('contact_number')
-                student_profile.address         = request.form.get('address')
-                student_profile.guardian_name   = request.form.get('guardian_name')
+                student_profile.contact_number   = request.form.get('contact_number')
+                student_profile.address          = request.form.get('address')
+                student_profile.guardian_name    = request.form.get('guardian_name')
                 student_profile.guardian_contact = request.form.get('guardian_contact')
 
             if teacher_profile:
@@ -1319,18 +1305,12 @@ def manage_exams():
 @admin_bp.route('/exam/<int:id>/results', methods=['GET'])
 @admin_required
 def exam_results(id):
-    """
-    View exam results.
-    FIX: Added explicit join(User) before the search filter so the User columns
-         are available; without it the ilike filter on User columns caused an error.
-    """
     try:
         exam    = Exam.query.get_or_404(id)
         page    = request.args.get('page', 1, type=int)
         search  = request.args.get('search', '', type=str)
         sort_by = request.args.get('sort', 'marks_obtained', type=str)
 
-        # ── FIX: always join User so the search filter works ──
         query = ExamResult.query.filter_by(exam_id=id).join(
             User, ExamResult.student_id == User.id
         )
@@ -1376,17 +1356,6 @@ def exam_results(id):
 @admin_bp.route('/exam/<int:result_id>/result-details')
 @admin_required
 def result_details_view(result_id):
-    """
-    View detailed result.
-    FIX 1: unanswered count — was `len(answers) - correct - wrong` which goes
-            negative when an answer is neither correct nor wrong (unselected).
-            Now counted directly.
-    FIX 2: correct_answer_text — used getattr(question,'correct_answer') which
-            is None for MCQ. Now uses get_correct_answer_text() helper.
-    FIX 3: student_answer_text — now uses get_student_answer_text() helper.
-    FIX 4: question/option order — uses get_ordered_questions() which respects
-            the per-session randomised order stored in ExamSession.question_order.
-    """
     try:
         result       = ExamResult.query.get_or_404(result_id)
         exam_session = ExamSession.query.get(result.exam_session_id)
@@ -1398,7 +1367,6 @@ def result_details_view(result_id):
 
         answer_map = {a.question_id: a for a in answers}
 
-        # ── FIX: correct counts ──
         correct    = sum(1 for a in answers if a.is_correct)
         wrong      = sum(1 for a in answers
                          if not a.is_correct and (a.selected_option_id or a.theory_answer))
@@ -1407,7 +1375,6 @@ def result_details_view(result_id):
 
         statistics = {'correct': correct, 'wrong': wrong, 'unanswered': unanswered}
 
-        # ── FIX: get questions in the order the student saw them ──
         questions = get_ordered_questions(result.exam_id, exam_session)
 
         question_results = []
@@ -1421,17 +1388,16 @@ def result_details_view(result_id):
             else:
                 status = 'unanswered'
 
-            # ── FIX: proper text for both MCQ and theory ──
             student_answer_text = get_student_answer_text(answer, question)
             correct_answer_text = get_correct_answer_text(question)
 
             question_results.append({
-                'question':           question,
-                'answer':             answer,
-                'status':             status,
+                'question':            question,
+                'answer':              answer,
+                'status':              status,
                 'student_answer_text': student_answer_text,
                 'correct_answer_text': correct_answer_text,
-                'marks_obtained':     (answer.marks_obtained or 0) if answer else 0
+                'marks_obtained':      (answer.marks_obtained or 0) if answer else 0
             })
 
         return render_template('admin/result_details.html',
@@ -1453,12 +1419,6 @@ def result_details_view(result_id):
 @admin_bp.route('/result/<int:result_id>/generate-pdf')
 @admin_required
 def generate_result_pdf(result_id):
-    """
-    Generate a detailed PDF for one exam result.
-    FIX: Questions and options are now rendered in the order the student
-         actually saw them (respecting ExamSession.question_order and
-         ExamSession.option_order JSON fields).
-    """
     try:
         from reportlab.lib.pagesizes import A4
         from reportlab.lib import colors
@@ -1470,8 +1430,6 @@ def generate_result_pdf(result_id):
             HRFlowable, KeepTogether, PageBreak
         )
         import re
-
-        # ── helpers ──────────────────────────────────────────────────────────
 
         def strip_latex(text):
             if not text:
@@ -1505,8 +1463,6 @@ def generate_result_pdf(result_id):
             safe = safe.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
             return Paragraph(safe, style)
 
-        # ── data ─────────────────────────────────────────────────────────────
-
         result       = ExamResult.query.get_or_404(result_id)
         exam         = result.exam
         student      = result.student_user
@@ -1518,9 +1474,7 @@ def generate_result_pdf(result_id):
         ).all()
         answer_map = {a.question_id: a for a in answers}
 
-        # ── FIX: use session-aware ordering ──
-        questions = get_ordered_questions(exam.id, exam_session)
-
+        questions    = get_ordered_questions(exam.id, exam_session)
         n_total      = len(questions)
         n_correct    = sum(1 for a in answers if a.is_correct)
         n_wrong      = sum(1 for a in answers
@@ -1528,44 +1482,35 @@ def generate_result_pdf(result_id):
         n_unanswered = sum(1 for a in answers
                            if not a.selected_option_id and not a.theory_answer)
 
-        # ── colour palette ────────────────────────────────────────────────────
         C_DARK      = colors.HexColor('#0d1117')
-        C_GOLD      = colors.HexColor('#c9973a')
         C_EMERALD   = colors.HexColor('#0d7a5f')
         C_EMERALD_L = colors.HexColor('#e6f4f0')
         C_CRIMSON   = colors.HexColor('#c0392b')
         C_CRIMSON_L = colors.HexColor('#fbeae8')
         C_AMBER     = colors.HexColor('#b7791f')
         C_AMBER_L   = colors.HexColor('#fef9ec')
-        C_BLUE      = colors.HexColor('#1e40af')
-        C_BLUE_L    = colors.HexColor('#eff3ff')
         C_GREY_L    = colors.HexColor('#f2ede6')
         C_GREY_B    = colors.HexColor('#e8e2d9')
         C_WHITE     = colors.white
         C_OPT_N     = colors.HexColor('#f9fafb')
 
-        # ── styles ────────────────────────────────────────────────────────────
         def S(name, **kw):
             d = dict(fontName='Helvetica', fontSize=10, leading=14,
                      textColor=C_DARK, spaceAfter=0, spaceBefore=0)
             d.update(kw)
             return ParagraphStyle(name, **d)
 
-        sTitle   = S('Title',   fontName='Helvetica-Bold', fontSize=18,
-                     textColor=C_WHITE, alignment=TA_CENTER, leading=24)
-        sSub     = S('Sub',     fontName='Helvetica', fontSize=9,
-                     textColor=colors.HexColor('#8b949e'), alignment=TA_CENTER)
+        sTitle   = S('Title',   fontName='Helvetica-Bold', fontSize=18, textColor=C_WHITE, alignment=TA_CENTER, leading=24)
+        sSub     = S('Sub',     fontName='Helvetica', fontSize=9, textColor=colors.HexColor('#8b949e'), alignment=TA_CENTER)
         sH1      = S('H1',      fontName='Helvetica-Bold', fontSize=13, textColor=C_DARK, spaceAfter=4)
         sH2      = S('H2',      fontName='Helvetica-Bold', fontSize=11, textColor=C_DARK)
         sBody    = S('Body',    fontSize=10, leading=14, textColor=colors.HexColor('#3d4151'))
         sBodyB   = S('BodyB',   fontName='Helvetica-Bold', fontSize=10, textColor=C_DARK)
         sSmall   = S('Small',   fontSize=8.5, textColor=colors.HexColor('#6e7491'))
         sCenter  = S('Center',  fontSize=10, alignment=TA_CENTER, textColor=C_DARK)
-        sCenterB = S('CenterB', fontName='Helvetica-Bold', fontSize=10,
-                     alignment=TA_CENTER, textColor=C_DARK)
+        sCenterB = S('CenterB', fontName='Helvetica-Bold', fontSize=10, alignment=TA_CENTER, textColor=C_DARK)
         sQText   = S('QText',   fontSize=9.5, leading=14, textColor=C_DARK)
 
-        # ── document ──────────────────────────────────────────────────────────
         buf    = io.BytesIO()
         PAGE_W, PAGE_H = A4
         MARGIN = 18 * mm
@@ -1582,56 +1527,52 @@ def generate_result_pdf(result_id):
             canvas.line(MARGIN, 13 * mm, PAGE_W - MARGIN, 13 * mm)
             canvas.restoreState()
 
-        doc   = SimpleDocTemplate(buf, pagesize=A4,
-                                  leftMargin=MARGIN, rightMargin=MARGIN,
-                                  topMargin=MARGIN,  bottomMargin=22 * mm,
-                                  title=f"Result — {student.full_name}",
-                                  author="E-Exam Portal")
+        doc   = SimpleDocTemplate(buf, pagesize=A4, leftMargin=MARGIN, rightMargin=MARGIN,
+                                  topMargin=MARGIN, bottomMargin=22 * mm,
+                                  title=f"Result — {student.full_name}", author="E-Exam Portal")
         story = []
         TW    = PAGE_W - 2 * MARGIN
 
-        # ── header ────────────────────────────────────────────────────────────
         hdr_tbl = Table([[para('EXAMINATION RESULT REPORT', sTitle)]], colWidths=[TW])
         hdr_tbl.setStyle(TableStyle([
-            ('BACKGROUND',   (0,0), (-1,-1), C_DARK),
-            ('TOPPADDING',   (0,0), (-1,-1), 14),
-            ('BOTTOMPADDING',(0,0), (-1,-1), 14),
-            ('LEFTPADDING',  (0,0), (-1,-1), 10),
-            ('RIGHTPADDING', (0,0), (-1,-1), 10),
+            ('BACKGROUND',    (0,0), (-1,-1), C_DARK),
+            ('TOPPADDING',    (0,0), (-1,-1), 14),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 14),
+            ('LEFTPADDING',   (0,0), (-1,-1), 10),
+            ('RIGHTPADDING',  (0,0), (-1,-1), 10),
         ]))
         story.append(hdr_tbl)
         story.append(Spacer(1, 3*mm))
         story.append(para(f"Generated: {datetime.now().strftime('%A, %d %B %Y  %H:%M:%S')}", sSub))
         story.append(Spacer(1, 6*mm))
 
-        # ── info panel ────────────────────────────────────────────────────────
         def kv_row(label, value, vs=sBody):
             return [para(label, sSmall), para(str(value), vs)]
 
         def make_info_table(rows):
             t = Table(rows, colWidths=[TW*0.38, TW*0.62])
             t.setStyle(TableStyle([
-                ('BACKGROUND',   (0,0), (-1,0),  C_GREY_L),
-                ('FONTNAME',     (0,0), (-1,0),  'Helvetica-Bold'),
-                ('SPAN',         (0,0), (-1,0)),
-                ('TOPPADDING',   (0,0), (-1,-1), 5),
-                ('BOTTOMPADDING',(0,0), (-1,-1), 5),
-                ('LEFTPADDING',  (0,0), (-1,-1), 8),
-                ('RIGHTPADDING', (0,0), (-1,-1), 8),
-                ('LINEBELOW',    (0,0), (-1,-1), 0.4, C_GREY_B),
-                ('VALIGN',       (0,0), (-1,-1), 'TOP'),
+                ('BACKGROUND',    (0,0), (-1,0),  C_GREY_L),
+                ('FONTNAME',      (0,0), (-1,0),  'Helvetica-Bold'),
+                ('SPAN',          (0,0), (-1,0)),
+                ('TOPPADDING',    (0,0), (-1,-1), 5),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+                ('LEFTPADDING',   (0,0), (-1,-1), 8),
+                ('RIGHTPADDING',  (0,0), (-1,-1), 8),
+                ('LINEBELOW',     (0,0), (-1,-1), 0.4, C_GREY_B),
+                ('VALIGN',        (0,0), (-1,-1), 'TOP'),
             ]))
             return t
 
         student_rows = [
             [para('STUDENT INFORMATION', sH2), ''],
-            kv_row('Full Name',  student.full_name,  sBodyB),
+            kv_row('Full Name',  student.full_name, sBodyB),
             kv_row('Email',      student.email or '—'),
             kv_row('Submitted',  result.submitted_at.strftime('%d %b %Y  %H:%M:%S')),
         ]
         exam_rows = [
             [para('EXAM INFORMATION', sH2), ''],
-            kv_row('Exam Title',  exam.title,         sBodyB),
+            kv_row('Exam Title',  exam.title, sBodyB),
             kv_row('Total Marks', result.total_marks),
             kv_row('Pass Marks',  result.pass_marks),
         ]
@@ -1639,25 +1580,22 @@ def generate_result_pdf(result_id):
         info_panel = Table([[make_info_table(student_rows), make_info_table(exam_rows)]],
                            colWidths=[TW*0.50 - 3, TW*0.50 - 3])
         info_panel.setStyle(TableStyle([
-            ('LEFTPADDING',  (0,0), (-1,-1), 0),
-            ('RIGHTPADDING', (0,0), (-1,-1), 0),
-            ('TOPPADDING',   (0,0), (-1,-1), 0),
-            ('BOTTOMPADDING',(0,0), (-1,-1), 0),
-            ('ALIGN',        (0,0), (-1,-1), 'LEFT'),
-            ('VALIGN',       (0,0), (-1,-1), 'TOP'),
+            ('LEFTPADDING',   (0,0), (-1,-1), 0),
+            ('RIGHTPADDING',  (0,0), (-1,-1), 0),
+            ('TOPPADDING',    (0,0), (-1,-1), 0),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 0),
+            ('ALIGN',         (0,0), (-1,-1), 'LEFT'),
+            ('VALIGN',        (0,0), (-1,-1), 'TOP'),
         ]))
         story.append(info_panel)
         story.append(Spacer(1, 5*mm))
 
-        # ── score panel ───────────────────────────────────────────────────────
         pct_color = C_EMERALD if result.is_passed else C_CRIMSON
         pct_bg    = C_EMERALD_L if result.is_passed else C_CRIMSON_L
         verdict   = 'PASSED ✓' if result.is_passed else 'FAILED ✗'
 
-        sScoreCol = S('ScoreCol', fontName='Helvetica-Bold', fontSize=28,
-                      alignment=TA_CENTER, leading=34, textColor=pct_color)
-        sVerdictS = S('VerdictS', fontName='Helvetica-Bold', fontSize=11,
-                      alignment=TA_CENTER, textColor=pct_color)
+        sScoreCol = S('ScoreCol', fontName='Helvetica-Bold', fontSize=28, alignment=TA_CENTER, leading=34, textColor=pct_color)
+        sVerdictS = S('VerdictS', fontName='Helvetica-Bold', fontSize=11, alignment=TA_CENTER, textColor=pct_color)
 
         score_data = [[
             Table([[para(f"{result.percentage}%", sScoreCol)],
@@ -1671,80 +1609,74 @@ def generate_result_pdf(result_id):
         ]]
         score_tbl = Table(score_data, colWidths=[TW*0.35, TW*0.65])
         score_tbl.setStyle(TableStyle([
-            ('BACKGROUND',   (0,0), (0,-1), pct_bg),
-            ('BACKGROUND',   (1,0), (1,-1), C_GREY_L),
-            ('ALIGN',        (0,0), (-1,-1), 'CENTER'),
-            ('VALIGN',       (0,0), (-1,-1), 'MIDDLE'),
-            ('TOPPADDING',   (0,0), (-1,-1), 10),
-            ('BOTTOMPADDING',(0,0), (-1,-1), 10),
-            ('LEFTPADDING',  (0,0), (-1,-1), 8),
-            ('RIGHTPADDING', (0,0), (-1,-1), 8),
-            ('BOX',          (0,0), (-1,-1), 0.8, C_GREY_B),
-            ('INNERGRID',    (0,0), (-1,-1), 0.4, C_GREY_B),
+            ('BACKGROUND',    (0,0), (0,-1), pct_bg),
+            ('BACKGROUND',    (1,0), (1,-1), C_GREY_L),
+            ('ALIGN',         (0,0), (-1,-1), 'CENTER'),
+            ('VALIGN',        (0,0), (-1,-1), 'MIDDLE'),
+            ('TOPPADDING',    (0,0), (-1,-1), 10),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 10),
+            ('LEFTPADDING',   (0,0), (-1,-1), 8),
+            ('RIGHTPADDING',  (0,0), (-1,-1), 8),
+            ('BOX',           (0,0), (-1,-1), 0.8, C_GREY_B),
+            ('INNERGRID',     (0,0), (-1,-1), 0.4, C_GREY_B),
         ]))
         story.append(score_tbl)
         story.append(Spacer(1, 4*mm))
 
-        # ── stats bar ─────────────────────────────────────────────────────────
         def stat_cell(num, label, bg, fg):
-            sN = S(f'SN{label}', fontName='Helvetica-Bold', fontSize=16,
-                   alignment=TA_CENTER, textColor=fg)
+            sN = S(f'SN{label}', fontName='Helvetica-Bold', fontSize=16, alignment=TA_CENTER, textColor=fg)
             sL = S(f'SL{label}', fontSize=8, alignment=TA_CENTER, textColor=fg)
             t  = Table([[para(str(num), sN)], [para(label, sL)]], colWidths=[TW/3 - 4])
             t.setStyle(TableStyle([
-                ('BACKGROUND',   (0,0), (-1,-1), bg),
-                ('TOPPADDING',   (0,0), (-1,-1), 8),
-                ('BOTTOMPADDING',(0,0), (-1,-1), 8),
+                ('BACKGROUND',    (0,0), (-1,-1), bg),
+                ('TOPPADDING',    (0,0), (-1,-1), 8),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 8),
             ]))
             return t
 
         stat_row = Table([[
-            stat_cell(n_correct,   'Correct Answers', C_EMERALD_L, C_EMERALD),
-            stat_cell(n_wrong,     'Wrong Answers',   C_CRIMSON_L, C_CRIMSON),
-            stat_cell(n_unanswered,'Unanswered',      C_AMBER_L,   C_AMBER),
+            stat_cell(n_correct,    'Correct Answers', C_EMERALD_L, C_EMERALD),
+            stat_cell(n_wrong,      'Wrong Answers',   C_CRIMSON_L, C_CRIMSON),
+            stat_cell(n_unanswered, 'Unanswered',      C_AMBER_L,   C_AMBER),
         ]], colWidths=[TW/3 - 2]*3, hAlign='CENTER')
         stat_row.setStyle(TableStyle([
-            ('LEFTPADDING',  (0,0), (-1,-1), 2),
-            ('RIGHTPADDING', (0,0), (-1,-1), 2),
-            ('TOPPADDING',   (0,0), (-1,-1), 0),
-            ('BOTTOMPADDING',(0,0), (-1,-1), 0),
+            ('LEFTPADDING',   (0,0), (-1,-1), 2),
+            ('RIGHTPADDING',  (0,0), (-1,-1), 2),
+            ('TOPPADDING',    (0,0), (-1,-1), 0),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 0),
         ]))
         story.append(stat_row)
         story.append(Spacer(1, 7*mm))
 
-        # ── section heading ───────────────────────────────────────────────────
         story.append(HRFlowable(width=TW, thickness=1, color=C_GREY_B))
         story.append(Spacer(1, 3*mm))
         story.append(para('Question-by-Question Analysis', sH1))
         story.append(Spacer(1, 3*mm))
 
-        # ── legend ────────────────────────────────────────────────────────────
         def legend_chip(label, bg, fg):
-            s = S(f'leg{label}', fontSize=7.5, alignment=TA_CENTER,
-                  textColor=fg, fontName='Helvetica-Bold')
+            s = S(f'leg{label}', fontSize=7.5, alignment=TA_CENTER, textColor=fg, fontName='Helvetica-Bold')
             t = Table([[para(label, s)]], colWidths=[30*mm])
             t.setStyle(TableStyle([
-                ('BACKGROUND',   (0,0), (-1,-1), bg),
-                ('TOPPADDING',   (0,0), (-1,-1), 3),
-                ('BOTTOMPADDING',(0,0), (-1,-1), 3),
+                ('BACKGROUND',    (0,0), (-1,-1), bg),
+                ('TOPPADDING',    (0,0), (-1,-1), 3),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 3),
             ]))
             return t
 
         legend = Table([[
-            legend_chip('✓ Correct Answer',         C_EMERALD_L, C_EMERALD),
-            legend_chip('✗ Student Wrong Selection', C_CRIMSON_L, C_CRIMSON),
-            legend_chip('○ Other Options',           C_OPT_N,     colors.HexColor('#6e7491')),
+            legend_chip('✓ Correct Answer',          C_EMERALD_L, C_EMERALD),
+            legend_chip('✗ Student Wrong Selection',  C_CRIMSON_L, C_CRIMSON),
+            legend_chip('○ Other Options',            C_OPT_N,     colors.HexColor('#6e7491')),
         ]], colWidths=[34*mm]*3, hAlign='LEFT')
         legend.setStyle(TableStyle([
-            ('LEFTPADDING',  (0,0), (-1,-1), 2),
-            ('RIGHTPADDING', (0,0), (-1,-1), 2),
-            ('TOPPADDING',   (0,0), (-1,-1), 0),
-            ('BOTTOMPADDING',(0,0), (-1,-1), 0),
+            ('LEFTPADDING',   (0,0), (-1,-1), 2),
+            ('RIGHTPADDING',  (0,0), (-1,-1), 2),
+            ('TOPPADDING',    (0,0), (-1,-1), 0),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 0),
         ]))
         story.append(legend)
         story.append(Spacer(1, 4*mm))
 
-        # ── question table header ─────────────────────────────────────────────
         COL_NUM  = 8  * mm
         COL_Q    = TW * 0.52
         COL_ANS  = TW * 0.18
@@ -1759,39 +1691,36 @@ def generate_result_pdf(result_id):
             para('Marks',              sCenterB),
         ]], colWidths=[COL_NUM, COL_Q, COL_ANS, COL_CORR, COL_MRK])
         hdr.setStyle(TableStyle([
-            ('BACKGROUND',   (0,0), (-1,-1), C_DARK),
-            ('TEXTCOLOR',    (0,0), (-1,-1), C_WHITE),
-            ('FONTNAME',     (0,0), (-1,-1), 'Helvetica-Bold'),
-            ('FONTSIZE',     (0,0), (-1,-1), 8.5),
-            ('TOPPADDING',   (0,0), (-1,-1), 6),
-            ('BOTTOMPADDING',(0,0), (-1,-1), 6),
-            ('LEFTPADDING',  (0,0), (-1,-1), 5),
-            ('ALIGN',        (0,0), (-1,-1), 'CENTER'),
-            ('ALIGN',        (1,0), (1,0),   'LEFT'),
+            ('BACKGROUND',    (0,0), (-1,-1), C_DARK),
+            ('TEXTCOLOR',     (0,0), (-1,-1), C_WHITE),
+            ('FONTNAME',      (0,0), (-1,-1), 'Helvetica-Bold'),
+            ('FONTSIZE',      (0,0), (-1,-1), 8.5),
+            ('TOPPADDING',    (0,0), (-1,-1), 6),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+            ('LEFTPADDING',   (0,0), (-1,-1), 5),
+            ('ALIGN',         (0,0), (-1,-1), 'CENTER'),
+            ('ALIGN',         (1,0), (1,0),   'LEFT'),
         ]))
         story.append(hdr)
 
         LABELS = ['A', 'B', 'C', 'D', 'E', 'F']
 
-        # ── per-question rows ─────────────────────────────────────────────────
         for idx, question in enumerate(questions, 1):
             answer = answer_map.get(question.id)
 
             if answer and answer.is_correct:
-                row_bg = C_EMERALD_L; status = 'correct'
+                status = 'correct'
             elif answer and (answer.selected_option_id or answer.theory_answer):
-                row_bg = C_CRIMSON_L; status = 'wrong'
+                status = 'wrong'
             else:
-                row_bg = C_AMBER_L;   status = 'skip'
+                status = 'skip'
 
-            row_stripe = C_WHITE if idx % 2 == 0 else colors.HexColor('#fdfcfa')
-
+            row_stripe   = C_WHITE if idx % 2 == 0 else colors.HexColor('#fdfcfa')
             opt_rows     = []
             correct_text = '—'
             student_text = '—'
 
             if question.question_type in ('mcq', 'true_false'):
-                # ── FIX: use session-aware option order ──
                 options = get_ordered_options(question, exam_session)
 
                 for i, opt in enumerate(options):
@@ -1816,78 +1745,68 @@ def generate_result_pdf(result_id):
                     row_t = Table([[para(f'{marker} {lbl}.', sOL), para(otxt, sOT)]],
                                   colWidths=[10*mm, COL_Q - 12*mm])
                     row_t.setStyle(TableStyle([
-                        ('BACKGROUND',   (0,0), (-1,-1), ob),
-                        ('TOPPADDING',   (0,0), (-1,-1), 3),
-                        ('BOTTOMPADDING',(0,0), (-1,-1), 3),
-                        ('LEFTPADDING',  (0,0), (-1,-1), 4),
-                        ('RIGHTPADDING', (0,0), (-1,-1), 4),
-                        ('VALIGN',       (0,0), (-1,-1), 'TOP'),
+                        ('BACKGROUND',    (0,0), (-1,-1), ob),
+                        ('TOPPADDING',    (0,0), (-1,-1), 3),
+                        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+                        ('LEFTPADDING',   (0,0), (-1,-1), 4),
+                        ('RIGHTPADDING',  (0,0), (-1,-1), 4),
+                        ('VALIGN',        (0,0), (-1,-1), 'TOP'),
                     ]))
                     opt_rows.append(row_t)
 
-                # Resolve student_text if not yet set by wrong-option path
                 if answer and answer.selected_option_id and student_text == '—':
                     sel_opt = next((o for o in options if o.id == answer.selected_option_id), None)
                     if sel_opt:
                         student_text = f"{sel_opt.option_label}. {strip_latex(sel_opt.option_text or '')}"
-
             else:
-                # Theory
                 student_text = strip_latex(answer.theory_answer if answer and answer.theory_answer else '—')
                 correct_text = strip_latex(getattr(question, 'correct_answer', None) or '—')
 
-            # Build question cell
-            q_cell_items = [para(strip_latex(question.question_text or ''), sQText),
-                            Spacer(1, 2*mm)]
+            q_cell_items = [para(strip_latex(question.question_text or ''), sQText), Spacer(1, 2*mm)]
             for ot in opt_rows:
                 q_cell_items.append(ot)
                 q_cell_items.append(Spacer(1, 1))
 
             q_inner = Table([[item] for item in q_cell_items], colWidths=[COL_Q])
             q_inner.setStyle(TableStyle([
-                ('LEFTPADDING',  (0,0), (-1,-1), 0),
-                ('RIGHTPADDING', (0,0), (-1,-1), 0),
-                ('TOPPADDING',   (0,0), (-1,-1), 0),
-                ('BOTTOMPADDING',(0,0), (-1,-1), 0),
+                ('LEFTPADDING',   (0,0), (-1,-1), 0),
+                ('RIGHTPADDING',  (0,0), (-1,-1), 0),
+                ('TOPPADDING',    (0,0), (-1,-1), 0),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 0),
             ]))
 
             mk_fg = C_EMERALD if status == 'correct' else C_CRIMSON if status == 'wrong' else C_AMBER
-            sMK   = S(f'MK{idx}',  fontName='Helvetica-Bold', fontSize=10,
-                      alignment=TA_CENTER, textColor=mk_fg)
-            sMKs  = S(f'MKS{idx}', fontSize=7.5, alignment=TA_CENTER,
-                      textColor=colors.HexColor('#6e7491'))
+            sMK   = S(f'MK{idx}',  fontName='Helvetica-Bold', fontSize=10, alignment=TA_CENTER, textColor=mk_fg)
+            sMKs  = S(f'MKS{idx}', fontSize=7.5, alignment=TA_CENTER, textColor=colors.HexColor('#6e7491'))
             mk_cell = Table([[para(str(answer.marks_obtained if answer else 0), sMK)],
                              [para(f'/ {question.marks}', sMKs)]],
                             colWidths=[COL_MRK])
             mk_cell.setStyle(TableStyle([
-                ('TOPPADDING',   (0,0), (-1,-1), 2),
-                ('BOTTOMPADDING',(0,0), (-1,-1), 2),
-                ('LEFTPADDING',  (0,0), (-1,-1), 2),
-                ('RIGHTPADDING', (0,0), (-1,-1), 2),
+                ('TOPPADDING',    (0,0), (-1,-1), 2),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+                ('LEFTPADDING',   (0,0), (-1,-1), 2),
+                ('RIGHTPADDING',  (0,0), (-1,-1), 2),
             ]))
 
-            sNum  = S(f'Num{idx}',  fontName='Helvetica-Bold', fontSize=9,
-                      alignment=TA_CENTER, textColor=mk_fg)
+            sNum  = S(f'Num{idx}',  fontName='Helvetica-Bold', fontSize=9, alignment=TA_CENTER, textColor=mk_fg)
             sAns  = S(f'Ans{idx}',  fontSize=8, leading=12, textColor=mk_fg)
-            sCorr = S(f'Corr{idx}', fontSize=8, leading=12,
-                      fontName='Helvetica-Bold', textColor=C_EMERALD)
+            sCorr = S(f'Corr{idx}', fontSize=8, leading=12, fontName='Helvetica-Bold', textColor=C_EMERALD)
 
             q_row = Table([[para(str(idx), sNum), q_inner,
                             para(student_text, sAns), para(correct_text, sCorr), mk_cell]],
                           colWidths=[COL_NUM, COL_Q, COL_ANS, COL_CORR, COL_MRK])
             q_row.setStyle(TableStyle([
-                ('BACKGROUND',   (0,0), (-1,-1), row_stripe),
-                ('TOPPADDING',   (0,0), (-1,-1), 7),
-                ('BOTTOMPADDING',(0,0), (-1,-1), 7),
-                ('LEFTPADDING',  (0,0), (-1,-1), 5),
-                ('RIGHTPADDING', (0,0), (-1,-1), 5),
-                ('VALIGN',       (0,0), (-1,-1), 'TOP'),
-                ('LINEBELOW',    (0,0), (-1,-1), 0.5, C_GREY_B),
-                ('LINEBEFORE',   (0,0), (0,-1),  3,   mk_fg),
+                ('BACKGROUND',    (0,0), (-1,-1), row_stripe),
+                ('TOPPADDING',    (0,0), (-1,-1), 7),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 7),
+                ('LEFTPADDING',   (0,0), (-1,-1), 5),
+                ('RIGHTPADDING',  (0,0), (-1,-1), 5),
+                ('VALIGN',        (0,0), (-1,-1), 'TOP'),
+                ('LINEBELOW',     (0,0), (-1,-1), 0.5, C_GREY_B),
+                ('LINEBEFORE',    (0,0), (0,-1),  3,   mk_fg),
             ]))
             story.append(KeepTogether(q_row))
 
-        # ── totals row ────────────────────────────────────────────────────────
         story.append(Spacer(1, 3*mm))
         total_obtained = sum((a.marks_obtained or 0) for a in answers)
         tot_row = Table([[
@@ -1896,12 +1815,12 @@ def generate_result_pdf(result_id):
             para(f'{total_obtained}\n/ {result.total_marks}', sCenterB),
         ]], colWidths=[COL_NUM, COL_Q, COL_ANS, COL_CORR, COL_MRK])
         tot_row.setStyle(TableStyle([
-            ('BACKGROUND',   (0,0), (-1,-1), C_DARK),
-            ('TEXTCOLOR',    (0,0), (-1,-1), C_WHITE),
-            ('TOPPADDING',   (0,0), (-1,-1), 8),
-            ('BOTTOMPADDING',(0,0), (-1,-1), 8),
-            ('LEFTPADDING',  (0,0), (-1,-1), 5),
-            ('ALIGN',        (0,0), (-1,-1), 'CENTER'),
+            ('BACKGROUND',    (0,0), (-1,-1), C_DARK),
+            ('TEXTCOLOR',     (0,0), (-1,-1), C_WHITE),
+            ('TOPPADDING',    (0,0), (-1,-1), 8),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+            ('LEFTPADDING',   (0,0), (-1,-1), 5),
+            ('ALIGN',         (0,0), (-1,-1), 'CENTER'),
         ]))
         story.append(tot_row)
 
@@ -1953,8 +1872,8 @@ def proctoring_reports():
     if date_to:
         query = query.filter(ProctoringLog.timestamp <= datetime.strptime(date_to, '%Y-%m-%d'))
 
-    query              = query.order_by(ProctoringLog.timestamp.desc())
-    logs_pagination    = query.paginate(page=page, per_page=50, error_out=False)
+    query           = query.order_by(ProctoringLog.timestamp.desc())
+    logs_pagination = query.paginate(page=page, per_page=50, error_out=False)
 
     for log in logs_pagination.items:
         es = ExamSession.query.get(log.exam_session_id)
@@ -1964,9 +1883,9 @@ def proctoring_reports():
         else:
             log.student_user = log.exam = None
 
-    stats      = calculate_proctoring_stats()
-    exams      = Exam.query.filter_by(published=True).order_by(Exam.title).all()
-    students   = db.session.query(User).join(Student, User.id == Student.user_id).order_by(
+    stats           = calculate_proctoring_stats()
+    exams           = Exam.query.filter_by(published=True).order_by(Exam.title).all()
+    students        = db.session.query(User).join(Student, User.id == Student.user_id).order_by(
         User.first_name, User.last_name).all()
     violation_types = [
         'face_not_visible', 'multiple_faces', 'tab_switch', 'fullscreen_exit',
@@ -1983,7 +1902,7 @@ def proctoring_reports():
 
 
 def calculate_proctoring_stats():
-    stats = {}
+    stats  = {}
     use_vt = hasattr(ProctoringLog, 'violation_type')
     field  = 'violation_type' if use_vt else 'event_type'
 
@@ -2006,7 +1925,7 @@ def calculate_proctoring_stats():
                     ['multiple_faces', 'excessive_violations', 'dev_tools_attempt']
                 )).count()
     else:
-        stats['total_violations']   = ProctoringLog.query.count()
+        stats['total_violations']    = ProctoringLog.query.count()
         stats['suspicious_activity'] = ProctoringLog.query.filter(
             ProctoringLog.event_type.in_(
                 ['multiple_faces', 'excessive_violations', 'dev_tools_attempt']
@@ -2029,9 +1948,9 @@ def student_proctoring_detail(student_id, exam_id):
     ).order_by(ProctoringLog.timestamp.asc()).all()
 
     violation_summary = {
-        'tab_switches':   exam_session.tab_switches   or 0,
-        'copy_attempts':  exam_session.copy_attempts  or 0,
-        'paste_attempts': exam_session.paste_attempts or 0,
+        'tab_switches':  exam_session.tab_switches  or 0,
+        'copy_attempts': exam_session.copy_attempts or 0,
+        'paste_attempts':exam_session.paste_attempts or 0,
     }
     if hasattr(exam_session, 'face_violations'):
         violation_summary['face_violations']  = exam_session.face_violations  or 0
@@ -2069,8 +1988,8 @@ def export_proctoring_report(exam_id):
         for col, w in zip(['A','B','C','D','E','F'], [20,25,20,12,40,15]):
             ws.column_dimensions[col].width = w
 
-        hfill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-        hfont = Font(bold=True, color="FFFFFF", size=12)
+        hfill  = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        hfont  = Font(bold=True, color="FFFFFF", size=12)
         halign = Alignment(horizontal="center", vertical="center")
         bdr    = Border(left=Side(style='thin'), right=Side(style='thin'),
                         top=Side(style='thin'),  bottom=Side(style='thin'))
@@ -2120,7 +2039,6 @@ def export_proctoring_report(exam_id):
             elif sl == 'low':    sc.fill = PatternFill(start_color="C6EFCE",end_color="C6EFCE",fill_type="solid"); sc.font = Font(color="006100")
             row += 1
 
-        # Summary
         row += 2
         ws.merge_cells(f'A{row}:F{row}')
         ws[f'A{row}'].value     = "Summary Statistics"
@@ -2128,8 +2046,8 @@ def export_proctoring_report(exam_id):
         ws[f'A{row}'].alignment = Alignment(horizontal="center")
         row += 1
 
-        vcounts = {}
-        scounts = {'high': 0, 'medium': 0, 'low': 0}
+        vcounts   = {}
+        scounts   = {'high': 0, 'medium': 0, 'low': 0}
         ustudents = set()
         for log in logs:
             vt = getattr(log, 'violation_type', None) or getattr(log, 'event_type', None)
@@ -2140,11 +2058,11 @@ def export_proctoring_report(exam_id):
             if es: ustudents.add(es.student_id)
 
         for label, value in [
-            ('Total Violations:', len(logs)),
-            ('Students with Violations:', len(ustudents)),
-            ('High Severity:', scounts['high']),
-            ('Medium Severity:', scounts['medium']),
-            ('Low Severity:', scounts['low']),
+            ('Total Violations:',         len(logs)),
+            ('Students with Violations:',  len(ustudents)),
+            ('High Severity:',             scounts['high']),
+            ('Medium Severity:',           scounts['medium']),
+            ('Low Severity:',              scounts['low']),
         ]:
             ws.cell(row=row, column=1).value = label
             ws.cell(row=row, column=1).font  = Font(bold=True)
@@ -2235,7 +2153,7 @@ def generate_summary_report(class_id, exam_id):
         title_run.font.size = Pt(18); title_run.font.bold = True
 
         class_name = report_data['class'].name if report_data['class'] else 'All Classes'
-        exam_title = report_data['exam'].title if report_data['exam'] else 'All Exams'
+        exam_title = report_data['exam'].title  if report_data['exam']  else 'All Exams'
         meta       = doc.add_paragraph()
         meta.alignment = WD_ALIGN_PARAGRAPH.CENTER
         meta.add_run(f"Class: {class_name}\nExam: {exam_title}\n")
@@ -2285,12 +2203,6 @@ def generate_summary_report(class_id, exam_id):
 
 
 def generate_detailed_report(class_id, exam_id):
-    """
-    FIX: answer.selected_option → correct attribute is selected_option_id; look up
-         option text via QuestionOption.query.get(). Also fixed correct_answer lookup
-         for MCQ (was reading nonexistent question.correct_answer field).
-    FIX: question.order used for row numbering; question.question_number removed.
-    """
     try:
         from docx import Document
         from docx.shared import Pt
@@ -2318,9 +2230,6 @@ def generate_detailed_report(class_id, exam_id):
         meta.add_run(f"Generated: {datetime.now().strftime('%B %d, %Y')}").italic = True
         doc.add_paragraph()
 
-        # Questions in default exam order (no session here — bulk report)
-        questions = get_ordered_questions(exam_id)
-
         for sd in report_data['students']:
             student = sd['student']
             doc.add_heading(f"{student.user.full_name} ({student.admission_number})", level=2)
@@ -2333,8 +2242,7 @@ def generate_detailed_report(class_id, exam_id):
                 doc.add_page_break()
                 continue
 
-            # Per-student session for randomised order
-            student_session = ExamSession.query.filter_by(
+            student_session   = ExamSession.query.filter_by(
                 student_id=student.user_id, exam_id=exam_id).first()
             student_questions = get_ordered_questions(exam_id, student_session)
 
@@ -2366,13 +2274,9 @@ def generate_detailed_report(class_id, exam_id):
 
             for idx, question in enumerate(student_questions, start=1):
                 row    = q_tbl.rows[idx].cells
-                row[0].text = str(idx)   # show display index, not DB order field
-
+                row[0].text = str(idx)
                 answer = answer_dict.get(question.id)
-
-                # ── FIX: get student answer text properly ──
                 row[1].text = get_student_answer_text(answer, question)
-                # ── FIX: get correct answer for MCQ from options ──
                 row[2].text = get_correct_answer_text(question)
                 row[3].text = ('✓ Correct' if answer and answer.is_correct
                                else '✗ Wrong' if answer else '✗ Unanswered')
@@ -2409,7 +2313,7 @@ def generate_performance_report(class_id, exam_id):
         tr.font.size = Pt(18); tr.font.bold = True
 
         class_name = report_data['class'].name if report_data['class'] else 'All Classes'
-        exam_title = report_data['exam'].title if report_data['exam'] else 'All Exams'
+        exam_title = report_data['exam'].title  if report_data['exam']  else 'All Exams'
         meta       = doc.add_paragraph()
         meta.alignment = WD_ALIGN_PARAGRAPH.CENTER
         meta.add_run(f"Class: {class_name}\nExam: {exam_title}\n")
@@ -2434,7 +2338,6 @@ def generate_performance_report(class_id, exam_id):
                            'D (60-69%)': 0, 'F (0-59%)': 0}
             all_results = ExamResult.query.filter_by(exam_id=exam_id).all()
             if class_id:
-                # FIX: use student.user_id (not student_id key)
                 student_ids = [sd['student'].user_id for sd in report_data['students']]
                 all_results = [r for r in all_results if r.student_id in student_ids]
             for r in all_results:
@@ -2518,14 +2421,14 @@ def get_report_data(class_id, exam_id):
         if all_results:
             pcts = [r.percentage for r in all_results]
             data['statistics'] = {
-                'Total Students':   len(students),
-                'Total Attempts':   len(all_results),
-                'Average Score':    f"{sum(pcts)/len(pcts):.2f}%",
-                'Highest Score':    f"{max(pcts):.2f}%",
-                'Lowest Score':     f"{min(pcts):.2f}%",
-                'Students Passed':  sum(1 for r in all_results if r.is_passed),
-                'Students Failed':  sum(1 for r in all_results if not r.is_passed),
-                'Pass Rate':        f"{sum(1 for r in all_results if r.is_passed)/len(all_results)*100:.2f}%"
+                'Total Students':  len(students),
+                'Total Attempts':  len(all_results),
+                'Average Score':   f"{sum(pcts)/len(pcts):.2f}%",
+                'Highest Score':   f"{max(pcts):.2f}%",
+                'Lowest Score':    f"{min(pcts):.2f}%",
+                'Students Passed': sum(1 for r in all_results if r.is_passed),
+                'Students Failed': sum(1 for r in all_results if not r.is_passed),
+                'Pass Rate':       f"{sum(1 for r in all_results if r.is_passed)/len(all_results)*100:.2f}%"
             }
         else:
             data['statistics'] = {'Total Students': len(students), 'Total Attempts': 0,
@@ -2555,6 +2458,88 @@ def api_students_count():
         return jsonify({'count': count})
     except Exception as e:
         return jsonify({'count': 0, 'error': str(e)}), 500
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# REAL-TIME PROCTORING ALERT (called by exam_proctoring_fixed.js)
+# ══════════════════════════════════════════════════════════════════════════
+
+@admin_bp.route('/api/proctoring-alert', methods=['POST'])
+@login_required
+def receive_proctoring_alert():
+    """
+    Receives real-time violation alerts pushed by the student browser
+    (exam_proctoring_fixed.js → alertAdmin()).
+
+    Deliberately NOT decorated with @admin_required because the caller is
+    a student browser mid-exam, not an admin session.  The route is still
+    protected by @login_required so anonymous POST are rejected.
+
+    On success:
+      - Creates a ProctoringLog row
+      - Increments the matching counter on ExamSession
+      - Returns JSON so the JS fetch() resolves cleanly
+    """
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+
+        exam_id        = data.get('exam_id')
+        session_id     = data.get('session_id')
+        violation_type = data.get('violation_type', 'unknown')
+        severity       = data.get('severity', 'medium')
+        details        = data.get('details', {})
+
+        if not exam_id or not session_id:
+            return jsonify({'success': False, 'message': 'exam_id and session_id required'}), 400
+
+        exam_session = ExamSession.query.get(int(session_id))
+        if not exam_session:
+            return jsonify({'success': False, 'message': 'Session not found'}), 404
+
+        # ── Create ProctoringLog entry ─────────────────────────────────
+        log_entry = ProctoringLog(
+            exam_session_id=exam_session.id,
+            event_type=violation_type,
+            timestamp=datetime.utcnow()
+        )
+        if hasattr(ProctoringLog, 'exam_id'):
+            log_entry.exam_id = int(exam_id)
+        if hasattr(ProctoringLog, 'student_id'):
+            log_entry.student_id = exam_session.student_id
+        if hasattr(ProctoringLog, 'violation_type'):
+            log_entry.violation_type = violation_type
+        if hasattr(ProctoringLog, 'severity'):
+            log_entry.severity = severity
+        if hasattr(ProctoringLog, 'details'):
+            log_entry.details = json.dumps(details)
+
+        db.session.add(log_entry)
+
+        # ── Increment session counters ─────────────────────────────────
+        vt = violation_type
+        if vt in ('face_not_visible', 'multiple_faces') and hasattr(exam_session, 'face_violations'):
+            exam_session.face_violations = (exam_session.face_violations or 0) + 1
+        elif vt == 'tab_switch':
+            exam_session.tab_switches = (exam_session.tab_switches or 0) + 1
+        elif vt == 'copy_attempt':
+            exam_session.copy_attempts = (exam_session.copy_attempts or 0) + 1
+        elif vt == 'paste_attempt':
+            exam_session.paste_attempts = (exam_session.paste_attempts or 0) + 1
+        elif vt == 'fullscreen_exit' and hasattr(exam_session, 'fullscreen_exits'):
+            exam_session.fullscreen_exits = (exam_session.fullscreen_exits or 0) + 1
+
+        exam_session.last_activity = datetime.utcnow()
+        db.session.commit()
+
+        print(f"[AdminAlert] {violation_type} | session={session_id} | severity={severity}")
+
+        return jsonify({'success': True, 'logged': True, 'severity': severity}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"[AdminAlert] ERROR: {str(e)}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -2598,19 +2583,17 @@ def delete_result_for_retake(result_id):
 @admin_required
 def bulk_delete_for_retake(exam_id):
     try:
-        result_ids    = request.form.getlist('result_ids[]')
+        result_ids = request.form.getlist('result_ids[]')
         if not result_ids:
             flash('No results selected.', 'warning')
             return redirect(url_for('admin.exam_results', id=exam_id))
 
         deleted_count = 0
-        student_names = []
         for rid in result_ids:
             try:
                 result = ExamResult.query.get(int(rid))
                 if not result: continue
                 sid = result.exam_session_id
-                student_names.append(result.student_user.full_name)
                 StudentAnswer.query.filter_by(exam_session_id=sid).delete()
                 ProctoringLog.query.filter_by(exam_session_id=sid).delete()
                 es = ExamSession.query.get(sid)
@@ -2709,9 +2692,7 @@ def analytics_chart_data():
 
 
 # ══════════════════════════════════════════════════════════════════════════
-# PROCTORING VIOLATION LOG (API)
-# FIX: was inside api_students_count scope due to wrong indentation —
-#      now properly defined at module level.
+# PROCTORING VIOLATION LOG (legacy — called by older JS)
 # ══════════════════════════════════════════════════════════════════════════
 
 @admin_bp.route('/exam/proctoring/log', methods=['POST'])
@@ -2732,13 +2713,13 @@ def log_proctoring_violation():
     screenshot     = data.get('screenshot_path')
 
     log = ProctoringLog(
-        exam_id          = session.exam_id,
-        student_id       = current_user.id,
-        exam_session_id  = session.id,
-        violation_type   = violation_type,
-        severity         = severity,
-        timestamp        = datetime.utcnow(),
-        screenshot_path  = screenshot
+        exam_id         = session.exam_id,
+        student_id      = current_user.id,
+        exam_session_id = session.id,
+        violation_type  = violation_type,
+        severity        = severity,
+        timestamp       = datetime.utcnow(),
+        screenshot_path = screenshot
     )
     db.session.add(log)
     session.webcam_captures = (session.webcam_captures or 0) + 1
