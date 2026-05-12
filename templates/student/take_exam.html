@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/css/katex.min.css') }}">
 
 <style>
     body {
@@ -177,7 +177,7 @@
     .header-right {
         display: flex;
         align-items: center;
-        gap: 15px;
+        gap: 12px;
     }
     
     .timer-box {
@@ -211,34 +211,6 @@
         letter-spacing: 1px;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
-
-    /* ── CALCULATOR BUTTON ── */
-    .calc-btn {
-        background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
-        color: white;
-        border: none;
-        padding: 8px 18px;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 13px;
-        cursor: pointer;
-        transition: all 0.3s;
-        box-shadow: 0 3px 12px rgba(14, 165, 233, 0.35);
-        display: flex;
-        align-items: center;
-        gap: 7px;
-    }
-    
-    .calc-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 22px rgba(14, 165, 233, 0.5);
-    }
-
-    .calc-btn.active {
-        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-        box-shadow: 0 2px 8px rgba(14, 165, 233, 0.4) inset;
-        transform: translateY(0);
-    }
     
     .preview-btn {
         background: linear-gradient(135deg, #10b981 0%, #059669 100%);
@@ -257,191 +229,32 @@
         transform: translateY(-2px);
         box-shadow: 0 6px 25px rgba(16, 185, 129, 0.5);
     }
-    
-    /* ══════════════════════════════════════════
-       SCIENTIFIC CALCULATOR PANEL
-    ══════════════════════════════════════════ */
-    #sci-calc-panel {
-        position: fixed;
-        top: 70px;
-        right: 20px;
-        width: 320px;
-        background: #1e1e2e;
-        border-radius: 16px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.08);
-        z-index: 9998;
-        display: none;
-        flex-direction: column;
-        overflow: hidden;
-        user-select: none;
-        font-family: 'Courier New', monospace;
-    }
 
-    #sci-calc-panel.visible {
-        display: flex;
-        animation: calcSlideIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-
-    @keyframes calcSlideIn {
-        from { opacity: 0; transform: translateY(-12px) scale(0.96); }
-        to   { opacity: 1; transform: translateY(0)   scale(1); }
-    }
-
-    /* Calc drag handle / title bar */
-    #calc-titlebar {
-        background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
-        padding: 9px 14px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        cursor: move;
-        flex-shrink: 0;
-    }
-
-    #calc-titlebar span {
+    /* ── Calculator toggle button in header ── */
+    .calc-toggle-btn {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
         color: white;
-        font-size: 12px;
-        font-weight: 700;
-        letter-spacing: 0.8px;
-        text-transform: uppercase;
-    }
-
-    #calc-close-btn {
-        background: rgba(255,255,255,0.25);
         border: none;
-        color: white;
-        width: 22px;
-        height: 22px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 13px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: background 0.2s;
-    }
-    #calc-close-btn:hover { background: rgba(255,255,255,0.4); }
-
-    /* Display */
-    #calc-display-wrap {
-        background: #13131f;
-        padding: 10px 14px 8px;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-    }
-
-    #calc-history {
-        color: #6c6c8a;
-        font-size: 11px;
-        min-height: 16px;
-        text-align: right;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        margin-bottom: 3px;
-    }
-
-    #calc-display {
-        color: #e2e8f0;
-        font-size: 26px;
-        font-weight: 700;
-        text-align: right;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        letter-spacing: 0.5px;
-    }
-
-    /* Mode toggle */
-    #calc-mode-row {
-        display: flex;
-        justify-content: flex-end;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 14px 4px;
-        background: #13131f;
-    }
-
-    .calc-mode-label {
-        color: #6c6c8a;
-        font-size: 10px;
-        font-family: sans-serif;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    #calc-deg-toggle {
-        background: rgba(14,165,233,0.2);
-        border: 1px solid rgba(14,165,233,0.4);
-        color: #7dd3fc;
-        font-size: 10px;
-        font-weight: 700;
-        padding: 2px 10px;
-        border-radius: 20px;
-        cursor: pointer;
-        font-family: sans-serif;
-        transition: all 0.2s;
-    }
-    #calc-deg-toggle:hover {
-        background: rgba(14,165,233,0.35);
-    }
-
-    /* Button grid */
-    #calc-buttons {
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 6px;
-        padding: 10px 12px 14px;
-        background: #1e1e2e;
-    }
-
-    .calc-key {
-        padding: 0;
-        height: 40px;
-        border: none;
-        border-radius: 9px;
-        font-size: 13px;
+        padding: 8px 16px;
+        border-radius: 8px;
         font-weight: 600;
+        font-size: 13px;
         cursor: pointer;
-        transition: all 0.12s ease;
-        font-family: 'Courier New', monospace;
+        transition: all 0.3s;
+        box-shadow: 0 3px 12px rgba(245, 158, 11, 0.3);
         display: flex;
         align-items: center;
-        justify-content: center;
-        position: relative;
-        overflow: hidden;
+        gap: 6px;
     }
-
-    .calc-key::after {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background: rgba(255,255,255,0);
-        transition: background 0.1s;
+    .calc-toggle-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(245, 158, 11, 0.45);
     }
-    .calc-key:hover::after { background: rgba(255,255,255,0.1); }
-    .calc-key:active { transform: scale(0.93); }
-
-    /* Key color themes */
-    .calc-key.num  { background: #2d2d42; color: #e2e8f0; }
-    .calc-key.op   { background: #1a3a5c; color: #7dd3fc; }
-    .calc-key.fn   { background: #2a1f42; color: #c084fc; }
-    .calc-key.mem  { background: #1a2e20; color: #86efac; }
-    .calc-key.eq   { background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: white; font-size: 16px; }
-    .calc-key.clr  { background: #3b1a1a; color: #f87171; }
-    .calc-key.del  { background: #3b2a1a; color: #fb923c; }
-    .calc-key.span2 { grid-column: span 2; }
-
-    /* Error flash */
-    #calc-display.calc-error {
-        color: #f87171;
-        animation: calcErrorShake 0.3s ease;
+    .calc-toggle-btn.active {
+        background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+        box-shadow: 0 3px 12px rgba(180, 83, 9, 0.4);
     }
-    @keyframes calcErrorShake {
-        0%,100% { transform: translateX(0); }
-        25%      { transform: translateX(-6px); }
-        75%      { transform: translateX(6px); }
-    }
-
+    
     /* Main Container */
     .exam-container {
         position: fixed;
@@ -478,7 +291,9 @@
     .question-card::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; border: 2px solid #f1f5f9; }
     .question-card::-webkit-scrollbar-thumb:hover { background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%); }
     
-    .question-card.active { display: flex; }
+    .question-card.active {
+        display: flex;
+    }
     
     .question-header {
         display: flex;
@@ -521,7 +336,9 @@
         font-weight: 600;
         font-size: 12px;
     }
+    
     .flag-btn:hover { border-color: #fbbf24; color: #f59e0b; background: #fef3c7; }
+    
     .flag-btn.flagged {
         background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
         border-color: #f59e0b;
@@ -535,13 +352,38 @@
         padding-right: 15px;
         max-height: calc(100vh - 280px);
     }
+    
     .question-content::-webkit-scrollbar { width: 8px; }
     .question-content::-webkit-scrollbar-track { background: #f8fafc; border-radius: 10px; }
     .question-content::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; }
+    .question-content::-webkit-scrollbar-thumb:hover { background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%); }
     
-    .question-text { font-size: 17px; line-height: 1.7; color: #1a202c; margin-bottom: 20px; font-weight: 500; }
-    .question-image { max-width: 100%; height: auto; border-radius: 12px; margin: 20px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 2px solid #e2e8f0; }
-    .question-instructions { background: #eff6ff; border-left: 3px solid #3b82f6; padding: 10px 15px; border-radius: 6px; margin-bottom: 20px; color: #1e40af; font-size: 13px; }
+    .question-text {
+        font-size: 17px;
+        line-height: 1.7;
+        color: #1a202c;
+        margin-bottom: 20px;
+        font-weight: 500;
+    }
+    
+    .question-image {
+        max-width: 100%;
+        height: auto;
+        border-radius: 12px;
+        margin: 20px 0;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        border: 2px solid #e2e8f0;
+    }
+    
+    .question-instructions {
+        background: #eff6ff;
+        border-left: 3px solid #3b82f6;
+        padding: 10px 15px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        color: #1e40af;
+        font-size: 13px;
+    }
     
     /* Options */
     .options-container { display: flex; flex-direction: column; gap: 12px; }
@@ -559,6 +401,7 @@
         position: relative;
         overflow: hidden;
     }
+    
     .option-card::before {
         content: '';
         position: absolute;
@@ -568,14 +411,17 @@
         opacity: 0.05;
         transition: width 0.3s ease;
     }
-    .option-card:hover { border-color: #667eea; transform: translateX(5px); box-shadow: 0 6px 20px rgba(102,126,234,0.2); }
+    
+    .option-card:hover { border-color: #667eea; transform: translateX(5px); box-shadow: 0 6px 20px rgba(102, 126, 234, 0.2); }
     .option-card:hover::before { width: 100%; }
+    
     .option-card.selected {
-        background: linear-gradient(135deg, rgba(102,126,234,0.12) 0%, rgba(118,75,162,0.12) 100%);
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%);
         border-color: #667eea;
         border-width: 2px;
-        box-shadow: 0 4px 15px rgba(102,126,234,0.2);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
     }
+    
     .option-label {
         width: 38px; height: 38px;
         border-radius: 50%;
@@ -584,87 +430,115 @@
         display: flex; align-items: center; justify-content: center;
         font-size: 18px; font-weight: 700;
         flex-shrink: 0;
-        box-shadow: 0 3px 10px rgba(102,126,234,0.3);
+        box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
         transition: all 0.3s;
     }
-    .option-card.selected .option-label { transform: scale(1.08); box-shadow: 0 4px 15px rgba(102,126,234,0.5); }
+    
+    .option-card.selected .option-label { transform: scale(1.08); box-shadow: 0 4px 15px rgba(102, 126, 234, 0.5); }
+    
     .option-text { flex: 1; font-size: 15px; color: #2d3748; line-height: 1.5; font-weight: 500; }
     
+    /* Theory Answer */
     .theory-textarea {
-        width: 100%;
-        min-height: 300px;
-        border: 3px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 18px;
-        font-size: 16px;
-        font-family: inherit;
-        resize: vertical;
-        transition: all 0.3s;
-        background: #f8fafc;
-        line-height: 1.6;
+        width: 100%; min-height: 300px;
+        border: 3px solid #e2e8f0; border-radius: 12px;
+        padding: 18px; font-size: 16px; font-family: inherit;
+        resize: vertical; transition: all 0.3s;
+        background: #f8fafc; line-height: 1.6;
     }
-    .theory-textarea:focus { outline: none; border-color: #667eea; background: white; box-shadow: 0 0 0 4px rgba(102,126,234,0.1); }
+    .theory-textarea:focus {
+        outline: none; border-color: #667eea; background: white;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    }
     
+    /* Submit Button Container */
     .submit-container {
         margin-top: 30px; padding: 25px;
-        background: linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(5,150,105,0.1) 100%);
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%);
         border-radius: 16px; text-align: center;
         border: 2px dashed #10b981; display: none;
     }
     .submit-container.show { display: block; }
+    
     .submit-exam-btn {
         background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        color: white; border: none; padding: 16px 50px;
-        border-radius: 12px; font-weight: 700; font-size: 18px;
-        cursor: pointer; transition: all 0.3s;
-        box-shadow: 0 8px 25px rgba(16,185,129,0.4);
+        color: white; border: none;
+        padding: 16px 50px; border-radius: 12px;
+        font-weight: 700; font-size: 18px; cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
     }
-    .submit-exam-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 35px rgba(16,185,129,0.5); }
+    .submit-exam-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 35px rgba(16, 185, 129, 0.5); }
+    
     .submit-note { margin-top: 12px; color: #059669; font-size: 14px; font-weight: 500; }
     
+    /* Navigation Footer */
     .navigation-footer {
-        border-top: 2px solid #e2e8f0; padding: 12px 30px;
+        border-top: 2px solid #e2e8f0;
+        padding: 12px 30px;
         background: #f8fafc;
         display: flex; justify-content: space-between; align-items: center;
         flex-shrink: 0;
     }
+    
     .nav-btn {
         padding: 8px 20px; border: none; border-radius: 8px;
         font-weight: 600; font-size: 13px; cursor: pointer;
-        transition: all 0.3s; display: flex; align-items: center; gap: 8px;
+        transition: all 0.3s;
+        display: flex; align-items: center; gap: 8px;
     }
     .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    
     .btn-prev { background: #f1f5f9; color: #475569; border: 2px solid #e2e8f0; }
     .btn-prev:hover:not(:disabled) { background: #e2e8f0; transform: translateX(-3px); }
-    .btn-next { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; box-shadow: 0 4px 15px rgba(102,126,234,0.3); }
-    .btn-next:hover:not(:disabled) { transform: translateX(3px); box-shadow: 0 6px 20px rgba(102,126,234,0.4); }
+    
+    .btn-next {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+    .btn-next:hover:not(:disabled) { transform: translateX(3px); box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4); }
+    
     .clear-btn { background: #fef2f2; color: #dc2626; border: 2px solid #fecaca; }
     .clear-btn:hover { background: #fee2e2; border-color: #fca5a5; }
     
+    /* Navigation Sidebar */
     .navigation-sidebar {
-        width: 250px; position: relative;
-        background: white; border-left: 2px solid #e2e8f0;
-        overflow: hidden; display: flex; flex-direction: column;
+        width: 250px;
+        position: relative;
+        background: white;
+        border-left: 2px solid #e2e8f0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
     }
-    .nav-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; text-align: center; flex-shrink: 0; }
+    
+    .nav-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white; padding: 15px; text-align: center; flex-shrink: 0;
+    }
     .nav-header h6 { margin: 0 0 10px 0; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    
     .progress-stats { display: flex; justify-content: space-around; margin-top: 12px; }
     .stat-item { text-align: center; }
     .stat-number { font-size: 20px; font-weight: 700; display: block; }
     .stat-label { font-size: 9px; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.5px; }
+    
     .question-grid-container { padding: 15px; flex: 1; overflow-y: auto; }
+    
     .legend { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 2px solid #e2e8f0; }
     .legend-item { display: flex; align-items: center; gap: 5px; font-size: 9px; color: #64748b; font-weight: 600; }
     .legend-box { width: 16px; height: 16px; border-radius: 4px; border: 2px solid; }
+    
     .question-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+    
     .nav-question {
         aspect-ratio: 1; border: 2px solid #e2e8f0; border-radius: 8px;
         display: flex; align-items: center; justify-content: center;
-        font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.3s;
-        background: white; color: #64748b;
+        font-weight: 700; font-size: 12px; cursor: pointer;
+        transition: all 0.3s; background: white; color: #64748b;
     }
-    .nav-question:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
-    .nav-question.current { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-color: #764ba2; color: white; box-shadow: 0 4px 15px rgba(102,126,234,0.5); }
+    .nav-question:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15); }
+    .nav-question.current { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-color: #764ba2; color: white; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.5); }
     .nav-question.answered { background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-color: #059669; color: white; }
     .nav-question.flagged { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border-color: #f59e0b; color: white; }
     .nav-question.flagged.answered { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
@@ -673,22 +547,34 @@
     .question-grid-container::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
     .question-grid-container::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; }
     
-    .modal-content { border-radius: 20px; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: 95vh; display: flex; flex-direction: column; }
+    /* Modal */
+    .modal-content { border-radius: 20px; border: none; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); max-height: 95vh; display: flex; flex-direction: column; }
     .modal-body { overflow-y: auto; }
     .modal-body::-webkit-scrollbar { width: 8px; }
     .modal-body::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
     .modal-body::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; }
-    .modal-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 20px 20px 0 0; border: none; padding: 25px 30px; }
+    
+    .modal-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white; border-radius: 20px 20px 0 0; border: none; padding: 25px 30px;
+    }
     
     .preview-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 10px; margin: 20px 0; max-height: 400px; overflow-y: auto; padding-right: 10px; }
     .preview-grid::-webkit-scrollbar { width: 8px; }
     .preview-grid::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
     .preview-grid::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; }
-    .preview-question { aspect-ratio: 1; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.3s; border: 2px solid; }
+    
+    .preview-question {
+        aspect-ratio: 1; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 14px; cursor: pointer;
+        transition: all 0.3s; border: 2px solid;
+    }
     .preview-question.answered { background: #10b981; border-color: #059669; color: white; }
     .preview-question.unanswered { background: #ef4444; border-color: #dc2626; color: white; }
     .preview-question:hover { transform: scale(1.1); }
     
+    /* Notification */
     .exam-notification {
         position: fixed; top: 80px; right: 20px; z-index: 10000;
         min-width: 300px; max-width: 500px; padding: 15px 20px;
@@ -701,16 +587,145 @@
     .exam-notification.alert-info    { background-color: #dbeafe; border-left: 4px solid #3b82f6; color: #1e3a8a; }
     .exam-notification.alert-success { background-color: #d1fae5; border-left: 4px solid #10b981; color: #065f46; }
     
-    @keyframes slideInRight  { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     @keyframes slideOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
-    
+
+    /* ═══════════════════════════════════════════════════
+       SCIENTIFIC CALCULATOR — all styles scoped to #sci-calc
+    ═══════════════════════════════════════════════════ */
+    #sci-calc {
+        position: fixed;
+        bottom: 90px;
+        left: 20px;
+        z-index: 9998;
+        width: 320px;
+        background: #1e2235;
+        border-radius: 16px;
+        box-shadow: 0 16px 48px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06);
+        user-select: none;
+        display: none;          /* toggled by JS */
+        flex-direction: column;
+        overflow: hidden;
+        transition: box-shadow 0.2s;
+    }
+    #sci-calc.open { display: flex; }
+    #sci-calc.dragging { box-shadow: 0 24px 60px rgba(0,0,0,0.6); cursor: grabbing; }
+
+    /* drag handle / title bar */
+    #sci-calc-bar {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 8px 12px;
+        display: flex; align-items: center; justify-content: space-between;
+        cursor: move;
+        flex-shrink: 0;
+    }
+    #sci-calc-bar span {
+        font-size: 11px; font-weight: 700; color: white;
+        text-transform: uppercase; letter-spacing: 0.8px;
+        display: flex; align-items: center; gap: 6px;
+    }
+    .calc-close-btn {
+        background: rgba(255,255,255,0.2); border: none; color: white;
+        width: 22px; height: 22px; border-radius: 5px;
+        cursor: pointer; font-size: 13px;
+        display: flex; align-items: center; justify-content: center;
+        transition: background 0.2s;
+    }
+    .calc-close-btn:hover { background: rgba(255,255,255,0.35); }
+
+    /* display area */
+    #sci-calc-display {
+        background: #141825;
+        padding: 10px 14px 8px;
+        flex-shrink: 0;
+    }
+    #calc-expr {
+        font-size: 11px; color: #7c89b0; min-height: 16px;
+        text-align: right; overflow: hidden; text-overflow: ellipsis;
+        white-space: nowrap; margin-bottom: 3px;
+        font-family: 'Courier New', monospace;
+    }
+    #calc-result {
+        font-size: 28px; font-weight: 700; color: #f0f4ff;
+        text-align: right; line-height: 1;
+        font-family: 'Courier New', monospace;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    #calc-result.error { font-size: 16px; color: #f87171; }
+    #calc-mode-bar {
+        display: flex; gap: 6px; margin-top: 6px; justify-content: flex-end;
+    }
+    .calc-mode-chip {
+        font-size: 9px; font-weight: 700; padding: 2px 7px;
+        border-radius: 20px; background: #2a3050; color: #7c89b0;
+        text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer;
+        border: 1px solid transparent; transition: all 0.15s;
+    }
+    .calc-mode-chip.active { background: #667eea; color: white; border-color: #764ba2; }
+
+    /* button grid */
+    #sci-calc-keys {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 5px;
+        padding: 10px;
+        background: #1e2235;
+    }
+    .ck {
+        border: none; border-radius: 8px;
+        font-size: 12px; font-weight: 600;
+        padding: 0; height: 38px;
+        cursor: pointer; transition: all 0.12s;
+        display: flex; align-items: center; justify-content: center;
+        line-height: 1;
+    }
+    .ck:active { transform: scale(0.93); }
+
+    /* colour themes per button category */
+    .ck-num  { background: #2a3050; color: #e8eeff; }
+    .ck-num:hover  { background: #343d65; }
+    .ck-op   { background: #3a2f60; color: #c4b5fd; }
+    .ck-op:hover   { background: #4a3c7a; }
+    .ck-fn   { background: #1f3a50; color: #7dd3fc; }
+    .ck-fn:hover   { background: #284e6a; }
+    .ck-mem  { background: #1f3828; color: #6ee7b7; }
+    .ck-mem:hover  { background: #275039; }
+    .ck-eq   { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+    .ck-eq:hover   { filter: brightness(1.15); }
+    .ck-clr  { background: #3d1a1a; color: #fca5a5; }
+    .ck-clr:hover  { background: #521f1f; }
+    .ck-del  { background: #3d2a1a; color: #fdba74; }
+    .ck-del:hover  { background: #523a1f; }
+    .ck-zero { grid-column: span 2; }   /* 0 button spans 2 cols */
+
+    /* history panel */
+    #calc-history {
+        max-height: 90px; overflow-y: auto;
+        background: #141825; padding: 6px 10px;
+        border-top: 1px solid #2a3050;
+        flex-shrink: 0;
+    }
+    #calc-history:empty { display: none; }
+    .calc-hist-item {
+        font-size: 10.5px; color: #5c6a99;
+        font-family: 'Courier New', monospace;
+        padding: 2px 0; border-bottom: 1px solid #1e2235;
+        cursor: pointer; transition: color 0.12s;
+        text-align: right;
+    }
+    .calc-hist-item:hover { color: #a5b4fc; }
+    .calc-hist-item:last-child { border-bottom: none; }
+    #calc-history::-webkit-scrollbar { width: 4px; }
+    #calc-history::-webkit-scrollbar-thumb { background: #3a4070; border-radius: 4px; }
+
+    /* Responsive */
     @media (max-width: 1024px) {
         .navigation-sidebar { display: none; }
         .exam-container { padding: 0 15px 30px; }
         .question-card { padding: 25px; }
         .navigation-footer { padding: 15px 25px; }
         #webcam-container { display: none; }
-        #sci-calc-panel { width: 95vw; right: 2.5vw; }
+        #sci-calc { left: 10px; width: 290px; }
     }
     @media (min-width: 1025px) {
         #webcam-container { right: 270px; }
@@ -735,95 +750,102 @@
     </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     SCIENTIFIC CALCULATOR PANEL
-══════════════════════════════════════════ -->
-<div id="sci-calc-panel" role="dialog" aria-label="Scientific Calculator">
-    <!-- Title bar / drag handle -->
-    <div id="calc-titlebar">
-        <span><i class="fas fa-calculator" style="margin-right:6px;"></i>Scientific Calculator</span>
-        <button id="calc-close-btn" onclick="toggleCalculator()" title="Close calculator">
-            <i class="fas fa-times"></i>
-        </button>
+<!-- ═══════════════════ SCIENTIFIC CALCULATOR ═══════════════════ -->
+<div id="sci-calc" aria-label="Scientific Calculator">
+    <!-- Drag handle -->
+    <div id="sci-calc-bar">
+        <span><i class="fas fa-calculator"></i> Scientific Calculator</span>
+        <button class="calc-close-btn" onclick="toggleCalculator()" title="Close"><i class="fas fa-times"></i></button>
     </div>
 
     <!-- Display -->
-    <div id="calc-display-wrap">
-        <div id="calc-history"></div>
-        <div id="calc-display">0</div>
+    <div id="sci-calc-display">
+        <div id="calc-expr"></div>
+        <div id="calc-result">0</div>
+        <div id="calc-mode-bar">
+            <span class="calc-mode-chip active" id="chip-deg" onclick="calcSetAngle('deg')">DEG</span>
+            <span class="calc-mode-chip"         id="chip-rad" onclick="calcSetAngle('rad')">RAD</span>
+            <span class="calc-mode-chip active" id="chip-norm" onclick="calcSetNotation('norm')">NORM</span>
+            <span class="calc-mode-chip"         id="chip-sci"  onclick="calcSetNotation('sci')">SCI</span>
+        </div>
     </div>
 
-    <!-- Degree / Radian toggle -->
-    <div id="calc-mode-row">
-        <span class="calc-mode-label">Angle:</span>
-        <button id="calc-deg-toggle" onclick="calcToggleDeg()">DEG</button>
-    </div>
+    <!-- History -->
+    <div id="calc-history"></div>
 
-    <!-- Button grid: 5 columns -->
-    <div id="calc-buttons">
-        <!-- Row 1: memory & clear -->
-        <button class="calc-key mem"  onclick="calcMemStore()"  title="Memory Store">MS</button>
-        <button class="calc-key mem"  onclick="calcMemRecall()" title="Memory Recall">MR</button>
-        <button class="calc-key mem"  onclick="calcMemClear()"  title="Memory Clear">MC</button>
-        <button class="calc-key clr"  onclick="calcAllClear()">AC</button>
-        <button class="calc-key del"  onclick="calcDelete()">⌫</button>
+    <!-- Keys  (5-column grid) -->
+    <div id="sci-calc-keys">
+        <!-- Row 1: memory + clear -->
+        <button class="ck ck-mem" onclick="calcMem('mc')"  title="Memory Clear">MC</button>
+        <button class="ck ck-mem" onclick="calcMem('mr')"  title="Memory Recall">MR</button>
+        <button class="ck ck-mem" onclick="calcMem('ms')"  title="Memory Store">MS</button>
+        <button class="ck ck-mem" onclick="calcMem('m+')"  title="Memory Add">M+</button>
+        <button class="ck ck-mem" onclick="calcMem('m-')"  title="Memory Subtract">M−</button>
 
-        <!-- Row 2: trig -->
-        <button class="calc-key fn" onclick="calcFn('sin')">sin</button>
-        <button class="calc-key fn" onclick="calcFn('cos')">cos</button>
-        <button class="calc-key fn" onclick="calcFn('tan')">tan</button>
-        <button class="calc-key fn" onclick="calcFn('asin')">sin⁻¹</button>
-        <button class="calc-key fn" onclick="calcFn('acos')">cos⁻¹</button>
+        <!-- Row 2: scientific functions -->
+        <button class="ck ck-fn" onclick="calcFn('sin')"  >sin</button>
+        <button class="ck ck-fn" onclick="calcFn('cos')"  >cos</button>
+        <button class="ck ck-fn" onclick="calcFn('tan')"  >tan</button>
+        <button class="ck ck-fn" onclick="calcFn('log')"  >log</button>
+        <button class="ck ck-fn" onclick="calcFn('ln')"   >ln</button>
 
-        <!-- Row 3: more fn -->
-        <button class="calc-key fn" onclick="calcFn('atan')">tan⁻¹</button>
-        <button class="calc-key fn" onclick="calcFn('log')">log</button>
-        <button class="calc-key fn" onclick="calcFn('ln')">ln</button>
-        <button class="calc-key fn" onclick="calcFn('sqrt')">√</button>
-        <button class="calc-key fn" onclick="calcFn('cbrt')">∛</button>
+        <!-- Row 3: more functions -->
+        <button class="ck ck-fn" onclick="calcFn('asin')" >sin⁻¹</button>
+        <button class="ck ck-fn" onclick="calcFn('acos')" >cos⁻¹</button>
+        <button class="ck ck-fn" onclick="calcFn('atan')" >tan⁻¹</button>
+        <button class="ck ck-fn" onclick="calcFn('sqrt')" >√</button>
+        <button class="ck ck-fn" onclick="calcFn('cbrt')" >∛</button>
 
-        <!-- Row 4: powers / const -->
-        <button class="calc-key fn" onclick="calcInsert('^2')">x²</button>
-        <button class="calc-key fn" onclick="calcInsert('^3')">x³</button>
-        <button class="calc-key fn" onclick="calcInsert('^(')">xⁿ</button>
-        <button class="calc-key fn" onclick="calcInsert('π')">π</button>
-        <button class="calc-key fn" onclick="calcInsert('e')">e</button>
+        <!-- Row 4: powers + constants -->
+        <button class="ck ck-fn" onclick="calcOp('^')"    >xʸ</button>
+        <button class="ck ck-fn" onclick="calcFn('sq')"   >x²</button>
+        <button class="ck ck-fn" onclick="calcFn('cube')" >x³</button>
+        <button class="ck ck-fn" onclick="calcFn('inv')"  >1/x</button>
+        <button class="ck ck-fn" onclick="calcFn('abs')"  >|x|</button>
 
-        <!-- Row 5: parens & ops -->
-        <button class="calc-key op" onclick="calcInsert('(')"> ( </button>
-        <button class="calc-key op" onclick="calcInsert(')')"> ) </button>
-        <button class="calc-key fn" onclick="calcFn('abs')">|x|</button>
-        <button class="calc-key fn" onclick="calcFn('fact')">n!</button>
-        <button class="calc-key op" onclick="calcInsert('%')">%</button>
+        <!-- Row 5: more functions -->
+        <button class="ck ck-fn" onclick="calcFn('exp')"  >eˣ</button>
+        <button class="ck ck-fn" onclick="calcFn('10x')"  >10ˣ</button>
+        <button class="ck ck-fn" onclick="calcFn('fact')" >n!</button>
+        <button class="ck ck-fn" onclick="calcFn('floor')">⌊x⌋</button>
+        <button class="ck ck-fn" onclick="calcFn('ceil')" >⌈x⌉</button>
 
-        <!-- Row 6: 7 8 9 ÷ -->
-        <button class="calc-key num" onclick="calcDigit('7')">7</button>
-        <button class="calc-key num" onclick="calcDigit('8')">8</button>
-        <button class="calc-key num" onclick="calcDigit('9')">9</button>
-        <button class="calc-key op"  onclick="calcInsert('/')">÷</button>
-        <button class="calc-key fn"  onclick="calcInsert('1/')">1/x</button>
+        <!-- Row 6: constants + brackets + % -->
+        <button class="ck ck-fn" onclick="calcConst('pi')">π</button>
+        <button class="ck ck-fn" onclick="calcConst('e')" >e</button>
+        <button class="ck ck-op" onclick="calcOp('(')"    >(</button>
+        <button class="ck ck-op" onclick="calcOp(')')"    >)</button>
+        <button class="ck ck-op" onclick="calcOp('%')"    >%</button>
 
-        <!-- Row 7: 4 5 6 × -->
-        <button class="calc-key num" onclick="calcDigit('4')">4</button>
-        <button class="calc-key num" onclick="calcDigit('5')">5</button>
-        <button class="calc-key num" onclick="calcDigit('6')">6</button>
-        <button class="calc-key op"  onclick="calcInsert('*')">×</button>
-        <button class="calc-key fn"  onclick="calcToggleSign()">±</button>
+        <!-- Row 7: digits 7 8 9 + ops -->
+        <button class="ck ck-num" onclick="calcDigit('7')">7</button>
+        <button class="ck ck-num" onclick="calcDigit('8')">8</button>
+        <button class="ck ck-num" onclick="calcDigit('9')">9</button>
+        <button class="ck ck-op"  onclick="calcOp('÷')"   >÷</button>
+        <button class="ck ck-clr" onclick="calcAC()"      >AC</button>
 
-        <!-- Row 8: 1 2 3 − -->
-        <button class="calc-key num" onclick="calcDigit('1')">1</button>
-        <button class="calc-key num" onclick="calcDigit('2')">2</button>
-        <button class="calc-key num" onclick="calcDigit('3')">3</button>
-        <button class="calc-key op"  onclick="calcInsert('-')">−</button>
-        <button class="calc-key fn"  onclick="calcInsert('E')">EE</button>
+        <!-- Row 8: digits 4 5 6 + ops -->
+        <button class="ck ck-num" onclick="calcDigit('4')">4</button>
+        <button class="ck ck-num" onclick="calcDigit('5')">5</button>
+        <button class="ck ck-num" onclick="calcDigit('6')">6</button>
+        <button class="ck ck-op"  onclick="calcOp('×')"   >×</button>
+        <button class="ck ck-del" onclick="calcDel()"     ><i class="fas fa-backspace"></i></button>
 
-        <!-- Row 9: 0 . + = -->
-        <button class="calc-key num span2" onclick="calcDigit('0')">0</button>
-        <button class="calc-key num" onclick="calcDecimal()">.</button>
-        <button class="calc-key op"  onclick="calcInsert('+')">+</button>
-        <button class="calc-key eq"  onclick="calcEquals()">=</button>
+        <!-- Row 9: digits 1 2 3 + ops -->
+        <button class="ck ck-num" onclick="calcDigit('1')">1</button>
+        <button class="ck ck-num" onclick="calcDigit('2')">2</button>
+        <button class="ck ck-num" onclick="calcDigit('3')">3</button>
+        <button class="ck ck-op"  onclick="calcOp('−')"   >−</button>
+        <button class="ck ck-eq"  onclick="calcEq()" style="grid-row: span 2; height: auto;">＝</button>
+
+        <!-- Row 10: 0 (span 2) + dot + + -->
+        <button class="ck ck-num ck-zero" onclick="calcDigit('0')">0</button>
+        <button class="ck ck-num" onclick="calcDot()">.</button>
+        <button class="ck ck-op"  onclick="calcSign()">+/−</button>
+        <button class="ck ck-op"  onclick="calcOp('+')"  >+</button>
     </div>
 </div>
+<!-- ═══════════════════ END CALCULATOR ═══════════════════ -->
 
 <!-- Fixed Header -->
 <div class="exam-header">
@@ -838,15 +860,13 @@
     </div>
     
     <div class="header-right">
+        <!-- Calculator toggle — NEW -->
+        <button class="calc-toggle-btn" id="calc-toggle-btn" onclick="toggleCalculator()">
+            <i class="fas fa-calculator"></i> Calculator
+        </button>
         <div class="timer-box" id="timer-box">
             <div class="timer-text" id="time-display">{{ exam.duration_minutes }}:00</div>
         </div>
-
-        <!-- Scientific Calculator toggle button -->
-        <button class="calc-btn" id="calc-toggle-btn" onclick="toggleCalculator()" title="Open Scientific Calculator (Alt+K)">
-            <i class="fas fa-calculator"></i> Calculator
-        </button>
-
         <button class="preview-btn" onclick="showPreview()">
             <i class="fas fa-eye"></i> Preview & Submit
         </button>
@@ -1061,8 +1081,10 @@
                         </div>
                     </div>
                 </div>
+                
                 <h6 class="mb-3">Click any question number to review:</h6>
                 <div class="preview-grid" id="previewGrid"></div>
+                
                 <div class="alert alert-warning mt-3" id="unanswered-warning" style="display: none; border-radius: 12px;">
                     <i class="fas fa-exclamation-triangle"></i>
                     <strong>Warning!</strong> You have <span id="unanswered-warning-count"></span> unanswered question(s).
@@ -1082,10 +1104,352 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
+<script src="{{ url_for('static', filename='vendor/js/katex.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/js/katex-auto-render.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/js/face-api.js') }}"></script>
 <script src="{{ url_for('static', filename='js/exam_proctoring_fixed.js') }}"></script>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SCIENTIFIC CALCULATOR — pure JS, zero dependencies
+     Namespaced under "calc" prefix to avoid collisions with exam JS
+═══════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+    'use strict';
+
+    // ── State ──────────────────────────────────────────────────
+    let calcInput   = '';     // current number being typed
+    let calcOper    = '';     // pending operator
+    let calcPrev    = null;   // previous operand
+    let calcResult  = null;   // last evaluated result
+    let calcExpr    = '';     // expression string shown above display
+    let calcMemory  = 0;      // M register
+    let calcAngle   = 'deg';  // 'deg' | 'rad'
+    let calcNotation= 'norm'; // 'norm' | 'sci'
+    let calcNewNum  = false;  // start fresh on next digit?
+    let calcHistory = [];     // [{expr, result}]
+    const MAX_HIST  = 12;
+
+    // DOM refs (resolved after DOMContentLoaded)
+    let elResult, elExpr, elHist;
+
+    // ── Init ───────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function () {
+        elResult = document.getElementById('calc-result');
+        elExpr   = document.getElementById('calc-expr');
+        elHist   = document.getElementById('calc-history');
+        calcRender();
+
+        // Keyboard support — only when calculator is visible
+        document.addEventListener('keydown', calcKeyHandler);
+    });
+
+    // ── Toggle visibility ──────────────────────────────────────
+    window.toggleCalculator = function () {
+        const el  = document.getElementById('sci-calc');
+        const btn = document.getElementById('calc-toggle-btn');
+        const open = el.classList.toggle('open');
+        btn.classList.toggle('active', open);
+    };
+
+    // ── Render display ─────────────────────────────────────────
+    function calcRender() {
+        if (!elResult) return;
+        const val = calcInput !== '' ? calcInput : (calcResult !== null ? calcResult : '0');
+        const num = parseFloat(val);
+        let display = val;
+        if (!isNaN(num) && isFinite(num) && calcNotation === 'sci' && val !== '') {
+            display = num.toExponential(6).replace(/\.?0+e/, 'e');
+        }
+        elResult.textContent = display || '0';
+        elResult.classList.toggle('error', false);
+        elExpr.textContent = calcExpr;
+    }
+
+    function calcShowError(msg) {
+        elResult.textContent = msg || 'Error';
+        elResult.classList.add('error');
+        calcInput = '';
+        calcPrev  = null;
+        calcOper  = '';
+        calcExpr  = '';
+        calcNewNum = false;
+    }
+
+    // ── Angle conversion helper ────────────────────────────────
+    function toRad(x) { return calcAngle === 'deg' ? x * Math.PI / 180 : x; }
+    function fromRad(x) { return calcAngle === 'deg' ? x * 180 / Math.PI : x; }
+
+    // ── Factorial helper ───────────────────────────────────────
+    function factorial(n) {
+        n = Math.round(n);
+        if (n < 0 || n > 170) return Infinity;
+        if (n === 0 || n === 1) return 1;
+        let r = 1;
+        for (let i = 2; i <= n; i++) r *= i;
+        return r;
+    }
+
+    // ── Format output (trim floating noise) ───────────────────
+    function fmt(n) {
+        if (!isFinite(n)) return n > 0 ? 'Infinity' : '-Infinity';
+        if (isNaN(n)) return 'NaN';
+        // Round to 12 significant digits to avoid floating-point noise
+        const s = parseFloat(n.toPrecision(12)).toString();
+        return s;
+    }
+
+    // ── Digit input ────────────────────────────────────────────
+    window.calcDigit = function (d) {
+        if (calcNewNum) { calcInput = ''; calcNewNum = false; }
+        if (calcInput === '0' && d !== '.') calcInput = d;
+        else calcInput += d;
+        calcRender();
+    };
+
+    window.calcDot = function () {
+        if (calcNewNum) { calcInput = '0'; calcNewNum = false; }
+        if (!calcInput.includes('.')) calcInput += (calcInput === '' ? '0' : '') + '.';
+        calcRender();
+    };
+
+    window.calcSign = function () {
+        if (calcInput === '' && calcResult !== null) calcInput = String(calcResult);
+        if (calcInput.startsWith('-')) calcInput = calcInput.slice(1);
+        else if (calcInput !== '' && calcInput !== '0') calcInput = '-' + calcInput;
+        calcRender();
+    };
+
+    // ── Operators ──────────────────────────────────────────────
+    window.calcOp = function (op) {
+        const cur = calcInput !== '' ? parseFloat(calcInput) : calcResult;
+        if (cur === null && op !== '(' && op !== ')') return;
+
+        // Evaluate pending operation first
+        if (calcPrev !== null && calcOper && !calcNewNum && calcInput !== '') {
+            const res = applyOp(calcPrev, calcOper, cur);
+            calcResult = res;
+            calcExpr   = fmt(res) + ' ' + op + ' ';
+            calcPrev   = res;
+        } else {
+            calcPrev = cur;
+            calcExpr = (cur !== null ? fmt(cur) : '') + ' ' + op + ' ';
+        }
+        calcOper   = op;
+        calcInput  = '';
+        calcNewNum = false;
+        calcRender();
+    };
+
+    function applyOp(a, op, b) {
+        switch (op) {
+            case '+': return a + b;
+            case '−': return a - b;
+            case '×': return a * b;
+            case '÷': return b === 0 ? NaN : a / b;
+            case '^': return Math.pow(a, b);
+            case '%': return a % b;
+            default:  return b;
+        }
+    }
+
+    // ── Equals ─────────────────────────────────────────────────
+    window.calcEq = function () {
+        const cur = calcInput !== '' ? parseFloat(calcInput) : calcResult;
+        if (cur === null) return;
+
+        let res;
+        if (calcPrev !== null && calcOper) {
+            res = applyOp(calcPrev, calcOper, cur);
+            calcExpr = fmt(calcPrev) + ' ' + calcOper + ' ' + fmt(cur) + ' =';
+        } else {
+            res = cur;
+            calcExpr = fmt(cur) + ' =';
+        }
+
+        if (!isFinite(res) || isNaN(res)) {
+            calcShowError(isNaN(res) ? 'Not a number' : (res > 0 ? '∞' : '−∞'));
+            return;
+        }
+
+        // Push to history
+        pushHistory(calcExpr, fmt(res));
+
+        calcResult = res;
+        calcInput  = fmt(res);
+        calcPrev   = null;
+        calcOper   = '';
+        calcNewNum = true;
+        calcRender();
+    };
+
+    // ── Scientific functions ────────────────────────────────────
+    window.calcFn = function (fn) {
+        let x = calcInput !== '' ? parseFloat(calcInput) : calcResult;
+        if (x === null || isNaN(x)) return;
+        let res;
+        switch (fn) {
+            case 'sin':   res = Math.sin(toRad(x)); break;
+            case 'cos':   res = Math.cos(toRad(x)); break;
+            case 'tan':   res = Math.tan(toRad(x)); break;
+            case 'asin':  res = fromRad(Math.asin(x)); break;
+            case 'acos':  res = fromRad(Math.acos(x)); break;
+            case 'atan':  res = fromRad(Math.atan(x)); break;
+            case 'log':   res = Math.log10(x); break;
+            case 'ln':    res = Math.log(x); break;
+            case 'sqrt':  res = Math.sqrt(x); break;
+            case 'cbrt':  res = Math.cbrt(x); break;
+            case 'sq':    res = x * x; break;
+            case 'cube':  res = x * x * x; break;
+            case 'inv':   res = x === 0 ? NaN : 1 / x; break;
+            case 'abs':   res = Math.abs(x); break;
+            case 'exp':   res = Math.exp(x); break;
+            case '10x':   res = Math.pow(10, x); break;
+            case 'fact':  res = factorial(x); break;
+            case 'floor': res = Math.floor(x); break;
+            case 'ceil':  res = Math.ceil(x); break;
+            default: return;
+        }
+        const exprStr = fn + '(' + fmt(x) + ') =';
+        if (!isFinite(res) || isNaN(res)) { calcShowError(isNaN(res) ? 'Domain error' : '∞'); return; }
+        pushHistory(exprStr, fmt(res));
+        calcExpr   = exprStr;
+        calcResult = res;
+        calcInput  = fmt(res);
+        calcPrev   = null;
+        calcOper   = '';
+        calcNewNum = true;
+        calcRender();
+    };
+
+    // ── Constants ──────────────────────────────────────────────
+    window.calcConst = function (c) {
+        if (calcNewNum) { calcInput = ''; calcNewNum = false; }
+        const val = c === 'pi' ? Math.PI : Math.E;
+        calcInput = fmt(val);
+        calcRender();
+    };
+
+    // ── AC / DEL ───────────────────────────────────────────────
+    window.calcAC = function () {
+        calcInput = ''; calcPrev = null; calcOper = '';
+        calcResult = null; calcExpr = ''; calcNewNum = false;
+        elResult.classList.remove('error');
+        calcRender();
+    };
+
+    window.calcDel = function () {
+        if (calcNewNum) { calcInput = ''; calcNewNum = false; }
+        if (calcInput.length > 0) calcInput = calcInput.slice(0, -1);
+        calcRender();
+    };
+
+    // ── Memory ─────────────────────────────────────────────────
+    window.calcMem = function (op) {
+        const cur = calcInput !== '' ? parseFloat(calcInput) : (calcResult || 0);
+        switch (op) {
+            case 'mc': calcMemory = 0; break;
+            case 'mr': calcInput = fmt(calcMemory); calcNewNum = false; calcRender(); return;
+            case 'ms': calcMemory = cur; break;
+            case 'm+': calcMemory += cur; break;
+            case 'm-': calcMemory -= cur; break;
+        }
+        calcRender();
+    };
+
+    // ── Angle & notation mode ──────────────────────────────────
+    window.calcSetAngle = function (mode) {
+        calcAngle = mode;
+        document.getElementById('chip-deg').classList.toggle('active', mode === 'deg');
+        document.getElementById('chip-rad').classList.toggle('active', mode === 'rad');
+    };
+    window.calcSetNotation = function (mode) {
+        calcNotation = mode;
+        document.getElementById('chip-norm').classList.toggle('active', mode === 'norm');
+        document.getElementById('chip-sci').classList.toggle('active',  mode === 'sci');
+        calcRender();
+    };
+
+    // ── History ────────────────────────────────────────────────
+    function pushHistory(expr, result) {
+        calcHistory.unshift({ expr, result });
+        if (calcHistory.length > MAX_HIST) calcHistory.pop();
+        renderHistory();
+    }
+
+    function renderHistory() {
+        if (!elHist) return;
+        elHist.innerHTML = calcHistory
+            .map((h, i) => `<div class="calc-hist-item" onclick="calcRecall(${i})" title="${h.expr}">${h.expr} ${h.result}</div>`)
+            .join('');
+    }
+
+    window.calcRecall = function (i) {
+        const h = calcHistory[i];
+        if (!h) return;
+        calcInput = h.result;
+        calcNewNum = false;
+        calcRender();
+    };
+
+    // ── Keyboard handler ───────────────────────────────────────
+    function calcKeyHandler(e) {
+        const calc = document.getElementById('sci-calc');
+        if (!calc || !calc.classList.contains('open')) return;
+        // Don't steal keypresses when user is typing in a textarea
+        if (document.activeElement && document.activeElement.tagName === 'TEXTAREA') return;
+
+        const k = e.key;
+        if (k >= '0' && k <= '9') { e.preventDefault(); calcDigit(k); }
+        else if (k === '.')       { e.preventDefault(); calcDot(); }
+        else if (k === '+')       { e.preventDefault(); calcOp('+'); }
+        else if (k === '-')       { e.preventDefault(); calcOp('−'); }
+        else if (k === '*')       { e.preventDefault(); calcOp('×'); }
+        else if (k === '/')       { e.preventDefault(); calcOp('÷'); }
+        else if (k === '^')       { e.preventDefault(); calcOp('^'); }
+        else if (k === '%')       { e.preventDefault(); calcOp('%'); }
+        else if (k === 'Enter' || k === '=') { e.preventDefault(); calcEq(); }
+        else if (k === 'Backspace')          { e.preventDefault(); calcDel(); }
+        else if (k === 'Escape')             { e.preventDefault(); calcAC(); }
+    }
+
+    // ── Draggable (mirrors webcam drag pattern) ────────────────
+    (function initCalcDrag() {
+        const el  = document.getElementById('sci-calc');
+        const bar = document.getElementById('sci-calc-bar');
+        if (!el || !bar) return;
+
+        let isDragging = false, startX = 0, startY = 0, offX = 0, offY = 0;
+
+        bar.addEventListener('mousedown', function (e) {
+            if (e.target.closest('.calc-close-btn')) return;
+            isDragging = true;
+            startX = e.clientX - offX;
+            startY = e.clientY - offY;
+            el.classList.add('dragging');
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', function (e) {
+            if (!isDragging) return;
+            offX = e.clientX - startX;
+            offY = e.clientY - startY;
+            // Constrain to viewport
+            const r = el.getBoundingClientRect();
+            offX = Math.max(-r.left + offX, offX - Math.max(0, r.right - window.innerWidth));
+            offY = Math.max(-r.top  + offY, offY - Math.max(0, r.bottom - window.innerHeight));
+            el.style.transform = `translate(${offX}px, ${offY}px)`;
+        });
+
+        document.addEventListener('mouseup', function () {
+            if (!isDragging) return;
+            isDragging = false;
+            el.classList.remove('dragging');
+        });
+    })();
+
+})(); // end IIFE
+</script>
 
 <script>
     // =============== EXAM STATE VARIABLES ===============
@@ -1098,11 +1462,11 @@
     let autoSaveInterval;
     const sessionId = '{{ session.id }}';
     const AUTO_SAVE_INTERVAL = 30000;
-
+    
     if (typeof window.EXAM_ID === 'undefined') {
         window.EXAM_ID = {{ exam.id }};
     }
-
+    
     // =============== INITIALIZATION ===============
     document.addEventListener('DOMContentLoaded', function() {
         renderAllLatex();
@@ -1110,15 +1474,12 @@
         updateNavigation();
         startAutoSave();
         loadSavedAnswers();
-        initCalcDraggable();
-
         window.addEventListener('beforeunload', preventUnload);
-
         document.addEventListener('visibilitychange', function() {
             if (document.hidden) saveAnswersToLocalStorage();
         });
     });
-
+    
     // =============== LATEX RENDERING ===============
     function renderAllLatex() {
         document.querySelectorAll('.latex-content').forEach(element => {
@@ -1135,250 +1496,128 @@
             } catch (e) { console.error('LaTeX rendering error:', e); }
         });
     }
-
-    // =============== TIMER FUNCTIONS ===============
-function startTimer() {
-    updateTimerDisplay();
-    timerInterval = setInterval(function() {
-        timeLeft--;
+    
+    // =============== TIMER ===============
+    function startTimer() {
         updateTimerDisplay();
-        
-        // Auto-save answers every 30 seconds AND at 5 minutes warning
-        if (timeLeft % 30 === 0 || timeLeft === 300) {
-            saveAnswersToLocalStorage();
-            syncAnswersToServer(); // NEW: Sync to server periodically
-        }
-        
-        if (timeLeft === 300) {
-            document.getElementById('timer-box').classList.add('warning');
-            showNotification('⚠️ Warning: Only 5 minutes remaining!', 'warning');
-        }
-        if (timeLeft === 60) {
-            document.getElementById('timer-box').classList.remove('warning');
-            document.getElementById('timer-box').classList.add('critical');
-            showNotification('⏰ Final Minute! Your exam will auto-submit soon.', 'danger');
-        }
-        if (timeLeft <= 0) {
-            handleTimeExpired();
-        }
-    }, 1000);
-}
-
-function updateTimerDisplay() {
-    const minutes = Math.floor(timeLeft / 60);
-    const seconds = timeLeft % 60;
-    document.getElementById('time-display').textContent =
-        `${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
-}
-
-// NEW: Sync answers to server via API before auto-submit
-function syncAnswersToServer() {
-    const formData = new FormData(document.getElementById('examForm'));
-    const answers = {};
-    for (let [key, value] of formData.entries()) {
-        answers[key] = value;
+        timerInterval = setInterval(function() {
+            timeLeft--;
+            updateTimerDisplay();
+            if (timeLeft === 300) {
+                document.getElementById('timer-box').classList.add('warning');
+                showNotification('⚠️ Warning: Only 5 minutes remaining!', 'warning');
+            }
+            if (timeLeft === 60) {
+                document.getElementById('timer-box').classList.remove('warning');
+                document.getElementById('timer-box').classList.add('critical');
+                showNotification('⏰ Final Minute! Your exam will auto-submit soon.', 'danger');
+            }
+            if (timeLeft <= 0) handleTimeExpired();
+        }, 1000);
     }
     
-    fetch(`/student/api/exam/${window.EXAM_ID}/save-answers`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            session_id: sessionId,
-            answers: answers,
-            time_left: timeLeft
-        })
-    }).catch(err => console.log('Sync error (non-critical):', err));
-}
-
-function handleTimeExpired() {
-    // CRITICAL: Remove the beforeunload listener FIRST to prevent "Leave site?" prompt
-    window.removeEventListener('beforeunload', preventUnload);
-    
-    // Also clear any other intervals
-    clearInterval(timerInterval);
-    clearInterval(autoSaveInterval);
-    
-    showNotification('⏰ Time expired! Auto-submitting your exam...', 'danger');
-    
-    // IMMEDIATE auto-submit via API (no delay, no prompts)
-    performAutoSubmit('time_expired');
-}
-function performAutoSubmit(reason) {
-    if (window.autoSubmitInProgress) return;
-    window.autoSubmitInProgress = true;
-    
-    // Final save to localStorage
-    saveAnswersToLocalStorage();
-    
-    // Collect ALL current answers from the form
-    const formData = new FormData(document.getElementById('examForm'));
-    const answersPayload = {};
-    
-    // Also collect from textareas (theory questions)
-    document.querySelectorAll('textarea[name^="question_"]').forEach(textarea => {
-        if (textarea.value.trim()) {
-            answersPayload[textarea.name] = textarea.value.trim();
-        }
-    });
-    
-    // Collect from radio buttons (MCQ/True-False)
-    document.querySelectorAll('input[type="radio"]:checked').forEach(radio => {
-        answersPayload[radio.name] = radio.value;
-    });
-    
-    // Merge with formData to be safe
-    for (let [key, value] of formData.entries()) {
-        if (value && value.toString().trim()) {
-            answersPayload[key] = value;
-        }
+    function updateTimerDisplay() {
+        const m = Math.floor(timeLeft / 60);
+        const s = timeLeft % 60;
+        document.getElementById('time-display').textContent =
+            `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
     }
     
-    console.log('Auto-submitting with answers:', Object.keys(answersPayload));
+    function handleTimeExpired() {
+        clearInterval(timerInterval);
+        clearInterval(autoSaveInterval);
+        window.removeEventListener('beforeunload', preventUnload);
+        showNotification('⏰ Time expired! Submitting your exam automatically...', 'danger');
+        saveAnswersToLocalStorage();
+        setTimeout(forceSubmitExam, 2000);
+    }
     
-    // Call auto-submit API
-    fetch(`/student/api/exam/session/${sessionId}/auto-submit`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        keepalive: true,
-        body: JSON.stringify({
-            student_id: {{ current_user.id }},
-            reason: reason,
-            answers: answersPayload,
-            time_spent: ({{ exam.duration_minutes }} * 60) - timeLeft
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Auto-submit response:', data);
-        
-        // Clear localStorage
-        localStorage.removeItem(`exam_session_${sessionId}`);
-        
-        // Redirect to dashboard for time_expired
-        if (reason === 'time_expired') {
-            window.location.replace('/student/dashboard');  // Use replace to prevent back button
-        } else if (data.success && data.allow_view && data.result_id) {
-            window.location.replace(`/student/result/${data.result_id}`);
-        } else {
-            window.location.replace('/student/dashboard');
-        }
-    })
-    .catch(error => {
-        console.error('Auto-submit failed:', error);
-        // Emergency: try to at least save answers via beacon
-        navigator.sendBeacon(`/student/api/exam/session/${sessionId}/auto-submit`, 
-            new Blob([JSON.stringify({
-                student_id: {{ current_user.id }},
-                reason: reason + '_fallback',
-                answers: answersPayload
-            })], {type: 'application/json'}));
-        
-        // Redirect anyway
-        window.location.replace('/student/dashboard');
-    });
-}
-// Legacy function - kept for compatibility but redirects to auto-submit
-function forceSubmitExam() {
-    performAutoSubmit('manual_force');
-}
-    // =============== AUTO-SAVE SYSTEM ===============
+    function forceSubmitExam() {
+        const inp1 = document.createElement('input');
+        inp1.type = 'hidden'; inp1.name = 'time_expired'; inp1.value = 'true';
+        document.getElementById('examForm').appendChild(inp1);
+        const inp2 = document.createElement('input');
+        inp2.type = 'hidden'; inp2.name = 'time_spent'; inp2.value = {{ exam.duration_minutes }} * 60;
+        document.getElementById('examForm').appendChild(inp2);
+        document.getElementById('examForm').submit();
+    }
+    
+    // =============== AUTO-SAVE ===============
     function startAutoSave() {
         autoSaveInterval = setInterval(function() {
             saveAnswersToLocalStorage();
-            console.log('Auto-saved at', new Date().toLocaleTimeString());
         }, AUTO_SAVE_INTERVAL);
     }
-
+    
     function saveAnswersToLocalStorage() {
         const formData = new FormData(document.getElementById('examForm'));
         const answers = {};
         for (let [key, value] of formData.entries()) answers[key] = value;
-
-        const saveData = {
-            answers,
-            answeredQuestions: Array.from(answeredQuestions),
-            flaggedQuestions: Array.from(flaggedQuestions),
-            currentQuestion,
-            timeLeft,
-            timestamp: new Date().toISOString()
-        };
         try {
-            localStorage.setItem(`exam_session_${sessionId}`, JSON.stringify(saveData));
-        } catch (e) { console.error('Failed to save to localStorage:', e); }
+            localStorage.setItem(`exam_session_${sessionId}`, JSON.stringify({
+                answers, 
+                answeredQuestions: Array.from(answeredQuestions),
+                flaggedQuestions:  Array.from(flaggedQuestions),
+                currentQuestion, timeLeft,
+                timestamp: new Date().toISOString()
+            }));
+        } catch (e) { console.error('Failed to save:', e); }
     }
-
+    
     function loadSavedAnswers() {
-        const savedDataStr = localStorage.getItem(`exam_session_${sessionId}`);
-        if (!savedDataStr) return;
+        const raw = localStorage.getItem(`exam_session_${sessionId}`);
+        if (!raw) return;
         try {
-            const savedData = JSON.parse(savedDataStr);
-            answeredQuestions = new Set(savedData.answeredQuestions || []);
-            flaggedQuestions  = new Set(savedData.flaggedQuestions  || []);
-
-            if (savedData.answers) {
-                for (let [key, value] of Object.entries(savedData.answers)) {
+            const d = JSON.parse(raw);
+            answeredQuestions = new Set(d.answeredQuestions || []);
+            flaggedQuestions  = new Set(d.flaggedQuestions  || []);
+            if (d.answers) {
+                for (let [key, value] of Object.entries(d.answers)) {
                     const input = document.querySelector(`[name="${key}"]`);
                     if (!input) continue;
                     if (input.type === 'radio') {
                         const radio = document.querySelector(`[name="${key}"][value="${value}"]`);
-                        if (radio) {
-                            radio.checked = true;
-                            const card = radio.closest('.option-card');
-                            if (card) card.classList.add('selected');
-                        }
-                    } else if (input.tagName === 'TEXTAREA') {
-                        input.value = value;
-                    }
+                        if (radio) { radio.checked = true; const c = radio.closest('.option-card'); if (c) c.classList.add('selected'); }
+                    } else if (input.tagName === 'TEXTAREA') { input.value = value; }
                 }
             }
-
-            savedData.answeredQuestions.forEach(qNum => {
-                const el = document.getElementById(`nav-${qNum}`);
-                if (el) el.classList.add('answered');
+            d.answeredQuestions.forEach(q => { const n = document.getElementById(`nav-${q}`); if (n) n.classList.add('answered'); });
+            d.flaggedQuestions.forEach(q => {
+                const n = document.getElementById(`nav-${q}`); if (n) n.classList.add('flagged');
+                const b = document.getElementById(`flag-btn-${q}`); if (b) { b.classList.add('flagged'); b.innerHTML = '<i class="fas fa-flag"></i> Flagged'; }
             });
-            savedData.flaggedQuestions.forEach(qNum => {
-                const el = document.getElementById(`nav-${qNum}`);
-                if (el) el.classList.add('flagged');
-                const fb = document.getElementById(`flag-btn-${qNum}`);
-                if (fb) { fb.classList.add('flagged'); fb.innerHTML = '<i class="fas fa-flag"></i> Flagged'; }
-            });
-
             updateNavigation();
-            console.log('Restored answers from localStorage');
         } catch (e) { console.error('Failed to load saved answers:', e); }
     }
-
-    // =============== NAVIGATION FUNCTIONS ===============
-    function goToQuestion(questionNum) {
+    
+    // =============== NAVIGATION ===============
+    function goToQuestion(n) {
         saveAnswersToLocalStorage();
         document.getElementById(`question-${currentQuestion}`).classList.remove('active');
         document.getElementById(`nav-${currentQuestion}`).classList.remove('current');
-        currentQuestion = questionNum;
+        currentQuestion = n;
         document.getElementById(`question-${currentQuestion}`).classList.add('active');
         document.getElementById(`nav-${currentQuestion}`).classList.add('current');
         updateNavigation();
         document.querySelector('.questions-section').scrollTop = 0;
     }
-
+    
     function nextQuestion()     { if (currentQuestion < totalQuestions) goToQuestion(currentQuestion + 1); }
-    function previousQuestion() { if (currentQuestion > 1)              goToQuestion(currentQuestion - 1); }
-
+    function previousQuestion() { if (currentQuestion > 1)             goToQuestion(currentQuestion - 1); }
+    
     function updateNavigation() {
         document.getElementById('prevBtn').disabled = currentQuestion === 1;
         document.getElementById('nextBtn').disabled = currentQuestion === totalQuestions;
-
         if (currentQuestion === totalQuestions) {
             document.getElementById('nextBtn').innerHTML = '<i class="fas fa-check"></i> Last Question';
-            const sc = document.getElementById('submit-container');
-            if (sc) sc.classList.add('show');
+            const sc = document.getElementById('submit-container'); if (sc) sc.classList.add('show');
         } else {
             document.getElementById('nextBtn').innerHTML = 'Next <i class="fas fa-arrow-right"></i>';
         }
-
         document.getElementById('answered-count').textContent = answeredQuestions.size;
         document.getElementById('flagged-count').textContent  = flaggedQuestions.size;
     }
-
+    
     // =============== ANSWER SELECTION ===============
     function selectOption(optionIndex, questionId, questionNum) {
         const card = document.getElementById(`question-${questionNum}`);
@@ -1389,44 +1628,41 @@ function forceSubmitExam() {
         markAsAnswered(questionNum);
         saveAnswersToLocalStorage();
     }
-
-    function markAsAnswered(questionNum) {
-        answeredQuestions.add(questionNum);
-        const el = document.getElementById(`nav-${questionNum}`);
-        if (el) el.classList.add('answered');
+    
+    function markAsAnswered(n) {
+        answeredQuestions.add(n);
+        const el = document.getElementById(`nav-${n}`); if (el) el.classList.add('answered');
         updateNavigation();
     }
-
+    
     function clearAnswer() {
         const card = document.getElementById(`question-${currentQuestion}`);
         card.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
-        const ta = card.querySelector('textarea');
-        if (ta) ta.value = '';
+        const ta = card.querySelector('textarea'); if (ta) ta.value = '';
         card.querySelectorAll('.option-card').forEach(o => o.classList.remove('selected'));
         answeredQuestions.delete(currentQuestion);
-        const el = document.getElementById(`nav-${currentQuestion}`);
-        if (el) el.classList.remove('answered');
+        const el = document.getElementById(`nav-${currentQuestion}`); if (el) el.classList.remove('answered');
         updateNavigation();
         saveAnswersToLocalStorage();
     }
-
-    // =============== FLAG FUNCTION ===============
-    function toggleFlag(questionNum) {
-        const navItem = document.getElementById(`nav-${questionNum}`);
-        const flagBtn = document.getElementById(`flag-btn-${questionNum}`);
-        if (flaggedQuestions.has(questionNum)) {
-            flaggedQuestions.delete(questionNum);
-            if (navItem) navItem.classList.remove('flagged');
-            if (flagBtn) { flagBtn.classList.remove('flagged'); flagBtn.innerHTML = '<i class="far fa-flag"></i> Flag for Review'; }
+    
+    // =============== FLAG ===============
+    function toggleFlag(n) {
+        const nav = document.getElementById(`nav-${n}`);
+        const btn = document.getElementById(`flag-btn-${n}`);
+        if (flaggedQuestions.has(n)) {
+            flaggedQuestions.delete(n);
+            if (nav) nav.classList.remove('flagged');
+            if (btn) { btn.classList.remove('flagged'); btn.innerHTML = '<i class="far fa-flag"></i> Flag for Review'; }
         } else {
-            flaggedQuestions.add(questionNum);
-            if (navItem) navItem.classList.add('flagged');
-            if (flagBtn) { flagBtn.classList.add('flagged'); flagBtn.innerHTML = '<i class="fas fa-flag"></i> Flagged'; }
+            flaggedQuestions.add(n);
+            if (nav) nav.classList.add('flagged');
+            if (btn) { btn.classList.add('flagged'); btn.innerHTML = '<i class="fas fa-flag"></i> Flagged'; }
         }
         updateNavigation();
         saveAnswersToLocalStorage();
     }
-
+    
     // =============== PREVIEW & SUBMIT ===============
     function showPreview() {
         const answered   = answeredQuestions.size;
@@ -1434,22 +1670,15 @@ function forceSubmitExam() {
         document.getElementById('modal-answered').textContent   = answered;
         document.getElementById('modal-unanswered').textContent = unanswered;
         document.getElementById('modal-flagged').textContent    = flaggedQuestions.size;
-
-        const warn = document.getElementById('unanswered-warning');
-        if (unanswered > 0) {
-            warn.style.display = 'block';
-            document.getElementById('unanswered-warning-count').textContent = unanswered;
-        } else {
-            warn.style.display = 'none';
-        }
-
+        document.getElementById('unanswered-warning').style.display = unanswered > 0 ? 'block' : 'none';
+        if (unanswered > 0) document.getElementById('unanswered-warning-count').textContent = unanswered;
         const grid = document.getElementById('previewGrid');
         grid.innerHTML = '';
         for (let i = 1; i <= totalQuestions; i++) {
             const item = document.createElement('div');
             item.className = 'preview-question ' + (answeredQuestions.has(i) ? 'answered' : 'unanswered');
             item.textContent = i;
-            item.onclick = function() {
+            item.onclick = function () {
                 const m = bootstrap.Modal.getInstance(document.getElementById('previewModal'));
                 if (m) m.hide();
                 goToQuestion(i);
@@ -1458,531 +1687,217 @@ function forceSubmitExam() {
         }
         new bootstrap.Modal(document.getElementById('previewModal')).show();
     }
-
-    function submitExam() {
-    const unanswered = totalQuestions - answeredQuestions.size;
-    if (unanswered > 0 && !confirm(`You have ${unanswered} unanswered question(s). Are you sure you want to submit?`)) return;
-    if (!confirm('⚠️ Are you sure you want to submit your exam?\n\nThis action cannot be undone.')) return;
-
-    // REMOVE beforeunload listener before submitting
-    window.removeEventListener('beforeunload', preventUnload);
     
-    clearInterval(timerInterval);
-    clearInterval(autoSaveInterval);
-    autoSubmitTriggered = true;
-
-    const timeSpent = ({{ exam.duration_minutes }} * 60) - timeLeft;
-    const el = document.createElement('input');
-    el.type = 'hidden'; el.name = 'time_spent'; el.value = timeSpent;
-    document.getElementById('examForm').appendChild(el);
-
-    localStorage.removeItem(`exam_session_${sessionId}`);
-    document.getElementById('examForm').submit();
-}
-
-    // =============== HELPER FUNCTIONS ===============
-function preventUnload(e) {
-    // Only prevent if exam is still active and not auto-submitting
-    if (window.autoSubmitInProgress || autoSubmitTriggered) {
-        return; // Don't show prompt if auto-submit is happening
+    function submitExam() {
+        const unanswered = totalQuestions - answeredQuestions.size;
+        if (unanswered > 0 && !confirm(`You have ${unanswered} unanswered question(s). Submit anyway?`)) return;
+        if (!confirm('⚠️ Submit your exam? This cannot be undone.')) return;
+        clearInterval(timerInterval);
+        clearInterval(autoSaveInterval);
+        window.removeEventListener('beforeunload', preventUnload);
+        const ts = document.createElement('input');
+        ts.type = 'hidden'; ts.name = 'time_spent';
+        ts.value = ({{ exam.duration_minutes }} * 60) - timeLeft;
+        document.getElementById('examForm').appendChild(ts);
+        localStorage.removeItem(`exam_session_${sessionId}`);
+        document.getElementById('examForm').submit();
     }
-    e.preventDefault();
-    e.returnValue = 'Your exam is in progress. Are you sure you want to leave?';
-    return e.returnValue;
-}
-
-    function showNotification(message, type = 'info') {
+    
+    // =============== HELPERS ===============
+    function preventUnload(e) {
+        e.preventDefault();
+        e.returnValue = 'Your exam is in progress. Are you sure you want to leave?';
+        return e.returnValue;
+    }
+    
+    function showNotification(message, type) {
+        type = type || 'info';
         const n = document.createElement('div');
         n.className = `alert alert-${type} exam-notification`;
         n.innerHTML = `<strong>${message}</strong><button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>`;
         document.body.appendChild(n);
-        setTimeout(() => {
-            n.style.animation = 'slideOutRight 0.5s ease';
-            setTimeout(() => n.remove(), 500);
-        }, 5000);
+        setTimeout(() => { n.style.animation = 'slideOutRight 0.5s ease'; setTimeout(() => n.remove(), 500); }, 5000);
     }
-
-    // =============== KEYBOARD SHORTCUTS ===============
+    
+    // =============== KEYBOARD SHORTCUTS (exam nav — NOT calculator keys) ===============
     document.addEventListener('keydown', function(e) {
-        // Block shortcuts if typing inside calculator input (none currently, but safe guard)
+        // Skip if calculator is open and focused — handled by calcKeyHandler
+        const calc = document.getElementById('sci-calc');
+        if (calc && calc.classList.contains('open') && document.activeElement && document.activeElement.tagName !== 'TEXTAREA') return;
+
         if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); nextQuestion(); }
         if (e.altKey && e.key === 'ArrowLeft')  { e.preventDefault(); previousQuestion(); }
         if (e.altKey && e.key.toLowerCase() === 'f') { e.preventDefault(); toggleFlag(currentQuestion); }
         if (e.altKey && e.key.toLowerCase() === 'c') { e.preventDefault(); clearAnswer(); }
         if (e.altKey && e.key.toLowerCase() === 's') { e.preventDefault(); saveAnswersToLocalStorage(); showNotification('✅ Answers saved!', 'success'); }
-        if (e.altKey && e.key.toLowerCase() === 'k') { e.preventDefault(); toggleCalculator(); } // Alt+K → Calculator
+        if (e.altKey && e.key.toLowerCase() === 'k') { e.preventDefault(); toggleCalculator(); } // Alt+K opens calc
     });
-
-    // =============== DRAGGABLE WEBCAM ===============
+    
+    // =============== DRAGGABLE WEBCAM (unchanged) ===============
     (function initDraggableWebcam() {
         const container = document.getElementById('webcam-container');
-        const handle    = document.getElementById('webcam-container-header');
-        if (!container || !handle) return;
-
+        const header    = document.getElementById('webcam-container-header');
+        if (!container || !header) return;
         let isDragging = false, currentX, currentY, initialX, initialY, xOffset = 0, yOffset = 0;
-
-        handle.addEventListener('mousedown', dragStart);
+        header.addEventListener('mousedown', dragStart);
         document.addEventListener('mousemove', drag);
         document.addEventListener('mouseup', dragEnd);
-        handle.addEventListener('touchstart', dragStart);
+        header.addEventListener('touchstart', dragStart);
         document.addEventListener('touchmove', drag);
         document.addEventListener('touchend', dragEnd);
-
         function dragStart(e) {
-            const src = e.type === 'touchstart' ? e.touches[0] : e;
-            initialX = src.clientX - xOffset;
-            initialY = src.clientY - yOffset;
-            if (e.target === handle || handle.contains(e.target)) {
-                isDragging = true;
-                container.classList.add('dragging');
-            }
+            if (e.type === 'touchstart') { initialX = e.touches[0].clientX - xOffset; initialY = e.touches[0].clientY - yOffset; }
+            else { initialX = e.clientX - xOffset; initialY = e.clientY - yOffset; }
+            if (e.target === header || header.contains(e.target)) { isDragging = true; container.classList.add('dragging'); }
         }
         function drag(e) {
             if (!isDragging) return;
             e.preventDefault();
-            const src = e.type === 'touchmove' ? e.touches[0] : e;
-            currentX = src.clientX - initialX;
-            currentY = src.clientY - initialY;
-            xOffset  = currentX; yOffset = currentY;
-            const rect = container.getBoundingClientRect();
-            xOffset = Math.max(0, Math.min(xOffset, window.innerWidth  - rect.width));
-            yOffset = Math.max(0, Math.min(yOffset, window.innerHeight - rect.height));
-            container.style.transform = `translate3d(${xOffset}px,${yOffset}px,0)`;
+            if (e.type === 'touchmove') { currentX = e.touches[0].clientX - initialX; currentY = e.touches[0].clientY - initialY; }
+            else { currentX = e.clientX - initialX; currentY = e.clientY - initialY; }
+            xOffset = currentX; yOffset = currentY;
+            const r = container.getBoundingClientRect();
+            xOffset = Math.max(0, Math.min(xOffset, window.innerWidth - r.width));
+            yOffset = Math.max(0, Math.min(yOffset, window.innerHeight - r.height));
+            setTranslate(xOffset, yOffset, container);
         }
-        function dragEnd() {
-            initialX = currentX; initialY = currentY;
-            isDragging = false;
-            container.classList.remove('dragging');
-            localStorage.setItem('webcam_position', JSON.stringify({x:xOffset,y:yOffset}));
-        }
-        const saved = localStorage.getItem('webcam_position');
-        if (saved) {
+        function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; container.classList.remove('dragging'); }
+        function setTranslate(x, y, el) { el.style.transform = `translate3d(${x}px, ${y}px, 0)`; }
+        function loadPos() {
             try {
-                const pos = JSON.parse(saved);
-                xOffset = pos.x || 0; yOffset = pos.y || 0;
-                container.style.transform = `translate3d(${xOffset}px,${yOffset}px,0)`;
+                const p = JSON.parse(localStorage.getItem('webcam_position') || '{}');
+                xOffset = p.x || 0; yOffset = p.y || 0; setTranslate(xOffset, yOffset, container);
             } catch(e) {}
         }
+        loadPos();
+        document.addEventListener('mouseup',  () => localStorage.setItem('webcam_position', JSON.stringify({x: xOffset, y: yOffset})));
+        document.addEventListener('touchend', () => localStorage.setItem('webcam_position', JSON.stringify({x: xOffset, y: yOffset})));
     })();
-
+    
     function toggleWebcamMinimize() {
-        const container   = document.getElementById('webcam-container');
-        const icon        = document.querySelector('.webcam-minimize-btn i');
+        const container = document.getElementById('webcam-container');
+        const icon = document.querySelector('.webcam-minimize-btn i');
         container.classList.toggle('minimized');
-        icon.className    = container.classList.contains('minimized') ? 'fas fa-plus' : 'fas fa-minus';
-        icon.parentElement.title = container.classList.contains('minimized') ? 'Maximize' : 'Minimize';
-    }
-
-    // ══════════════════════════════════════════════════════════════════════
-    // SCIENTIFIC CALCULATOR ENGINE
-    // ══════════════════════════════════════════════════════════════════════
-    (function() {
-        'use strict';
-
-        // ── State ──
-        const state = {
-            display: '0',
-            history: '',
-            expression: '',  // raw expression being built
-            justEvaled: false,
-            memory: 0,
-            isDeg: true      // true = degrees, false = radians
-        };
-
-        // ── DOM refs ──
-        const disp    = () => document.getElementById('calc-display');
-        const hist    = () => document.getElementById('calc-history');
-        const degBtn  = () => document.getElementById('calc-deg-toggle');
-
-        function render() {
-            const d = disp();
-            d.textContent   = state.display;
-            hist().textContent = state.history;
-            degBtn().textContent = state.isDeg ? 'DEG' : 'RAD';
-            // shrink font if long
-            d.style.fontSize = state.display.length > 14 ? '16px'
-                             : state.display.length > 10 ? '20px' : '26px';
-        }
-
-        function flashError(msg) {
-            state.display    = msg || 'Error';
-            state.history    = '';
-            state.expression = '';
-            state.justEvaled = false;
-            render();
-            const d = disp();
-            d.classList.add('calc-error');
-            setTimeout(() => d.classList.remove('calc-error'), 400);
-        }
-
-        // ── Convert angle to radians if needed ──
-        function toRad(v) { return state.isDeg ? v * Math.PI / 180 : v; }
-        function fromRad(v) { return state.isDeg ? v * 180 / Math.PI : v; }
-
-        // ── Factorial ──
-        function factorial(n) {
-            n = Math.round(n);
-            if (n < 0 || n > 170) return Infinity;
-            if (n === 0 || n === 1) return 1;
-            let r = 1;
-            for (let i = 2; i <= n; i++) r *= i;
-            return r;
-        }
-
-        // ── Safe evaluator (no eval) ──
-        // Converts the expression string into a value using a recursive descent parser
-        function safeEval(expr) {
-            // Pre-process: replace constants and ^ operator
-            expr = expr.trim()
-                .replace(/π/g, '(' + Math.PI + ')')
-                .replace(/\be\b/g, '(' + Math.E + ')')
-                .replace(/\^/g, '**')
-                .replace(/(\d)\s*E\s*([+-]?\d+)/g, (_, m, exp) => `(${m}e${exp})`);
-            // % is left as a token and handled in parsePrimary (postfix ÷100)
-
-            // Tokenise + parse
-            const tokens = tokenise(expr);
-            const pos = { i: 0 };
-            const result = parseExpr(tokens, pos);
-            if (pos.i < tokens.length) throw new Error('Unexpected token: ' + tokens[pos.i]);
-            return result;
-        }
-
-        function tokenise(s) {
-            // IMPORTANT: \*\* must come BEFORE [*] so "**" is one token, not two "*"
-            const re = /\*\*|\d+\.?\d*(?:e[+-]?\d+)?|[+\-*/()!%]/gi;
-            return s.match(re) || [];
-        }
-
-        function parseExpr(t, p) { return parseAddSub(t, p); }
-
-        function parseAddSub(t, p) {
-            let left = parseMulDiv(t, p);
-            while (p.i < t.length && (t[p.i] === '+' || t[p.i] === '-')) {
-                const op = t[p.i++];
-                const right = parseMulDiv(t, p);
-                left = op === '+' ? left + right : left - right;
-            }
-            return left;
-        }
-
-        function parseMulDiv(t, p) {
-            let left = parsePow(t, p);
-            // Only consume * or / — never ** (that belongs to parsePow)
-            while (p.i < t.length && (t[p.i] === '*' || t[p.i] === '/') && t[p.i] !== '**') {
-                const op = t[p.i++];
-                const right = parsePow(t, p);
-                if (op === '/' && right === 0) throw new Error('Division by zero');
-                left = op === '*' ? left * right : left / right;
-            }
-            return left;
-        }
-
-        function parsePow(t, p) {
-            let base = parseUnary(t, p);
-            if (p.i < t.length && t[p.i] === '**') {
-                p.i++;
-                const exp = parsePow(t, p); // right-associative
-                base = Math.pow(base, exp);
-            }
-            return base;
-        }
-
-        function parseUnary(t, p) {
-            if (t[p.i] === '-') { p.i++; return -parsePrimary(t, p); }
-            if (t[p.i] === '+') { p.i++; return  parsePrimary(t, p); }
-            return parsePrimary(t, p);
-        }
-
-        function parsePrimary(t, p) {
-            if (p.i >= t.length) throw new Error('Unexpected end');
-            const tok = t[p.i];
-
-            if (tok === '(') {
-                p.i++;
-                const val = parseExpr(t, p);
-                if (t[p.i] !== ')') throw new Error('Missing )');
-                p.i++;
-                // factorial after closing paren
-                if (t[p.i] === '!') { p.i++; return factorial(val); }
-                return val;
-            }
-
-            // Number
-            if (/^\d/.test(tok)) {
-                p.i++;
-                let v = parseFloat(tok);
-                if (t[p.i] === '!') { p.i++; return factorial(v); }
-                if (t[p.i] === '%') { p.i++; return v / 100; }
-                return v;
-            }
-
-            throw new Error('Unknown token: ' + tok);
-        }
-
-        // ── Public API (attached to window so buttons can call them) ──
-
-        window.calcToggleDeg = function() {
-            state.isDeg = !state.isDeg;
-            render();
-        };
-
-        window.calcDigit = function(d) {
-            if (state.justEvaled) { state.expression = ''; state.justEvaled = false; }
-            if (state.display === '0' && d !== '.') {
-                state.display    = d;
-                state.expression = d;
-            } else {
-                state.display    += d;
-                state.expression += d;
-            }
-            render();
-        };
-
-        window.calcDecimal = function() {
-            if (state.justEvaled) { state.expression = '0'; state.display = '0'; state.justEvaled = false; }
-            // Only add . if the current number segment doesn't already have one
-            const parts = state.expression.split(/[+\-*/()]/);
-            const last  = parts[parts.length - 1];
-            if (!last.includes('.')) {
-                if (!last) { state.expression += '0'; state.display += '0'; }
-                state.expression += '.';
-                state.display    += '.';
-            }
-            render();
-        };
-
-        window.calcInsert = function(sym) {
-            if (state.justEvaled) {
-                // Allow continuing with operators after result; otherwise start fresh
-                if (['+','-','*','/'].includes(sym)) {
-                    state.expression = state.display + sym;
-                    state.display    = sym;
-                    state.justEvaled = false;
-                    render(); return;
-                }
-                state.expression = ''; state.justEvaled = false;
-            }
-            if (sym === '1/') {
-                // reciprocal shorthand
-                state.expression = '1/(' + (state.expression || state.display) + ')';
-                state.display    = '1÷(' + state.display + ')';
-                render(); return;
-            }
-            state.expression += sym;
-            state.display    += sym === '*' ? '×' : sym === '/' ? '÷' : sym;
-            render();
-        };
-
-        window.calcFn = function(fn) {
-            const cur = parseFloat(state.display);
-            const expr = state.expression || state.display;
-
-            if (state.justEvaled || !isNaN(cur)) {
-                // Apply function to current display value immediately
-                let result;
-                try {
-                    switch(fn) {
-                        case 'sin':  result = Math.sin(toRad(cur));   break;
-                        case 'cos':  result = Math.cos(toRad(cur));   break;
-                        case 'tan':  result = Math.tan(toRad(cur));   break;
-                        case 'asin': result = fromRad(Math.asin(cur)); break;
-                        case 'acos': result = fromRad(Math.acos(cur)); break;
-                        case 'atan': result = fromRad(Math.atan(cur)); break;
-                        case 'log':  result = Math.log10(cur);         break;
-                        case 'ln':   result = Math.log(cur);           break;
-                        case 'sqrt': result = Math.sqrt(cur);          break;
-                        case 'cbrt': result = Math.cbrt(cur);          break;
-                        case 'abs':  result = Math.abs(cur);           break;
-                        case 'fact': result = factorial(cur);          break;
-                        default: flashError('Unknown fn'); return;
-                    }
-                    if (!isFinite(result) || isNaN(result)) { flashError('Math Error'); return; }
-                    state.history    = fn + '(' + state.display + ') =';
-                    state.display    = formatResult(result);
-                    state.expression = String(result);
-                    state.justEvaled = true;
-                } catch(e) { flashError('Error'); }
-            } else {
-                // Insert function prefix for building an expression
-                const prefix = fn + '(';
-                state.expression += prefix;
-                state.display    += prefix;
-            }
-            render();
-        };
-
-        window.calcEquals = function() {
-            if (!state.expression) return;
-            try {
-                state.history    = state.display + ' =';
-                const result     = safeEval(state.expression);
-                if (!isFinite(result) || isNaN(result)) { flashError('Math Error'); return; }
-                state.display    = formatResult(result);
-                state.expression = String(result);
-                state.justEvaled = true;
-            } catch(e) {
-                flashError(e.message === 'Division by zero' ? 'Div by 0' : 'Syntax Err');
-                return;
-            }
-            render();
-        };
-
-        window.calcDelete = function() {
-            if (state.justEvaled) { calcAllClear(); return; }
-            state.expression = state.expression.slice(0, -1) || '0';
-            state.display    = state.display.slice(0, -1)    || '0';
-            render();
-        };
-
-        window.calcAllClear = function() {
-            state.display    = '0';
-            state.history    = '';
-            state.expression = '';
-            state.justEvaled = false;
-            render();
-        };
-
-        window.calcToggleSign = function() {
-            const v = parseFloat(state.display);
-            if (!isNaN(v)) {
-                const toggled    = -v;
-                state.display    = formatResult(toggled);
-                state.expression = String(toggled);
-            }
-            render();
-        };
-
-        window.calcMemStore  = function() { state.memory = parseFloat(state.display) || 0; showNotification('💾 Value stored in memory', 'success'); };
-        window.calcMemRecall = function() {
-            state.display    = formatResult(state.memory);
-            state.expression = String(state.memory);
-            state.justEvaled = true;
-            render();
-        };
-        window.calcMemClear  = function() { state.memory = 0; showNotification('🗑 Memory cleared', 'info'); };
-
-        function formatResult(v) {
-            if (Number.isInteger(v) && Math.abs(v) < 1e15) return String(v);
-            // 10 significant figures, trim trailing zeros
-            return parseFloat(v.toPrecision(10)).toString();
-        }
-
-        render(); // initial render
-    })();
-
-    // ── Toggle calculator visibility ──
-    window.toggleCalculator = function() {
-        const panel = document.getElementById('sci-calc-panel');
-        const btn   = document.getElementById('calc-toggle-btn');
-        panel.classList.toggle('visible');
-        btn.classList.toggle('active');
-    };
-
-    // ── Draggable calculator panel ──
-    function initCalcDraggable() {
-        const panel    = document.getElementById('sci-calc-panel');
-        const titlebar = document.getElementById('calc-titlebar');
-        if (!panel || !titlebar) return;
-
-        let dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
-
-        titlebar.addEventListener('mousedown', e => {
-            if (e.target.id === 'calc-close-btn' || e.target.closest('#calc-close-btn')) return;
-            dragging = true;
-            sx = e.clientX - ox;
-            sy = e.clientY - oy;
-            panel.classList.add('dragging');
-        });
-
-        document.addEventListener('mousemove', e => {
-            if (!dragging) return;
-            ox = e.clientX - sx;
-            oy = e.clientY - sy;
-            // Constrain
-            const rect = panel.getBoundingClientRect();
-            ox = Math.max(0, Math.min(ox, window.innerWidth  - rect.width));
-            oy = Math.max(0, Math.min(oy, window.innerHeight - rect.height));
-            panel.style.right     = 'auto';
-            panel.style.top       = 'auto';
-            panel.style.left      = ox + 'px';
-            panel.style.top       = oy + 'px';
-        });
-
-        document.addEventListener('mouseup', () => {
-            dragging = false;
-            panel.classList.remove('dragging');
-        });
+        icon.className = container.classList.contains('minimized') ? 'fas fa-plus' : 'fas fa-minus';
     }
 </script>
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     AUTO-SUBMIT & FULLSCREEN PATCH (CLEAN - NO PROMPTS)
-═══════════════════════════════════════════════════════════════════════════ -->
+<!-- Auto-submit & fullscreen patch (unchanged) -->
 <script>
 (function() {
     'use strict';
-
     const AUTO_SUBMIT_URL = `/student/api/exam/session/${sessionId}/auto-submit`;
     const TAB_SWITCH_LIMIT = 3;
     let tabSwitchCount = 0;
     let autoSubmitTriggered = false;
-
-    // ── FULLSCREEN ──
     let fullscreenRequested = false;
-
+    
     function enterFullscreen() {
         if (fullscreenRequested || !{{ exam.enable_proctoring|lower }}) return;
         const elem = document.documentElement;
         const doRequest = () => {
-            const p = elem.requestFullscreen ? elem.requestFullscreen()
-                    : elem.webkitRequestFullscreen ? elem.webkitRequestFullscreen()
-                    : elem.msRequestFullscreen ? elem.msRequestFullscreen()
-                    : Promise.reject('Fullscreen not supported');
-            p.then(() => { fullscreenRequested = true; })
-             .catch(err => console.warn('[Fullscreen] Request failed:', err.message));
+            const promise = elem.requestFullscreen ? elem.requestFullscreen()
+                : elem.webkitRequestFullscreen ? elem.webkitRequestFullscreen()
+                : elem.msRequestFullscreen ? elem.msRequestFullscreen()
+                : Promise.reject('not supported');
+            promise.then(() => { fullscreenRequested = true; }).catch(err => console.warn('[Fullscreen]', err.message));
         };
         const gestures = ['click','keydown','touchstart'];
-        const handler = () => { 
-            if (!fullscreenRequested) { 
-                doRequest(); 
-                gestures.forEach(ev => document.removeEventListener(ev, handler)); 
-            } 
-        };
-        gestures.forEach(ev => document.addEventListener(ev, handler, {once: true}));
+        const handler = () => { if (!fullscreenRequested) { doRequest(); gestures.forEach(ev => document.removeEventListener(ev, handler)); } };
+        gestures.forEach(ev => document.addEventListener(ev, handler, { once: true }));
+        if (typeof showNotification === 'function') showNotification('Click anywhere to enter fullscreen mode', 'info');
     }
-
+    
     document.addEventListener('fullscreenchange', () => {
         if (!document.fullscreenElement && fullscreenRequested) {
             fullscreenRequested = false;
             setTimeout(() => { if (!document.fullscreenElement) enterFullscreen(); }, 2000);
         }
     });
-
+    
     if ({{ exam.enable_proctoring|lower }}) enterFullscreen();
-
-    // ── TAB SWITCH HANDLER ──
+    
+    function collectCurrentAnswers() {
+        const answers = {};
+        const form = document.getElementById('examForm');
+        if (form) {
+            const fd = new FormData(form);
+            for (let [key, value] of fd.entries()) {
+                if (key.startsWith('question_') && value !== '') answers[key] = value;
+            }
+        }
+        if (Object.keys(answers).length === 0) {
+            try {
+                const saved = localStorage.getItem(`exam_session_${sessionId}`);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed && parsed.answers) {
+                        for (const [k, v] of Object.entries(parsed.answers)) {
+                            if (k.startsWith('question_') && v !== '') answers[k] = v;
+                        }
+                    }
+                }
+            } catch(e) {}
+        }
+        return answers;
+    }
+    
+    function doAutoSubmit(reason) {
+        if (autoSubmitTriggered) return;
+        autoSubmitTriggered = true;
+        saveAnswersToLocalStorage();
+        if (typeof timerInterval !== 'undefined') clearInterval(timerInterval);
+        if (typeof autoSaveInterval !== 'undefined') clearInterval(autoSaveInterval);
+        const overlay = document.getElementById('autoSubmitOverlay');
+        if (overlay) overlay.classList.add('show');
+        const payload = JSON.stringify({
+            student_id: {{ current_user.id }},
+            reason, answers: collectCurrentAnswers(),
+            time_spent: (typeof timeLeft !== 'undefined') ? ({{ exam.duration_minutes }} * 60 - timeLeft) : 0
+        });
+        fetch(AUTO_SUBMIT_URL, { method: 'POST', headers: {'Content-Type':'application/json'}, keepalive: true, body: payload })
+            .then(r => r.json())
+            .then(data => {
+                const goTo = (data.success && data.allow_view && data.result_id)
+                    ? `/student/result/${data.result_id}` : '/student/dashboard';
+                setTimeout(() => { window.location.href = goTo; }, 800);
+            })
+            .catch(() => { window.location.href = `/student/exam/session/${sessionId}/submit`; });
+    }
+    
     window.PROCTORING_TAB_SWITCH_CALLBACK = function(count) {
         tabSwitchCount = count;
-        if (TAB_SWITCH_LIMIT === 0 || count >= TAB_SWITCH_LIMIT) {
-            // Remove beforeunload first to prevent prompt
-            window.removeEventListener('beforeunload', preventUnload);
-            performAutoSubmit('tab_switch_limit');
-        }
+        if (TAB_SWITCH_LIMIT === 0 || count >= TAB_SWITCH_LIMIT) doAutoSubmit('tab_switch_limit');
     };
-
-    // ── CLEANUP: Remove beforeunload for manual submit buttons ──
-    document.querySelector('.submit-exam-btn')?.addEventListener('click', function() {
-        window.removeEventListener('beforeunload', preventUnload);
+    
+    window.addEventListener('pagehide', (e) => {
+        if (autoSubmitTriggered) return;
+        navigator.sendBeacon(AUTO_SUBMIT_URL, new Blob([JSON.stringify({
+            student_id: {{ current_user.id }}, reason: 'pagehide',
+            answers: collectCurrentAnswers(),
+            time_spent: (typeof timeLeft !== 'undefined') ? ({{ exam.duration_minutes }} * 60 - timeLeft) : 0
+        })], { type: 'application/json' }));
         autoSubmitTriggered = true;
     });
     
-    document.querySelector('.modal-footer .btn-success')?.addEventListener('click', function() {
-        window.removeEventListener('beforeunload', preventUnload);
+    window.addEventListener('beforeunload', (e) => {
+        if (autoSubmitTriggered) return;
+        try {
+            navigator.sendBeacon(AUTO_SUBMIT_URL, new Blob([JSON.stringify({
+                student_id: {{ current_user.id }}, reason: 'beforeunload',
+                answers: collectCurrentAnswers(),
+                time_spent: (typeof timeLeft !== 'undefined') ? ({{ exam.duration_minutes }} * 60 - timeLeft) : 0
+            })], { type: 'application/json' }));
+        } catch(err) {}
+        e.preventDefault();
+        e.returnValue = 'Your exam will be auto-submitted if you leave. Are you sure?';
         autoSubmitTriggered = true;
     });
-
-    console.log('[AutoSubmit] System initialized | Tab switch limit:', TAB_SWITCH_LIMIT);
+    
+    const origSubmitBtn = document.querySelector('.submit-exam-btn');
+    if (origSubmitBtn) origSubmitBtn.addEventListener('click', () => { autoSubmitTriggered = true; });
+    const previewSubmitBtn = document.querySelector('.modal-footer .btn-success');
+    if (previewSubmitBtn) previewSubmitBtn.addEventListener('click', () => { autoSubmitTriggered = true; });
 })();
 </script>
 {% endblock %}

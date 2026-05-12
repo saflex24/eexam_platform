@@ -1,867 +1,681 @@
 {% extends "base.html" %}
 
-{% block title %}Admin Dashboard - E-Exam Platform{% endblock %}
+{% block title %}Admin Dashboard{% endblock %}
 
 {% block extra_css %}
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-/* ── Reset & Base ── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* ── Dashboard — compact redesign ── */
 
-:root {
-    --ink:        #111827;
-    --ink-2:      #374151;
-    --ink-3:      #6b7280;
-    --ink-4:      #9ca3af;
-    --surface:    #ffffff;
-    --surface-2:  #f9fafb;
-    --surface-3:  #f3f4f6;
-    --border:     #e5e7eb;
-    --border-2:   #d1d5db;
-    --accent:     #4f46e5;
-    --accent-2:   #6366f1;
-    --accent-soft:#eef2ff;
-    --green:      #059669;
-    --green-soft: #ecfdf5;
-    --amber:      #d97706;
-    --amber-soft: #fffbeb;
-    --red:        #dc2626;
-    --red-soft:   #fef2f2;
-    --blue:       #2563eb;
-    --blue-soft:  #eff6ff;
-    --radius-sm:  6px;
-    --radius:     10px;
-    --radius-lg:  14px;
-    --shadow-xs:  0 1px 2px rgba(0,0,0,.05);
-    --shadow-sm:  0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
-    --shadow-md:  0 10px 15px -3px rgba(0,0,0,.08), 0 4px 6px -4px rgba(0,0,0,.04);
-    --font:       'DM Sans', system-ui, sans-serif;
-    --font-mono:  'DM Mono', monospace;
-    --ease:       cubic-bezier(.4,0,.2,1);
-}
-
-/* ── Dashboard body override ── */
+/* Reset aggressive base overrides */
 body {
-    font-family: var(--font);
-    background: var(--surface-2);
-    color: var(--ink);
-    font-size: 15px;
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
+    font-size: 13px;
+    background: #f1f3f7;
 }
 
-/* ── Wrapper: sits below the base navbar ── */
-.adm-wrapper {
-    display: flex;
-    min-height: calc(100vh - 56px); /* 56px = base navbar height */
-}
-
-/* ── Sidebar ── */
-.adm-sidebar {
-    width: 220px;
-    flex-shrink: 0;
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    padding: 16px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    position: sticky;
-    top: 56px;          /* stick below base navbar */
-    height: calc(100vh - 56px);
-    overflow-y: auto;
-}
-
-.sidebar-section-label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: var(--ink-4);
-    padding: 10px 10px 4px;
-    margin-top: 8px;
-}
-.sidebar-section-label:first-child { margin-top: 0; }
-
-.sidebar-link {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-    border-radius: var(--radius-sm);
-    font-size: 13.5px;
-    font-weight: 500;
-    color: var(--ink-3);
-    text-decoration: none;
-    transition: all .15s var(--ease);
-}
-.sidebar-link i { width: 16px; text-align: center; font-size: 13px; flex-shrink: 0; }
-.sidebar-link:hover { background: var(--surface-3); color: var(--ink); }
-.sidebar-link.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-.sidebar-link.danger { color: var(--red); }
-.sidebar-link.danger:hover { background: var(--red-soft); }
-
-.sidebar-footer {
-    margin-top: auto;
-    padding-top: 12px;
-    border-top: 1px solid var(--border);
-}
-
-/* ── Main content area ── */
-.adm-main {
-    flex: 1;
-    min-width: 0;
-    padding: 28px 32px;
-    display: flex;
-    flex-direction: column;
-    gap: 28px;
+/* ── Layout wrapper ── */
+.db-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1.5rem 1.25rem 3rem;
 }
 
 /* ── Page header ── */
-.page-header {
+.db-header {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-    flex-wrap: wrap;
-}
-.page-header-text h1 {
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--ink);
-    letter-spacing: -.3px;
-    line-height: 1.3;
-}
-.page-header-text p { font-size: 13.5px; color: var(--ink-3); margin-top: 3px; }
-.page-header-actions { display: flex; gap: 8px; flex-shrink: 0; }
-
-/* ── Buttons ── */
-.btn {
-    height: 36px;
-    padding: 0 16px;
-    border-radius: var(--radius-sm);
-    font-size: 13px;
-    font-weight: 600;
-    font-family: var(--font);
-    cursor: pointer;
-    display: inline-flex;
     align-items: center;
-    gap: 7px;
-    transition: all .15s var(--ease);
-    text-decoration: none;
-    border: none;
-    white-space: nowrap;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
 }
-.btn-primary { background: var(--accent); color: white; }
-.btn-primary:hover { background: var(--accent-2); color: white; box-shadow: 0 0 0 3px rgba(79,70,229,.2); }
-.btn-ghost { background: var(--surface); border: 1px solid var(--border); color: var(--ink-2); }
-.btn-ghost:hover { background: var(--surface-3); color: var(--ink); border-color: var(--border-2); }
+.db-header-left h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 0 0 2px 0;
+    letter-spacing: -0.3px;
+}
+.db-header-left p {
+    font-size: 12px;
+    color: #7c8494;
+    margin: 0;
+}
+.db-header-date {
+    font-size: 11px;
+    color: #9aa3b0;
+    background: #fff;
+    border: 1px solid #e2e6ed;
+    border-radius: 8px;
+    padding: 5px 12px;
+}
 
-/* ── KPI grid ── */
-.kpi-grid {
+/* ── Stat cards ── */
+.db-stat-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
+    gap: 12px;
+    margin-bottom: 1.25rem;
 }
+@media (max-width: 768px) { .db-stat-row { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .db-stat-row { grid-template-columns: 1fr; } }
 
-.kpi-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 20px 22px;
-    display: flex;
-    align-items: flex-start;
-    gap: 16px;
-    box-shadow: var(--shadow-xs);
-    transition: box-shadow .2s var(--ease), transform .2s var(--ease);
-    animation: kpiIn .4s var(--ease) both;
-}
-.kpi-card:nth-child(1) { animation-delay: .05s; }
-.kpi-card:nth-child(2) { animation-delay: .10s; }
-.kpi-card:nth-child(3) { animation-delay: .15s; }
-.kpi-card:nth-child(4) { animation-delay: .20s; }
-.kpi-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
-
-@keyframes kpiIn {
-    from { opacity: 0; transform: translateY(12px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-
-.kpi-icon {
-    width: 42px; height: 42px;
-    border-radius: var(--radius-sm);
-    display: grid; place-items: center;
-    font-size: 16px; flex-shrink: 0;
-}
-.kpi-icon.purple { background: var(--accent-soft); color: var(--accent); }
-.kpi-icon.green  { background: var(--green-soft);  color: var(--green); }
-.kpi-icon.amber  { background: var(--amber-soft);  color: var(--amber); }
-.kpi-icon.blue   { background: var(--blue-soft);   color: var(--blue); }
-
-.kpi-body { min-width: 0; flex: 1; }
-.kpi-label { font-size: 12px; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
-.kpi-value { font-size: 26px; font-weight: 700; font-family: var(--font-mono); color: var(--ink); letter-spacing: -.5px; line-height: 1.1; }
-.kpi-meta { margin-top: 5px; font-size: 12px; color: var(--green); font-weight: 600; display: flex; align-items: center; gap: 4px; }
-
-/* ── Grid helpers ── */
-.two-col   { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
-
-/* ── Card ── */
-.card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-xs);
+.db-stat {
+    background: #fff;
+    border: 1px solid #e8ecf2;
+    border-radius: 12px;
+    padding: 1.1rem 1.2rem;
+    position: relative;
     overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    animation: cardIn .5s var(--ease) both;
-    animation-delay: .25s;
+    transition: box-shadow 0.18s, transform 0.18s;
 }
-@keyframes cardIn {
-    from { opacity: 0; transform: translateY(16px); }
-    to   { opacity: 1; transform: translateY(0); }
+.db-stat:hover {
+    box-shadow: 0 4px 18px rgba(0,0,0,.09);
+    transform: translateY(-2px);
 }
-.card-head {
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
+.db-stat-accent {
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px;
+    height: 100%;
+    border-radius: 12px 0 0 12px;
+}
+.db-stat.s1 .db-stat-accent { background: #667eea; }
+.db-stat.s2 .db-stat-accent { background: #11998e; }
+.db-stat.s3 .db-stat-accent { background: #f5576c; }
+.db-stat.s4 .db-stat-accent { background: #4facfe; }
+
+.db-stat-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    margin-bottom: 10px;
 }
-.card-head-left { display: flex; align-items: center; gap: 10px; }
-.card-head-icon {
-    width: 30px; height: 30px;
-    border-radius: var(--radius-sm);
-    display: grid; place-items: center;
-    font-size: 13px;
-    background: var(--surface-3);
-    color: var(--ink-2);
+.db-stat-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #fff;
+    flex-shrink: 0;
 }
-.card-title { font-size: 14px; font-weight: 700; color: var(--ink); letter-spacing: -.1px; }
-.card-body { padding: 20px; flex: 1; }
-.card-body.no-pad { padding: 0; }
+.s1 .db-stat-icon { background: #667eea; }
+.s2 .db-stat-icon { background: #11998e; }
+.s3 .db-stat-icon { background: #f5576c; }
+.s4 .db-stat-icon { background: #4facfe; }
 
-/* ── Data table ── */
-.data-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-.data-table thead th {
-    padding: 10px 16px;
-    text-align: left;
+.db-stat-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: #9aa3b0;
+}
+.db-stat-val {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1a1a2e;
+    line-height: 1;
+    margin-bottom: 4px;
+    letter-spacing: -0.5px;
+}
+.db-stat-sub {
     font-size: 11px;
+    color: #9aa3b0;
+}
+
+/* ── Content grid ── */
+.db-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.db-grid.full { grid-template-columns: 1fr; }
+@media (max-width: 768px) { .db-grid { grid-template-columns: 1fr; } }
+
+/* ── Panel card ── */
+.db-panel {
+    background: #fff;
+    border: 1px solid #e8ecf2;
+    border-radius: 12px;
+    overflow: hidden;
+}
+.db-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f3f7;
+    background: #fafbfd;
+}
+.db-panel-head h6 {
+    font-size: 12px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+.db-panel-head h6 i {
+    font-size: 11px;
+    color: #667eea;
+}
+.db-panel-body { padding: 14px 16px; }
+
+/* ── Performance stats inside panel ── */
+.db-perf-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.db-perf-tile {
+    background: #f6f8fc;
+    border: 1px solid #e8ecf2;
+    border-radius: 9px;
+    padding: 10px 12px;
+}
+.db-perf-tile .pt-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-weight: 600;
+    color: #9aa3b0;
+    margin-bottom: 4px;
+}
+.db-perf-tile .pt-val {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a2e;
+    line-height: 1;
+}
+.db-perf-tile.t-green .pt-val { color: #11998e; }
+.db-perf-tile.t-blue  .pt-val { color: #667eea; }
+
+/* ── Chart container ── */
+.db-chart-wrap {
+    position: relative;
+    height: 180px;
+}
+
+/* ── Table styles ── */
+.db-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+}
+.db-table thead th {
+    font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: .06em;
-    color: var(--ink-3);
-    background: var(--surface-2);
-    border-bottom: 1px solid var(--border);
+    letter-spacing: 0.7px;
+    color: #9aa3b0;
+    padding: 8px 10px;
+    border-bottom: 1px solid #f0f3f7;
     white-space: nowrap;
+    background: #fafbfd;
 }
-.data-table tbody tr { border-bottom: 1px solid var(--border); transition: background .1s var(--ease); }
-.data-table tbody tr:last-child { border-bottom: none; }
-.data-table tbody tr:hover { background: var(--surface-2); }
-.data-table tbody td { padding: 12px 16px; color: var(--ink-2); vertical-align: middle; }
+.db-table tbody tr {
+    border-bottom: 1px solid #f6f8fc;
+    transition: background 0.12s;
+}
+.db-table tbody tr:last-child { border-bottom: none; }
+.db-table tbody tr:hover { background: #f8faff; }
+.db-table tbody td {
+    padding: 9px 10px;
+    color: #2d3748;
+    vertical-align: middle;
+}
+.db-table .td-name {
+    font-weight: 500;
+    color: #1a1a2e;
+    font-size: 12.5px;
+}
+.db-table .td-sub {
+    font-size: 11px;
+    color: #7c8494;
+    margin-top: 1px;
+}
+.db-table .td-score {
+    font-weight: 700;
+    font-size: 12.5px;
+    color: #667eea;
+}
 
 /* ── Badges ── */
-.badge {
+.db-badge {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     padding: 3px 9px;
-    border-radius: 100px;
-    font-size: 11.5px;
+    border-radius: 20px;
+    font-size: 10.5px;
     font-weight: 600;
-    line-height: 1.6;
 }
-.badge-green  { background: var(--green-soft);  color: var(--green); }
-.badge-red    { background: var(--red-soft);    color: var(--red); }
-.badge-amber  { background: var(--amber-soft);  color: var(--amber); }
-.badge-blue   { background: var(--blue-soft);   color: var(--blue); }
-.badge-purple { background: var(--accent-soft); color: var(--accent); }
-
-/* ── Stat row ── */
-.stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.stat-item {
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px 16px;
-}
-.stat-item-label { font-size: 11px; font-weight: 700; color: var(--ink-4); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
-.stat-item-value { font-size: 22px; font-weight: 700; font-family: var(--font-mono); color: var(--ink); letter-spacing: -.3px; }
-.stat-item-sub   { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
-
-/* ── Performer list ── */
-.performer-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
-.performer-row:last-child { border-bottom: none; }
-.performer-rank {
-    width: 24px; height: 24px;
+.db-badge::before {
+    content: '';
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
-    background: var(--surface-3);
-    display: grid; place-items: center;
-    font-size: 11px; font-weight: 700; color: var(--ink-3); flex-shrink: 0;
+    background: currentColor;
 }
-.performer-rank.gold   { background: #fef3c7; color: #92400e; }
-.performer-rank.silver { background: #f3f4f6; color: #374151; }
-.performer-rank.bronze { background: #fde68a; color: #78350f; }
-.performer-avatar {
-    width: 34px; height: 34px;
+.db-badge.b-pass { background: #eaf3de; color: #27500a; }
+.db-badge.b-fail { background: #fce8e8; color: #7f1c1c; }
+.db-badge.b-info { background: #e6f0ff; color: #185fa5; }
+
+/* ── Avatar initials ── */
+.db-avatar {
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
-    background: var(--accent-soft);
-    display: grid; place-items: center;
-    font-size: 13px; color: var(--accent); font-weight: 700; flex-shrink: 0;
-    border: 2px solid var(--border);
+    background: #e8edff;
+    color: #4a5fa8;
+    font-size: 10px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    text-transform: uppercase;
 }
-.performer-info { flex: 1; min-width: 0; }
-.performer-name { font-size: 13.5px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.performer-score { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--green); flex-shrink: 0; }
 
-/* ── Score bar ── */
-.score-bar-track { height: 4px; background: var(--surface-3); border-radius: 2px; overflow: hidden; margin-top: 4px; }
-.score-bar-fill  { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 2px; transition: width .6s var(--ease); }
-
-/* ── Action grid ── */
-.action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.action-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 11px 13px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
+/* ── Quick actions ── */
+.db-action-list { display: flex; flex-direction: column; gap: 6px; }
+.db-action-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 9px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #2d3748;
     text-decoration: none;
-    font-size: 13px; font-weight: 500; color: var(--ink-2);
-    transition: all .15s var(--ease);
-    background: var(--surface);
+    border: 1px solid #e8ecf2;
+    background: #fafbfd;
+    transition: all 0.15s;
 }
-.action-item i { font-size: 13px; color: var(--ink-4); transition: color .15s; }
-.action-item:hover { background: var(--accent-soft); border-color: rgba(79,70,229,.25); color: var(--accent); }
-.action-item:hover i { color: var(--accent); }
-
-/* ── Avatar initial ── */
-.av {
-    width: 28px; height: 28px;
-    border-radius: 50%;
-    background: var(--accent-soft); color: var(--accent);
-    font-size: 11px; font-weight: 700;
-    display: inline-grid; place-items: center; flex-shrink: 0;
+.db-action-link:hover {
+    background: #667eea;
+    color: #fff;
+    border-color: #667eea;
+    transform: translateX(4px);
+    box-shadow: 0 3px 10px rgba(102,126,234,.25);
+}
+.db-action-link i {
+    font-size: 12px;
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
 }
 
-/* ── Status dot ── */
-.status-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
-.status-dot.green { background: var(--green); }
-.status-dot.red   { background: var(--red); }
-
-/* ── Chart ── */
-.chart-area { position: relative; height: 220px; }
+/* ── Tool buttons ── */
+.db-tool-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 14px;
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s;
+    margin-bottom: 7px;
+}
+.db-tool-btn:last-child { margin-bottom: 0; }
+.db-tool-btn i { font-size: 11px; width: 16px; text-align: center; }
+.db-tool-btn.tb-purple { background: #667eea; }
+.db-tool-btn.tb-purple:hover { background: #5568d6; box-shadow: 0 3px 10px rgba(102,126,234,.35); color:#fff; }
+.db-tool-btn.tb-teal   { background: #11998e; }
+.db-tool-btn.tb-teal:hover   { background: #0e887e; box-shadow: 0 3px 10px rgba(17,153,142,.3); color:#fff; }
+.db-tool-btn.tb-blue   { background: #4facfe; }
+.db-tool-btn.tb-blue:hover   { background: #3d9dee; box-shadow: 0 3px 10px rgba(79,172,254,.3); color:#fff; }
+.db-tool-btn.tb-dark   { background: #3b4a6b; }
+.db-tool-btn.tb-dark:hover   { background: #2e3a56; box-shadow: 0 3px 10px rgba(59,74,107,.3); color:#fff; }
 
 /* ── Empty state ── */
-.empty-state { padding: 40px 24px; text-align: center; color: var(--ink-3); }
-.empty-state i { font-size: 28px; opacity: .35; display: block; margin-bottom: 10px; }
-.empty-state p { font-size: 13px; }
+.db-empty {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: #9aa3b0;
+}
+.db-empty i { font-size: 28px; opacity: 0.3; margin-bottom: 8px; display: block; }
+.db-empty p { font-size: 12px; margin: 4px 0 0; }
 
-/* ── Responsive ── */
-@media (max-width: 1100px) {
-    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-    .two-col, .three-col { grid-template-columns: 1fr; }
-    .adm-main { padding: 20px; }
+/* ── Subject pill ── */
+.db-subj-pill {
+    display: inline-block;
+    background: #eef0fb;
+    color: #4a5fa8;
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 6px;
 }
-@media (max-width: 768px) {
-    .adm-sidebar { display: none; }
-    .kpi-grid { grid-template-columns: 1fr 1fr; }
-}
-@media (max-width: 480px) {
-    .kpi-grid { grid-template-columns: 1fr; }
+
+/* ── Date chip ── */
+.db-date {
+    font-size: 11px;
+    color: #9aa3b0;
+    white-space: nowrap;
 }
 </style>
 {% endblock %}
 
+{% block content %}
+<div class="db-page">
 
-{# ═══════════════════════════════════════════════════
-   Override full_page to skip the base sidebar entirely.
-   The base <nav> still renders above this block.
-═══════════════════════════════════════════════════ #}
-{% block full_page %}
-
-{# Flash messages — floating so they don't disturb the layout #}
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-<div style="position:fixed;top:66px;right:16px;z-index:9999;min-width:300px;max-width:420px;">
-    {% for category, message in messages %}
-    <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert" style="margin-bottom:8px;border-radius:8px;">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    {# ── Page header ── #}
+    <div class="db-header">
+        <div class="db-header-left">
+            <h2><i class="fas fa-chart-line" style="color:#667eea;margin-right:7px;font-size:16px"></i>Admin Dashboard</h2>
+            <p>Welcome back — here's your platform overview.</p>
+        </div>
+        <span class="db-header-date">
+            <i class="fas fa-calendar-alt" style="margin-right:5px;color:#9aa3b0"></i>
+            {{ now.strftime('%d %b %Y') if now else 'Today' }}
+        </span>
     </div>
-    {% endfor %}
-</div>
-{% endif %}
-{% endwith %}
 
-<!-- Dashboard shell: sidebar + main, positioned below the base navbar -->
-<div class="adm-wrapper">
-
-    <!-- ── Custom sidebar ── -->
-    <aside class="adm-sidebar">
-
-        <span class="sidebar-section-label">Overview</span>
-        <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link active">
-            <i class="fas fa-chart-line"></i> Dashboard
-        </a>
-        <a href="{{ url_for('admin.analytics') }}" class="sidebar-link">
-            <i class="fas fa-chart-area"></i> Analytics
-        </a>
-        <a href="{{ url_for('admin.advanced_analytics') }}" class="sidebar-link">
-            <i class="fas fa-chart-bar"></i> Advanced Analytics
-        </a>
-
-        <span class="sidebar-section-label">People</span>
-        <a href="{{ url_for('admin.manage_students') }}" class="sidebar-link">
-            <i class="fas fa-user-graduate"></i> Students
-        </a>
-        <a href="{{ url_for('admin.manage_teachers') }}" class="sidebar-link">
-            <i class="fas fa-chalkboard-teacher"></i> Teachers
-        </a>
-        <a href="{{ url_for('admin.manage_classes') }}" class="sidebar-link">
-            <i class="fas fa-layer-group"></i> Classes
-        </a>
-
-        <span class="sidebar-section-label">Exams</span>
-        <a href="{{ url_for('admin.manage_exams') }}" class="sidebar-link">
-            <i class="fas fa-file-alt"></i> All Exams
-        </a>
-        <a href="{{ url_for('admin.proctoring_reports') }}" class="sidebar-link">
-            <i class="fas fa-shield-alt"></i> Proctoring Reports
-        </a>
-
-        <span class="sidebar-section-label">Reports</span>
-        <a href="{{ url_for('admin.student_reports') }}" class="sidebar-link">
-            <i class="fas fa-file-chart-line"></i> Student Reports
-        </a>
-        <a href="{{ url_for('admin.activity_log') }}" class="sidebar-link">
-            <i class="fas fa-history"></i> Activity Log
-        </a>
-
-        <span class="sidebar-section-label">Import</span>
-        <a href="{{ url_for('admin.import_students') }}" class="sidebar-link">
-            <i class="fas fa-file-upload"></i> Import Students
-        </a>
-        <a href="{{ url_for('admin.import_teachers') }}" class="sidebar-link">
-            <i class="fas fa-file-upload"></i> Import Teachers
-        </a>
-
-        <div class="sidebar-footer">
-            <a href="{{ url_for('admin.admin_settings') }}" class="sidebar-link">
-                <i class="fas fa-cog"></i> Settings
-            </a>
-            <a href="{{ url_for('auth.logout') }}" class="sidebar-link danger">
-                <i class="fas fa-sign-out-alt"></i> Logout
-            </a>
+    {# ── Stat cards ── #}
+    <div class="db-stat-row">
+        <div class="db-stat s1">
+            <div class="db-stat-accent"></div>
+            <div class="db-stat-top">
+                <span class="db-stat-label">Students</span>
+                <div class="db-stat-icon"><i class="fas fa-user-graduate"></i></div>
+            </div>
+            <div class="db-stat-val">{{ total_students }}</div>
+            <div class="db-stat-sub">Total enrolled</div>
         </div>
-    </aside>
-
-    <!-- ── Main content ── -->
-    <main class="adm-main">
-
-        <!-- Page header -->
-        <div class="page-header">
-            <div class="page-header-text">
-                <h1>Admin Dashboard</h1>
-                <p>Welcome back — here's a snapshot of the platform today.</p>
+        <div class="db-stat s2">
+            <div class="db-stat-accent"></div>
+            <div class="db-stat-top">
+                <span class="db-stat-label">Teachers</span>
+                <div class="db-stat-icon"><i class="fas fa-chalkboard-teacher"></i></div>
             </div>
-            <div class="page-header-actions">
-                <a href="{{ url_for('admin.create_student') }}" class="btn btn-ghost">
-                    <i class="fas fa-user-plus"></i> Add Student
-                </a>
-                <a href="{{ url_for('admin.create_teacher') }}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Add Teacher
-                </a>
-            </div>
+            <div class="db-stat-val">{{ total_teachers }}</div>
+            <div class="db-stat-sub">Active staff</div>
         </div>
+        <div class="db-stat s3">
+            <div class="db-stat-accent"></div>
+            <div class="db-stat-top">
+                <span class="db-stat-label">Classes</span>
+                <div class="db-stat-icon"><i class="fas fa-school"></i></div>
+            </div>
+            <div class="db-stat-val">{{ total_classes }}</div>
+            <div class="db-stat-sub">Groups</div>
+        </div>
+        <div class="db-stat s4">
+            <div class="db-stat-accent"></div>
+            <div class="db-stat-top">
+                <span class="db-stat-label">Exams</span>
+                <div class="db-stat-icon"><i class="fas fa-clipboard-list"></i></div>
+            </div>
+            <div class="db-stat-val">{{ total_exams }}</div>
+            <div class="db-stat-sub">Tests created</div>
+        </div>
+    </div>
 
-        <!-- KPI row -->
-        <div class="kpi-grid">
-            <div class="kpi-card">
-                <div class="kpi-icon purple"><i class="fas fa-user-graduate"></i></div>
-                <div class="kpi-body">
-                    <div class="kpi-label">Students</div>
-                    <div class="kpi-value">{{ total_students }}</div>
-                    <div class="kpi-meta"><i class="fas fa-circle" style="font-size:7px;"></i> Enrolled</div>
-                </div>
+    {# ── Row 2: Chart + Top performers ── #}
+    <div class="db-grid">
+
+        {# Chart panel #}
+        <div class="db-panel">
+            <div class="db-panel-head">
+                <h6><i class="fas fa-chart-bar"></i> Exam statistics</h6>
             </div>
-            <div class="kpi-card">
-                <div class="kpi-icon green"><i class="fas fa-chalkboard-teacher"></i></div>
-                <div class="kpi-body">
-                    <div class="kpi-label">Teachers</div>
-                    <div class="kpi-value">{{ total_teachers }}</div>
-                    <div class="kpi-meta"><i class="fas fa-circle" style="font-size:7px;"></i> Active</div>
+            <div class="db-panel-body">
+                <div class="db-perf-row">
+                    <div class="db-perf-tile t-blue">
+                        <div class="pt-label">Avg score</div>
+                        <div class="pt-val">{{ avg_score }}%</div>
+                    </div>
+                    <div class="db-perf-tile t-green">
+                        <div class="pt-label">Submissions</div>
+                        <div class="pt-val">{{ total_submissions }}</div>
+                    </div>
                 </div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-icon amber"><i class="fas fa-layer-group"></i></div>
-                <div class="kpi-body">
-                    <div class="kpi-label">Classes</div>
-                    <div class="kpi-value">{{ total_classes }}</div>
-                    <div class="kpi-meta"><i class="fas fa-circle" style="font-size:7px;"></i> Running</div>
-                </div>
-            </div>
-            <div class="kpi-card">
-                <div class="kpi-icon blue"><i class="fas fa-clipboard-list"></i></div>
-                <div class="kpi-body">
-                    <div class="kpi-label">Exams</div>
-                    <div class="kpi-value">{{ total_exams }}</div>
-                    <div class="kpi-meta"><i class="fas fa-circle" style="font-size:7px;"></i> Total</div>
+                <div class="db-chart-wrap">
+                    <canvas id="performanceChart"></canvas>
                 </div>
             </div>
         </div>
 
-        <!-- Row 2: Chart + Top Performers -->
-        <div class="two-col">
-
-            <div class="card">
-                <div class="card-head">
-                    <div class="card-head-left">
-                        <div class="card-head-icon"><i class="fas fa-chart-line"></i></div>
-                        <span class="card-title">Exam Performance</span>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="stat-row" style="margin-bottom:20px;">
-                        <div class="stat-item">
-                            <div class="stat-item-label">Avg Score</div>
-                            <div class="stat-item-value">{{ avg_score }}%</div>
-                            <div class="stat-item-sub">across all exams</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-item-label">Submissions</div>
-                            <div class="stat-item-value">{{ total_submissions }}</div>
-                            <div class="stat-item-sub">total attempts</div>
-                        </div>
-                    </div>
-                    <div class="chart-area">
-                        <canvas id="performanceChart"></canvas>
-                    </div>
-                </div>
+        {# Top performers panel #}
+        <div class="db-panel">
+            <div class="db-panel-head">
+                <h6><i class="fas fa-star"></i> Top performers</h6>
             </div>
-
-            <div class="card">
-                <div class="card-head">
-                    <div class="card-head-left">
-                        <div class="card-head-icon"><i class="fas fa-trophy"></i></div>
-                        <span class="card-title">Top Performers</span>
-                    </div>
-                    <a href="{{ url_for('admin.student_reports') }}" class="btn btn-ghost" style="height:30px;font-size:12px;">
-                        View all
-                    </a>
-                </div>
-                <div class="card-body">
-                    {% for student, score in top_students %}
-                    <div class="performer-row">
-                        <div class="performer-rank {% if loop.index == 1 %}gold{% elif loop.index == 2 %}silver{% elif loop.index == 3 %}bronze{% endif %}">
-                            {{ loop.index }}
-                        </div>
-                        <div class="performer-avatar">
-                            {{ student.user.full_name[0]|upper }}
-                        </div>
-                        <div class="performer-info">
-                            <div class="performer-name">{{ student.user.full_name }}</div>
-                            <div class="score-bar-track">
-                                <div class="score-bar-fill" style="width:{{ score|round(0)|int }}%;"></div>
-                            </div>
-                        </div>
-                        <div class="performer-score">{{ score|round(1) }}%</div>
-                    </div>
-                    {% else %}
-                    <div class="empty-state">
-                        <i class="fas fa-trophy"></i>
-                        <p>No performance data yet.<br>Results appear once students complete exams.</p>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Row 3: Recent results -->
-        <div class="card">
-            <div class="card-head">
-                <div class="card-head-left">
-                    <div class="card-head-icon"><i class="fas fa-history"></i></div>
-                    <span class="card-title">Recent Results</span>
-                </div>
-                <a href="{{ url_for('admin.student_reports') }}" class="btn btn-ghost" style="height:30px;font-size:12px;">
-                    All results
-                </a>
-            </div>
-            <div class="card-body no-pad">
-                <table class="data-table">
+            <div class="db-panel-body" style="padding:0">
+                {% if top_students %}
+                <table class="db-table">
                     <thead>
                         <tr>
+                            <th style="padding-left:16px">#</th>
                             <th>Student</th>
-                            <th>Exam</th>
-                            <th>Subject</th>
-                            <th>Score</th>
-                            <th>Percentage</th>
-                            <th>Status</th>
-                            <th>Submitted</th>
+                            <th>Avg score</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for result in recent_results %}
+                        {% for student, avg in top_students %}
                         <tr>
+                            <td style="padding-left:16px;color:#9aa3b0;font-size:11px">{{ loop.index }}</td>
                             <td>
-                                <div style="display:flex;align-items:center;gap:9px;">
-                                    <div class="av">{{ result.student_user.full_name[0]|upper }}</div>
-                                    <span style="font-weight:600;font-size:13.5px;">{{ result.student_user.full_name }}</span>
+                                <div style="display:flex;align-items:center;gap:8px">
+                                    <div class="db-avatar">
+                                        {{ student.user.full_name[:2] }}
+                                    </div>
+                                    <span class="td-name">{{ student.user.full_name }}</span>
                                 </div>
                             </td>
-                            <td style="font-size:13px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                                {{ result.exam.title }}
-                            </td>
-                            <td><span class="badge badge-purple">{{ result.exam.subject }}</span></td>
-                            <td style="font-family:var(--font-mono);font-size:13px;font-weight:600;">
-                                {{ result.marks_obtained }}/{{ result.total_marks }}
-                            </td>
-                            <td style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--accent);">
-                                {{ result.percentage }}%
-                            </td>
                             <td>
-                                {% if result.is_passed %}
-                                <span class="badge badge-green"><span class="status-dot green"></span>Passed</span>
-                                {% else %}
-                                <span class="badge badge-red"><span class="status-dot red"></span>Failed</span>
-                                {% endif %}
-                            </td>
-                            <td style="font-size:12.5px;color:var(--ink-3);">
-                                {{ result.submitted_at.strftime('%d %b %Y, %H:%M') }}
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="7">
-                                <div class="empty-state">
-                                    <i class="fas fa-clipboard-check"></i>
-                                    <p>No results yet. They'll appear once students complete their tests.</p>
-                                </div>
+                                <span class="db-badge b-pass">{{ avg | round(1) }}%</span>
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
+                {% else %}
+                <div class="db-empty">
+                    <i class="fas fa-chart-line"></i>
+                    <strong>No data yet</strong>
+                    <p>Appears once students complete exams</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# ── Row 3: Recent results ── #}
+    <div class="db-grid full" style="margin-bottom:12px">
+        <div class="db-panel">
+            <div class="db-panel-head">
+                <h6><i class="fas fa-history"></i> Recent results</h6>
+                <span style="font-size:11px;color:#9aa3b0">Latest submissions</span>
+            </div>
+            <div class="db-panel-body" style="padding:0;overflow-x:auto">
+                {% if recent_results %}
+                <table class="db-table">
+                    <thead>
+                        <tr>
+                            <th style="padding-left:16px">Student</th>
+                            <th>Exam</th>
+                            <th>Subject</th>
+                            <th>Score</th>
+                            <th>%</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in recent_results %}
+                        <tr>
+                            <td style="padding-left:16px">
+                                <div style="display:flex;align-items:center;gap:8px">
+                                    <div class="db-avatar">{{ result.student_user.full_name[:2] }}</div>
+                                    <div>
+                                        <div class="td-name">{{ result.student_user.full_name }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="td-name">{{ result.exam.title }}</td>
+                            <td><span class="db-subj-pill">{{ result.exam.subject }}</span></td>
+                            <td class="td-score">{{ result.marks_obtained }}/{{ result.total_marks }}</td>
+                            <td><strong style="color:{% if result.is_passed %}#11998e{% else %}#f5576c{% endif %}">{{ "{:.2f}".format(result.percentage) }}%</strong></td>
+                            <td>
+                                {% if result.is_passed %}
+                                    <span class="db-badge b-pass">Passed</span>
+                                {% else %}
+                                    <span class="db-badge b-fail">Failed</span>
+                                {% endif %}
+                            </td>
+                            <td class="db-date">{{ result.submitted_at.strftime('%d %b · %H:%M') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="db-empty">
+                    <i class="fas fa-clipboard-check"></i>
+                    <strong>No results yet</strong>
+                    <p>Exam results appear here once students complete tests</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# ── Row 4: Quick actions + System tools ── #}
+    <div class="db-grid">
+
+        <div class="db-panel">
+            <div class="db-panel-head">
+                <h6><i class="fas fa-bolt"></i> Quick actions</h6>
+            </div>
+            <div class="db-panel-body">
+                <div class="db-action-list">
+                    <a href="{{ url_for('admin.manage_users') }}" class="db-action-link">
+                        <i class="fas fa-users"></i> Manage users
+                    </a>
+                    <a href="{{ url_for('admin.create_class') }}" class="db-action-link">
+                        <i class="fas fa-plus-circle"></i> Create new class
+                    </a>
+                    <a href="{{ url_for('admin.create_student') }}" class="db-action-link">
+                        <i class="fas fa-user-plus"></i> Add student
+                    </a>
+                    <a href="{{ url_for('admin.create_teacher') }}" class="db-action-link">
+                        <i class="fas fa-chalkboard-teacher"></i> Add teacher
+                    </a>
+                </div>
             </div>
         </div>
 
-        <!-- Row 4: Quick actions + System tools -->
-        <div class="two-col">
-
-            <div class="card">
-                <div class="card-head">
-                    <div class="card-head-left">
-                        <div class="card-head-icon"><i class="fas fa-bolt"></i></div>
-                        <span class="card-title">Quick Actions</span>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="action-grid">
-                        <a href="{{ url_for('admin.manage_users') }}" class="action-item">
-                            <i class="fas fa-users"></i> Manage Users
-                        </a>
-                        <a href="{{ url_for('admin.create_class') }}" class="action-item">
-                            <i class="fas fa-plus-circle"></i> Create Class
-                        </a>
-                        <a href="{{ url_for('admin.create_student') }}" class="action-item">
-                            <i class="fas fa-user-plus"></i> Add Student
-                        </a>
-                        <a href="{{ url_for('admin.create_teacher') }}" class="action-item">
-                            <i class="fas fa-chalkboard-teacher"></i> Add Teacher
-                        </a>
-                        <a href="{{ url_for('admin.student_reports') }}" class="action-item">
-                            <i class="fas fa-file-alt"></i> Student Reports
-                        </a>
-                        <a href="{{ url_for('admin.proctoring_reports') }}" class="action-item">
-                            <i class="fas fa-shield-alt"></i> Proctoring
-                        </a>
-                    </div>
-                </div>
+        <div class="db-panel">
+            <div class="db-panel-head">
+                <h6><i class="fas fa-tools"></i> System tools</h6>
             </div>
-
-            <div class="card">
-                <div class="card-head">
-                    <div class="card-head-left">
-                        <div class="card-head-icon"><i class="fas fa-tools"></i></div>
-                        <span class="card-title">System Tools</span>
-                    </div>
-                </div>
-                <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
-                    <a href="{{ url_for('admin.import_students') }}" class="btn btn-ghost" style="height:40px;justify-content:flex-start;">
-                        <i class="fas fa-file-upload" style="color:var(--accent);"></i> Import Students (CSV/Excel)
-                    </a>
-                    <a href="{{ url_for('admin.import_teachers') }}" class="btn btn-ghost" style="height:40px;justify-content:flex-start;">
-                        <i class="fas fa-file-upload" style="color:var(--accent);"></i> Import Teachers (CSV/Excel)
-                    </a>
-                    <a href="{{ url_for('admin.analytics') }}" class="btn btn-ghost" style="height:40px;justify-content:flex-start;">
-                        <i class="fas fa-chart-pie" style="color:var(--blue);"></i> View Analytics
-                    </a>
-                    <a href="{{ url_for('admin.student_reports') }}" class="btn btn-primary" style="height:40px;justify-content:flex-start;">
-                        <i class="fas fa-file-alt"></i> Generate Reports
-                    </a>
-                    <a href="{{ url_for('admin.admin_profile') }}" class="btn btn-ghost" style="height:40px;justify-content:flex-start;">
-                        <i class="fas fa-user-circle" style="color:var(--ink-3);"></i> Admin Profile
-                    </a>
-                    <a href="{{ url_for('admin.admin_settings') }}" class="btn btn-ghost" style="height:40px;justify-content:flex-start;">
-                        <i class="fas fa-cog" style="color:var(--ink-3);"></i> Platform Settings
-                    </a>
-                </div>
+            <div class="db-panel-body">
+                <a href="{{ url_for('admin.import_students') }}" class="db-tool-btn tb-purple">
+                    <i class="fas fa-file-upload"></i> Import students
+                </a>
+                <a href="{{ url_for('admin.import_teachers') }}" class="db-tool-btn tb-purple">
+                    <i class="fas fa-file-upload"></i> Import teachers
+                </a>
+                <a href="{{ url_for('admin.analytics') }}" class="db-tool-btn tb-teal">
+                    <i class="fas fa-chart-pie"></i> View analytics
+                </a>
+                <a href="{{ url_for('admin.student_reports') }}" class="db-tool-btn tb-dark">
+                    <i class="fas fa-file-alt"></i> Generate reports
+                </a>
             </div>
         </div>
+    </div>
 
-        <!-- Student performance insights (if present) -->
-        {% if student_insights %}
-        <div class="card">
-            <div class="card-head">
-                <div class="card-head-left">
-                    <div class="card-head-icon"><i class="fas fa-lightbulb"></i></div>
-                    <span class="card-title">Student Performance Insights</span>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="three-col">
-                    {% for student in student_insights %}
-                    <div style="border:1px solid var(--border);border-radius:var(--radius);padding:16px;background:var(--surface-2);">
-                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-                            <div class="av">{{ student.name[0]|upper }}</div>
-                            <div>
-                                <div style="font-weight:700;font-size:13.5px;color:var(--ink);">{{ student.name }}</div>
-                                <div style="font-size:12px;color:var(--ink-3);">{{ student.class_name }} · #{{ student.admission_number }}</div>
-                            </div>
-                        </div>
-                        <div style="display:flex;gap:8px;margin-bottom:12px;">
-                            <div class="stat-item" style="flex:1;">
-                                <div class="stat-item-label">Avg Score</div>
-                                <div class="stat-item-value" style="font-size:18px;">{{ student.avg_score }}%</div>
-                            </div>
-                            <div class="stat-item" style="flex:1;">
-                                <div class="stat-item-label">Pass Rate</div>
-                                <div class="stat-item-value" style="font-size:18px;">{{ student.pass_rate }}%</div>
-                            </div>
-                        </div>
-                        <div style="margin-bottom:8px;">
-                            <span style="font-size:12px;font-weight:600;color:var(--ink-3);">Trend: </span>
-                            {% if student.trend == 'improving' %}
-                            <span class="badge badge-green">Improving</span>
-                            {% elif student.trend == 'declining' %}
-                            <span class="badge badge-red">Declining</span>
-                            {% else %}
-                            <span class="badge badge-amber">Stable</span>
-                            {% endif %}
-                        </div>
-                        {% if student.key_insights %}
-                        <div style="font-size:12px;font-weight:600;color:var(--ink-3);margin-bottom:4px;">Key Insights</div>
-                        {% for insight in student.key_insights %}
-                        <div style="display:flex;gap:6px;font-size:12.5px;color:var(--ink-2);margin-bottom:3px;">
-                            <i class="fas fa-check-circle" style="color:var(--green);margin-top:3px;font-size:11px;flex-shrink:0;"></i>{{ insight }}
-                        </div>
-                        {% endfor %}
-                        {% endif %}
-                        {% if student.concerns %}
-                        <div style="font-size:12px;font-weight:600;color:var(--ink-3);margin:8px 0 4px;">Concerns</div>
-                        {% for concern in student.concerns %}
-                        <div style="display:flex;gap:6px;font-size:12.5px;color:var(--ink-2);margin-bottom:3px;">
-                            <i class="fas fa-exclamation-circle" style="color:var(--amber);margin-top:3px;font-size:11px;flex-shrink:0;"></i>{{ concern }}
-                        </div>
-                        {% endfor %}
-                        {% endif %}
-                        {% if student.recommendations %}
-                        <div style="font-size:12px;font-weight:600;color:var(--ink-3);margin:8px 0 4px;">Recommendations</div>
-                        {% for rec in student.recommendations %}
-                        <div style="display:flex;gap:6px;font-size:12.5px;color:var(--ink-2);margin-bottom:3px;">
-                            <i class="fas fa-lightbulb" style="color:var(--blue);margin-top:3px;font-size:11px;flex-shrink:0;"></i>{{ rec }}
-                        </div>
-                        {% endfor %}
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-    </main>
-</div><!-- end adm-wrapper -->
-
-{% endblock full_page %}
+</div>
+{% endblock %}
 
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='vendor/js/chart.umd.js') }}"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+(function () {
+    var canvas = document.getElementById('performanceChart');
+    if (!canvas) return;
 
-    /* ── Performance chart ── */
-    const canvas = document.getElementById('performanceChart');
-    if (canvas) {
-        const ctx = canvas.getContext('2d');
-        const gradient = ctx.createLinearGradient(0, 0, 0, 220);
-        gradient.addColorStop(0,   'rgba(79,70,229,.18)');
-        gradient.addColorStop(0.6, 'rgba(79,70,229,.05)');
-        gradient.addColorStop(1,   'rgba(79,70,229,0)');
+    var ctx = canvas.getContext('2d');
+    var grad = ctx.createLinearGradient(0, 0, 0, 180);
+    grad.addColorStop(0,   'rgba(102,126,234,0.35)');
+    grad.addColorStop(0.6, 'rgba(102,126,234,0.10)');
+    grad.addColorStop(1,   'rgba(102,126,234,0.00)');
 
-        new Chart(canvas, {
-            type: 'line',
-            data: {
-                labels: ['Week 1','Week 2','Week 3','Week 4','Week 5'],
-                datasets: [{
-                    label: 'Avg Score (%)',
-                    data: [65,70,75,72,78],
-                    borderColor: '#4f46e5',
-                    backgroundColor: gradient,
-                    tension: 0.4,
-                    fill: true,
-                    pointRadius: 5,
-                    pointHoverRadius: 7,
-                    pointBackgroundColor: '#4f46e5',
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2,
-                    borderWidth: 2.5
-                }]
+    new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: ['Wk 1', 'Wk 2', 'Wk 3', 'Wk 4', 'Wk 5'],
+            datasets: [{
+                label: 'Avg Score (%)',
+                data: [65, 70, 75, 72, 78],
+                borderColor: '#667eea',
+                backgroundColor: grad,
+                tension: 0.4,
+                fill: true,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: '#667eea',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1a1a2e',
+                    titleColor: '#fff',
+                    bodyColor: '#a0aec0',
+                    padding: 10,
+                    borderColor: '#667eea',
+                    borderWidth: 1,
+                    displayColors: false,
+                    titleFont: { size: 11, weight: '600' },
+                    bodyFont: { size: 12, weight: '700' },
+                    callbacks: {
+                        label: function(c) { return c.parsed.y + '%'; }
+                    }
+                }
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: '#111827',
-                        titleColor: '#fff',
-                        bodyColor: '#e5e7eb',
-                        padding: 10,
-                        borderColor: '#4f46e5',
-                        borderWidth: 1,
-                        displayColors: false,
-                        callbacks: { label: c => c.parsed.y + '%' }
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    min: 50,
+                    max: 100,
+                    grid: { color: 'rgba(0,0,0,0.05)', drawBorder: false },
+                    ticks: {
+                        font: { size: 10 },
+                        color: '#9aa3b0',
+                        callback: function(v) { return v + '%'; }
                     }
                 },
-                scales: {
-                    y: {
-                        beginAtZero: false, min: 50, max: 100,
-                        grid: { color: 'rgba(0,0,0,.05)', drawBorder: false },
-                        ticks: { font: { family:"'DM Mono',monospace", size:11 }, color:'#9ca3af', callback: v => v+'%' },
-                        border: { display: false }
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { font: { family:"'DM Sans',sans-serif", size:12 }, color:'#9ca3af' },
-                        border: { display: false }
-                    }
-                },
-                interaction: { intersect: false, mode: 'index' }
-            }
-        });
-    }
-
-    /* ── Animate score bars ── */
-    document.querySelectorAll('.score-bar-fill').forEach(bar => {
-        const target = bar.style.width;
-        bar.style.width = '0%';
-        setTimeout(() => { bar.style.width = target; }, 400);
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { size: 10 }, color: '#9aa3b0' }
+                }
+            },
+            interaction: { intersect: false, mode: 'index' }
+        }
     });
-});
+}());
 </script>
 {% endblock %}

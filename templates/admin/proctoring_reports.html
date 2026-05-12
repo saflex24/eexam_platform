@@ -2,145 +2,271 @@
 
 {% block title %}Proctoring Reports - E-Exam Platform{% endblock %}
 
+{% block extra_css %}
+<style>
+    :root {
+        --navy:   #0f1e3c;
+        --accent: #3b82f6;
+        --cyan:   #06b6d4;
+        --green:  #10b981;
+        --amber:  #f59e0b;
+        --red:    #ef4444;
+        --purple: #8b5cf6;
+        --slate:  #64748b;
+        --border: #e2e8f0;
+        --bg:     #f1f5f9;
+        --card:   #ffffff;
+        --text:   #1e293b;
+        --muted:  #94a3b8;
+        --radius: 6px;
+        --sh:     0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
+    }
+
+    .pr-wrap { padding: 12px 16px; background: var(--bg); min-height: 100vh; }
+
+    /* header */
+    .pr-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:10px; }
+    .pr-header h5 { font-size:.9rem; font-weight:700; color:var(--navy); margin:0; letter-spacing:-.2px; }
+    .pr-header h5 i { color:var(--red); margin-right:5px; font-size:.85rem; }
+    .pr-header p  { font-size:.67rem; color:var(--muted); margin:2px 0 0; }
+
+    /* stat strip */
+    .stat-strip { display:grid; grid-template-columns:repeat(6,1fr); gap:7px; margin-bottom:10px; }
+    @media(max-width:900px){ .stat-strip{ grid-template-columns:repeat(3,1fr); } }
+    @media(max-width:560px){ .stat-strip{ grid-template-columns:repeat(2,1fr); } }
+
+    .sbox {
+        background:var(--card); border:1px solid var(--border);
+        border-radius:var(--radius); padding:8px 11px;
+        display:flex; flex-direction:column; gap:1px;
+        box-shadow:var(--sh); position:relative; overflow:hidden;
+    }
+    .sbox::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+    .sbox.c1::before { background:var(--accent); }
+    .sbox.c2::before { background:var(--red); }
+    .sbox.c3::before { background:var(--amber); }
+    .sbox.c4::before { background:var(--cyan); }
+    .sbox.c5::before { background:var(--slate); }
+    .sbox.c6::before { background:var(--navy); }
+
+    .sbox-val   { font-size:1.3rem; font-weight:800; line-height:1.1; font-variant-numeric:tabular-nums; color:var(--text); }
+    .sbox-label { font-size:.58rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); }
+    .sbox.c1 .sbox-val { color:var(--accent); }
+    .sbox.c2 .sbox-val { color:var(--red); }
+    .sbox.c3 .sbox-val { color:var(--amber); }
+    .sbox.c4 .sbox-val { color:var(--cyan); }
+    .sbox.c5 .sbox-val { color:var(--slate); }
+    .sbox.c6 .sbox-val { color:var(--navy); }
+
+    /* card */
+    .pc { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--sh); overflow:hidden; margin-bottom:8px; }
+    .pc-head {
+        display:flex; align-items:center; justify-content:space-between;
+        padding:6px 11px; border-bottom:1px solid var(--border);
+    }
+    .pc-head span { font-size:.7rem; font-weight:700; color:#fff; display:flex; align-items:center; gap:5px; }
+    .pc-head.navy  { background:var(--navy); }
+    .pc-head.red   { background:#7f1d1d; }
+    .pc-head.slate { background:#1e293b; }
+    .pc-body { padding:8px 12px; }
+    .pc-body-p0 { padding:0; }
+
+    /* filter bar */
+    .filter-bar {
+        display:flex; gap:7px; flex-wrap:wrap; align-items:flex-end;
+        padding:8px 12px;
+    }
+    .filter-bar .fg { flex:1; min-width:110px; }
+    .filter-bar .fg-sm { min-width:90px; flex:0 0 120px; }
+    .filter-bar label { font-size:.6rem; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--slate); display:block; margin-bottom:2px; }
+    .filter-bar .form-select,
+    .filter-bar .form-control {
+        font-size:.71rem; padding:3px 7px; height:27px;
+        border:1px solid var(--border); border-radius:4px;
+        color:var(--text); background:var(--bg);
+    }
+    .filter-actions { display:flex; gap:5px; align-self:flex-end; }
+    .btn-f {
+        height:27px; padding:0 11px; font-size:.68rem; font-weight:600;
+        border:none; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;
+        text-decoration:none; transition:opacity .15s; white-space:nowrap;
+    }
+    .btn-f:hover { opacity:.85; }
+    .btn-f.primary { background:var(--accent); color:#fff; }
+    .btn-f.secondary { background:#e2e8f0; color:var(--slate); }
+    .btn-f.success { background:var(--green); color:#fff; }
+
+    /* table */
+    .pt { width:100%; border-collapse:collapse; font-size:.71rem; }
+    .pt thead th {
+        font-size:.6rem; font-weight:700; text-transform:uppercase; letter-spacing:.4px;
+        color:var(--muted); padding:4px 8px; border-bottom:1px solid var(--border);
+        white-space:nowrap; background:#fafbfc;
+    }
+    .pt tbody td { padding:4px 8px; color:var(--text); border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+    .pt tbody tr:last-child td { border-bottom:none; }
+    .pt tbody tr:hover td { background:#f8fafc; }
+
+    /* violation type badges */
+    .vb { font-size:.58rem; font-weight:700; padding:2px 6px; border-radius:3px; white-space:nowrap; }
+    .vb-danger  { background:#fee2e2; color:#991b1b; }
+    .vb-warning { background:#fef3c7; color:#92400e; }
+    .vb-info    { background:#e0f2fe; color:#0c4a6e; }
+    .vb-slate   { background:#f1f5f9; color:#475569; }
+    .vb-dark    { background:#e2e8f0; color:#1e293b; }
+
+    /* severity badges */
+    .sv { font-size:.58rem; font-weight:700; padding:2px 6px; border-radius:3px; }
+    .sv-high   { background:#fee2e2; color:#991b1b; }
+    .sv-medium { background:#fef3c7; color:#92400e; }
+    .sv-low    { background:#e0f2fe; color:#0c4a6e; }
+
+    /* action link */
+    .act-link {
+        font-size:.65rem; font-weight:600; color:var(--accent);
+        text-decoration:none; display:inline-flex; align-items:center; gap:3px;
+    }
+    .act-link:hover { text-decoration:underline; color:var(--accent); }
+
+    /* empty */
+    .empty { text-align:center; padding:24px; color:var(--muted); font-size:.72rem; }
+    .empty i { display:block; font-size:1.3rem; margin-bottom:5px; }
+
+    /* pagination */
+    .pg { display:flex; gap:3px; flex-wrap:wrap; padding:8px 12px; border-top:1px solid var(--border); }
+    .pg a, .pg span {
+        font-size:.65rem; font-weight:600; padding:3px 8px;
+        border:1px solid var(--border); border-radius:4px;
+        text-decoration:none; color:var(--slate); background:var(--card);
+        display:inline-block; transition:background .12s;
+    }
+    .pg a:hover { background:var(--bg); color:var(--text); }
+    .pg .active span, .pg .pg-active { background:var(--accent); color:#fff; border-color:var(--accent); }
+    .pg .disabled span, .pg .pg-disabled { color:var(--muted); background:#fafbfc; cursor:default; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid mt-4">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h2><i class="fas fa-shield-alt"></i> Proctoring Reports</h2>
-            <p class="text-muted">Monitor exam integrity and proctoring violations</p>
+<div class="pr-wrap">
+
+    <!-- HEADER -->
+    <div class="pr-header">
+        <div>
+            <h5><i class="fas fa-shield-alt"></i> Proctoring Reports</h5>
+            <p>Monitor exam integrity and proctoring violations</p>
         </div>
     </div>
 
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-md-2">
-            <div class="card text-white bg-primary">
-                <div class="card-body">
-                    <h6>Total Violations</h6>
-                    <h3>{{ stats.total_violations }}</h3>
-                </div>
-            </div>
+    <!-- STAT STRIP -->
+    <div class="stat-strip">
+        <div class="sbox c1">
+            <div class="sbox-val">{{ stats.total_violations }}</div>
+            <div class="sbox-label">Total Violations</div>
         </div>
-        <div class="col-md-2">
-            <div class="card text-white bg-danger">
-                <div class="card-body">
-                    <h6>Face Not Visible</h6>
-                    <h3>{{ stats.face_not_visible }}</h3>
-                </div>
-            </div>
+        <div class="sbox c2">
+            <div class="sbox-val">{{ stats.face_not_visible }}</div>
+            <div class="sbox-label">Face Not Visible</div>
         </div>
-        <div class="col-md-2">
-            <div class="card text-white bg-warning">
-                <div class="card-body">
-                    <h6>Multiple Faces</h6>
-                    <h3>{{ stats.multiple_faces }}</h3>
-                </div>
-            </div>
+        <div class="sbox c3">
+            <div class="sbox-val">{{ stats.multiple_faces }}</div>
+            <div class="sbox-label">Multiple Faces</div>
         </div>
-        <div class="col-md-2">
-            <div class="card text-white bg-info">
-                <div class="card-body">
-                    <h6>Tab Switch</h6>
-                    <h3>{{ stats.tab_switch }}</h3>
-                </div>
-            </div>
+        <div class="sbox c4">
+            <div class="sbox-val">{{ stats.tab_switch }}</div>
+            <div class="sbox-label">Tab Switch</div>
         </div>
-        <div class="col-md-2">
-            <div class="card text-white bg-secondary">
-                <div class="card-body">
-                    <h6>Fullscreen Exit</h6>
-                    <h3>{{ stats.fullscreen_exit }}</h3>
-                </div>
-            </div>
+        <div class="sbox c5">
+            <div class="sbox-val">{{ stats.fullscreen_exit }}</div>
+            <div class="sbox-label">Fullscreen Exit</div>
         </div>
-        <div class="col-md-2">
-            <div class="card text-white bg-dark">
-                <div class="card-body">
-                    <h6>Suspicious Activity</h6>
-                    <h3>{{ stats.suspicious_activity }}</h3>
-                </div>
-            </div>
+        <div class="sbox c6">
+            <div class="sbox-val">{{ stats.suspicious_activity }}</div>
+            <div class="sbox-label">Suspicious Activity</div>
         </div>
     </div>
 
-    <!-- Filters -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5><i class="fas fa-filter"></i> Filters</h5>
+    <!-- FILTERS -->
+    <div class="pc">
+        <div class="pc-head navy">
+            <span><i class="fas fa-filter"></i> Filters</span>
         </div>
-        <div class="card-body">
-            <form method="GET" action="{{ url_for('admin.proctoring_reports') }}">
-                <div class="row">
-                    <div class="col-md-3">
-                        <label>Exam</label>
-                        <select name="exam_id" class="form-select">
-                            <option value="">All Exams</option>
-                            {% for exam in exams %}
-                            <option value="{{ exam.id }}" {% if filters.exam_id == exam.id %}selected{% endif %}>
-                                {{ exam.title }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label>Student</label>
-                        <select name="student_id" class="form-select">
-                            <option value="">All Students</option>
-                            {% for student in students %}
-<option value="{{ student.id }}">
-    {{ student.full_name }}  <!-- ✅ Fixed -->
-</option>
-{% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label>Violation Type</label>
-                        <select name="violation_type" class="form-select">
-                            <option value="">All Types</option>
-                            {% for vtype in violation_types %}
-                            <option value="{{ vtype }}" {% if filters.violation_type == vtype %}selected{% endif %}>
-                                {{ vtype.replace('_', ' ').title() }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label>Date From</label>
-                        <input type="date" name="date_from" class="form-control" value="{{ filters.date_from }}">
-                    </div>
-                    <div class="col-md-2">
-                        <label>Date To</label>
-                        <input type="date" name="date_to" class="form-control" value="{{ filters.date_to }}">
-                    </div>
+        <form method="GET" action="{{ url_for('admin.proctoring_reports') }}">
+            <div class="filter-bar">
+                <div class="fg">
+                    <label>Exam</label>
+                    <select name="exam_id" class="form-select">
+                        <option value="">All Exams</option>
+                        {% for exam in exams %}
+                        <option value="{{ exam.id }}"
+                            {% if filters.exam_id == exam.id %}selected{% endif %}>
+                            {{ exam.title }}
+                        </option>
+                        {% endfor %}
+                    </select>
                 </div>
-                <div class="row mt-3">
-                    <div class="col-12">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search"></i> Apply Filters
-                        </button>
-                        <a href="{{ url_for('admin.proctoring_reports') }}" class="btn btn-secondary">
-                            <i class="fas fa-redo"></i> Reset
-                        </a>
-                        {% if filters.exam_id %}
-                        <a href="{{ url_for('admin.export_proctoring_report', exam_id=filters.exam_id) }}" 
-                           class="btn btn-success">
-                            <i class="fas fa-file-excel"></i> Export to Excel
-                        </a>
-                        {% endif %}
-                    </div>
+                <div class="fg">
+                    <label>Student</label>
+                    <select name="student_id" class="form-select">
+                        <option value="">All Students</option>
+                        {% for student in students %}
+                        <option value="{{ student.id }}"
+                            {% if filters.student_id == student.id %}selected{% endif %}>
+                            {{ student.full_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
                 </div>
-            </form>
-        </div>
+                <div class="fg">
+                    <label>Violation Type</label>
+                    <select name="violation_type" class="form-select">
+                        <option value="">All Types</option>
+                        {% for vtype in violation_types %}
+                        <option value="{{ vtype }}"
+                            {% if filters.violation_type == vtype %}selected{% endif %}>
+                            {{ vtype.replace('_', ' ').title() }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="fg-sm">
+                    <label>Date From</label>
+                    <input type="date" name="date_from" class="form-control"
+                           value="{{ filters.date_from or '' }}">
+                </div>
+                <div class="fg-sm">
+                    <label>Date To</label>
+                    <input type="date" name="date_to" class="form-control"
+                           value="{{ filters.date_to or '' }}">
+                </div>
+                <div class="filter-actions">
+                    <button type="submit" class="btn-f primary">
+                        <i class="fas fa-search" style="font-size:.6rem;"></i> Apply
+                    </button>
+                    <a href="{{ url_for('admin.proctoring_reports') }}" class="btn-f secondary">
+                        <i class="fas fa-redo" style="font-size:.6rem;"></i> Reset
+                    </a>
+                    {% if filters.exam_id %}
+                    <a href="{{ url_for('admin.export_proctoring_report', exam_id=filters.exam_id) }}"
+                       class="btn-f success">
+                        <i class="fas fa-file-excel" style="font-size:.6rem;"></i> Export
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
     </div>
 
-    <!-- Violations Table -->
-    <div class="card">
-        <div class="card-header">
-            <h5><i class="fas fa-list"></i> Proctoring Violations</h5>
+    <!-- VIOLATIONS TABLE -->
+    <div class="pc">
+        <div class="pc-head slate">
+            <span><i class="fas fa-list"></i> Proctoring Violations</span>
+            <span style="font-size:.62rem;font-weight:500;opacity:.7;">
+                {% if logs.total is defined %}{{ logs.total }} record{{ 's' if logs.total != 1 }}{% endif %}
+            </span>
         </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
+        <div class="pc-body-p0">
+            <div style="overflow-x:auto;">
+                <table class="pt">
                     <thead>
                         <tr>
                             <th>Timestamp</th>
@@ -149,100 +275,129 @@
                             <th>Violation Type</th>
                             <th>Severity</th>
                             <th>Details</th>
-                            <th>Actions</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
-    {% for log in logs.items %}
-    <tr>
-        <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-        <td>
-            {% if log.student_user %}
-                {{ log.student_user.full_name }}
-            {% else %}
-                Unknown
-            {% endif %}
-        </td>
-        <td>
-            {% if log.exam %}
-                {{ log.exam.title }}
-            {% else %}
-                Unknown Exam
-            {% endif %}
-        </td>
-        <td>
-            <span class="badge 
-                {% if log.violation_type == 'face_not_visible' %}bg-danger
-                {% elif log.violation_type == 'multiple_faces' %}bg-warning
-                {% elif log.violation_type == 'tab_switch' %}bg-info
-                {% elif log.violation_type == 'fullscreen_exit' %}bg-secondary
-                {% else %}bg-dark{% endif %}">
-                {{ (log.violation_type or '').replace('_', ' ').title() or 'No Violation' }}
-
-
-            </span>
-        </td>
-        <td>
-            {% if log.severity == 'high' %}
-            <span class="badge bg-danger">HIGH</span>
-            {% elif log.severity == 'medium' %}
-            <span class="badge bg-warning">MEDIUM</span>
-            {% else %}
-            <span class="badge bg-info">LOW</span>
-            {% endif %}
-        </td>
-        <td>{{ (log.details[:50] + '...') if log.details and log.details|length > 50 else (log.details or 'N/A') }}</td>
-        <td>
-            <!-- Change FROM: Complex logic with student_profile.id -->
-   
-   <!-- TO: Simple check -->
-   {% if log.student_user and log.exam %}
-       <a href="{{ url_for('admin.student_proctoring_detail', 
-                  student_id=log.student_user.id, 
-                  exam_id=log.exam.id) }}">
-   {% endif %}
-        </td>
-    </tr>
-    {% else %}
-    <tr>
-        <td colspan="7" class="text-center text-muted py-4">
-            <i class="fas fa-info-circle"></i> No proctoring violations found
-        </td>
-    </tr>
-    {% endfor %}
-</tbody>
+                        {% for log in logs.items %}
+                        <tr>
+                            <td style="white-space:nowrap;color:var(--muted);">
+                                {{ log.timestamp.strftime('%d %b %Y, %H:%M') }}
+                            </td>
+                            <td style="font-weight:600;">
+                                {% if log.student_user %}
+                                    {{ log.student_user.full_name }}
+                                {% else %}
+                                    <span style="color:var(--muted);">Unknown</span>
+                                {% endif %}
+                            </td>
+                            <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--slate);">
+                                {% if log.exam %}{{ log.exam.title }}{% else %}<span style="color:var(--muted);">Unknown Exam</span>{% endif %}
+                            </td>
+                            <td>
+                                {% set vt = (log.violation_type or '') %}
+                                <span class="vb
+                                    {% if vt == 'face_not_visible' %}vb-danger
+                                    {% elif vt == 'multiple_faces' %}vb-warning
+                                    {% elif vt == 'tab_switch' %}vb-info
+                                    {% elif vt == 'fullscreen_exit' %}vb-slate
+                                    {% else %}vb-dark{% endif %}">
+                                    {{ vt.replace('_', ' ').title() or 'N/A' }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if log.severity == 'high' %}
+                                <span class="sv sv-high">HIGH</span>
+                                {% elif log.severity == 'medium' %}
+                                <span class="sv sv-medium">MED</span>
+                                {% else %}
+                                <span class="sv sv-low">LOW</span>
+                                {% endif %}
+                            </td>
+                            <td style="max-width:180px;color:var(--slate);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                                title="{{ log.details or '' }}">
+                                {{ (log.details[:55] + '…') if log.details and log.details|length > 55 else (log.details or '—') }}
+                            </td>
+                            <td>
+                                {% if log.student_user and log.exam %}
+                                <a href="{{ url_for('admin.student_proctoring_detail',
+                                           student_id=log.student_user.id,
+                                           exam_id=log.exam.id) }}"
+                                   class="act-link">
+                                    <i class="fas fa-eye" style="font-size:.6rem;"></i> View
+                                </a>
+                                {% else %}
+                                <span style="color:var(--muted);font-size:.65rem;">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7">
+                                <div class="empty">
+                                    <i class="fas fa-shield-alt"></i>
+                                    No proctoring violations found
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
                 </table>
             </div>
 
-            <!-- Pagination -->
+            <!-- PAGINATION -->
             {% if logs.pages > 1 %}
-            <nav>
-                <ul class="pagination">
-                    <li class="page-item {% if not logs.has_prev %}disabled{% endif %}">
-                        <a class="page-link" href="{{ url_for('admin.proctoring_reports', page=logs.prev_num) }}">
-                            Previous
-                        </a>
-                    </li>
-                    {% for page_num in logs.iter_pages() %}
-                        {% if page_num %}
-                            <li class="page-item {% if page_num == logs.page %}active{% endif %}">
-                                <a class="page-link" href="{{ url_for('admin.proctoring_reports', page=page_num) }}">
-                                    {{ page_num }}
-                                </a>
-                            </li>
+            <div class="pg">
+                {# Previous #}
+                {% if logs.has_prev %}
+                <a href="{{ url_for('admin.proctoring_reports', page=logs.prev_num,
+                           exam_id=filters.exam_id or '',
+                           student_id=filters.student_id or '',
+                           violation_type=filters.violation_type or '',
+                           date_from=filters.date_from or '',
+                           date_to=filters.date_to or '') }}">
+                    <i class="fas fa-chevron-left" style="font-size:.55rem;"></i> Prev
+                </a>
+                {% else %}
+                <span class="pg-disabled"><i class="fas fa-chevron-left" style="font-size:.55rem;"></i> Prev</span>
+                {% endif %}
+
+                {# Page numbers #}
+                {% for page_num in logs.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}
+                        {% if page_num == logs.page %}
+                        <span class="pg-active">{{ page_num }}</span>
                         {% else %}
-                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        <a href="{{ url_for('admin.proctoring_reports', page=page_num,
+                                   exam_id=filters.exam_id or '',
+                                   student_id=filters.student_id or '',
+                                   violation_type=filters.violation_type or '',
+                                   date_from=filters.date_from or '',
+                                   date_to=filters.date_to or '') }}">{{ page_num }}</a>
                         {% endif %}
-                    {% endfor %}
-                    <li class="page-item {% if not logs.has_next %}disabled{% endif %}">
-                        <a class="page-link" href="{{ url_for('admin.proctoring_reports', page=logs.next_num) }}">
-                            Next
-                        </a>
-                    </li>
-                </ul>
-            </nav>
+                    {% else %}
+                    <span class="pg-disabled">…</span>
+                    {% endif %}
+                {% endfor %}
+
+                {# Next #}
+                {% if logs.has_next %}
+                <a href="{{ url_for('admin.proctoring_reports', page=logs.next_num,
+                           exam_id=filters.exam_id or '',
+                           student_id=filters.student_id or '',
+                           violation_type=filters.violation_type or '',
+                           date_from=filters.date_from or '',
+                           date_to=filters.date_to or '') }}">
+                    Next <i class="fas fa-chevron-right" style="font-size:.55rem;"></i>
+                </a>
+                {% else %}
+                <span class="pg-disabled">Next <i class="fas fa-chevron-right" style="font-size:.55rem;"></i></span>
+                {% endif %}
+            </div>
             {% endif %}
+
         </div>
     </div>
-</div>
+
+</div>{# /pr-wrap #}
 {% endblock %}

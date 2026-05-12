@@ -28,7 +28,7 @@ def dashboard():
     results = ExamResult.query.filter_by(student_id=current_user.id).all()
     
     if results:
-        avg_score = round(sum(r.percentage for r in results) / len(results), 1)
+        avg_score = round(sum(r.percentage for r in results) / len(results), 2)
     else:
         avg_score = 0.0
     
@@ -51,7 +51,7 @@ def dashboard():
         student_avgs = []
         for s in class_students:
             s_results = ExamResult.query.filter_by(student_id=s.user_id).all()
-            s_avg = sum(r.percentage for r in s_results) / len(s_results) if s_results else 0
+            s_avg = round(sum(r.percentage for r in s_results) / len(s_results), 2) if s_results else 0.00
             student_avgs.append((s.user_id, s_avg))
         
         student_avgs.sort(key=lambda x: x[1], reverse=True)
@@ -1064,7 +1064,7 @@ def class_ranking():
                 if results:
                     total_m   = sum(r.marks_obtained or 0 for r in results)
                     total_p   = sum(r.total_marks    or 0 for r in results)
-                    avg_pct   = (total_m / total_p * 100) if total_p > 0 else 0
+                    avg_pct   = round((total_m / total_p * 100), 2) if total_p > 0 else 0.00
                     exam_count = len(results)
                 else:
                     total_m = avg_pct = exam_count = 0

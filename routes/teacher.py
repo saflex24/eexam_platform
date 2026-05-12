@@ -1168,6 +1168,10 @@ def exam_results(exam_id):
         flash(f'Error loading exam results: {str(e)}', 'danger')
         return redirect(url_for('teacher.dashboard'))
 
+# ── PATCH: replace the existing result_details route in teacher.py ──────────────
+# The only change vs the original is fetching all_questions and building
+# answer_map so the template can render every question, including unattempted ones.
+
 @teacher_bp.route('/result/<int:result_id>/details')
 @teacher_required
 def result_details(result_id):
@@ -1179,28 +1183,48 @@ def result_details(result_id):
 
         student_user    = User.query.get(result.student_id)
         student_profile = Student.query.filter_by(user_id=result.student_id).first()
-        answers         = StudentAnswer.query.filter_by(exam_session_id=result.exam_session_id).all()
-        all_questions   = Question.query.filter_by(exam_id=result.exam_id).all()
-        total_questions = len(all_questions)
-        answered_count  = len(answers)
-        unattempted_count = total_questions - answered_count
-        correct_count   = sum(1 for a in answers if a.is_correct == True)
-        incorrect_count = sum(1 for a in answers if a.is_correct == False)
         exam_session    = ExamSession.query.get(result.exam_session_id)
 
+        # Fetch every question for this exam (needed to show unattempted questions)
+        all_questions = (
+            Question.query
+            .filter_by(exam_id=result.exam_id)
+            .order_by(Question.order)
+            .all()
+        )
+
+        # Fetch only the answered questions
+        answers = StudentAnswer.query.filter_by(
+            exam_session_id=result.exam_session_id
+        ).all()
+
+        # Build a lookup dict so the template can resolve answer by question_id in O(1)
+        answer_map = {a.question_id: a for a in answers}
+
+        total_questions   = len(all_questions)
+        answered_count    = len(answers)
+        unattempted_count = total_questions - answered_count
+        correct_count     = sum(1 for a in answers if a.is_correct is True)
+        incorrect_count   = sum(1 for a in answers if a.is_correct is False)
+
+        # Patch transient attributes so the template's result.correct_answers etc. work
         result.correct_answers   = correct_count
         result.incorrect_answers = incorrect_count
         result.unattempted       = unattempted_count
 
-        return render_template('teacher/result_details.html',
-                             result=result,
-                             student_user=student_user,
-                             student_profile=student_profile,
-                             answers=answers,
-                             exam_session=exam_session,
-                             correct_count=correct_count,
-                             incorrect_count=incorrect_count,
-                             unattempted_count=unattempted_count)
+        return render_template(
+            'teacher/result_details.html',
+            result=result,
+            student_user=student_user,
+            student_profile=student_profile,
+            answers=answers,           # kept for backward compat
+            answer_map=answer_map,     # NEW: used by the redesigned template
+            all_questions=all_questions,  # NEW: full ordered question list
+            exam_session=exam_session,
+            correct_count=correct_count,
+            incorrect_count=incorrect_count,
+            unattempted_count=unattempted_count,
+        )
     except Exception as e:
         print(f"ERROR in result_details: {str(e)}")
         import traceback
@@ -1368,18 +1392,9 @@ def analytics_performance():
 
 
 def _enrich_recent_submissions(raw_results):
-    """
-    FIX 3 HELPER: Convert raw ExamResult rows into enriched dicts that the
-    template can safely access.  Replaces the previous pattern of accessing
-    result.student (which is not a mapped relationship on ExamResult).
-    """
     enriched = []
     for r in raw_results:
-        # Look up the student User row
         student_user = User.query.get(r.student_id)
-
-        # Look up the exam — use the mapped relationship if it exists,
-        # otherwise fall back to a direct query so we never crash
         exam_obj = None
         if hasattr(r, 'exam') and r.exam is not None:
             exam_obj = r.exam
@@ -1387,9 +1402,14 @@ def _enrich_recent_submissions(raw_results):
             exam_obj = Exam.query.get(r.exam_id)
 
         enriched.append({
-            'result':       r,
-            'student':      student_user,   # User object (has .full_name)
-            'exam':         exam_obj,        # Exam object (has .title)
+            'result':        r,
+            'student':       student_user,
+            'exam':          exam_obj,
+            # Flat convenience fields so the template doesn't need result.result.*
+            'submitted_at':  r.submitted_at,
+            'percentage':    r.percentage,
+            'grade':         r.grade,
+            'is_passed':     r.is_passed,
         })
     return enriched
 

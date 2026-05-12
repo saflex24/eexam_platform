@@ -1,426 +1,421 @@
 {% extends "base.html" %}
-
-{% block title %}Teacher Dashboard - E-Exam Platform{% endblock %}
-
-{% block content %}
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h2><i class="fas fa-tachometer-alt"></i> Teacher Dashboard</h2>
-            <p class="text-muted">Welcome back, {{ current_user.first_name }}!</p>
-        </div>
-    </div>
-
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <!-- Total Exams -->
-        <div class="col-md-3 mb-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-white-50 mb-1">Total Exams</h6>
-                            <h2 class="mb-0">{{ total_exams }}</h2>
-                        </div>
-                        <div class="fs-1 text-white-50">
-                            <i class="fas fa-file-alt"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer bg-primary-dark">
-                    <small>
-                        <i class="fas fa-check-circle"></i> {{ published_exams }} Published | 
-                        <i class="fas fa-clock"></i> {{ unpublished_exams }} Draft
-                    </small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Total Questions -->
-        <div class="col-md-3 mb-3">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-white-50 mb-1">Total Questions</h6>
-                            <h2 class="mb-0">{{ total_questions }}</h2>
-                        </div>
-                        <div class="fs-1 text-white-50">
-                            <i class="fas fa-question-circle"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer bg-success-dark">
-                    <small>Across all exams</small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Total Students -->
-        <div class="col-md-3 mb-3">
-            <div class="card bg-info text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-white-50 mb-1">Total Students</h6>
-                            <h2 class="mb-0">{{ total_students }}</h2>
-                        </div>
-                        <div class="fs-1 text-white-50">
-                            <i class="fas fa-users"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer bg-info-dark">
-                    <small>In your classes</small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Total Attempts -->
-        <div class="col-md-3 mb-3">
-            <div class="card bg-warning text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-white-50 mb-1">Total Attempts</h6>
-                            <h2 class="mb-0">{{ total_attempts }}</h2>
-                        </div>
-                        <div class="fs-1 text-white-50">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer bg-warning-dark">
-                    <small>
-                        <i class="fas fa-percentage"></i> Avg Score: {{ avg_score }}%
-                    </small>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Recent Exams -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-clock"></i> Recent Exams</h5>
-                    <a href="{{ url_for('teacher.manage_exams') }}" class="btn btn-sm btn-primary">
-                        View All Exams
-                    </a>
-                </div>
-                <div class="card-body">
-                    {% if recent_exams %}
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Title</th>
-                                    <th>Subject</th>
-                                    <th>Questions</th>
-                                    <th>Status</th>
-                                    <th>Created</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for exam in recent_exams %}
-                                <tr>
-                                    <td>
-                                        <strong>{{ exam.title }}</strong><br>
-                                        <small class="text-muted">{{ exam.code }}</small>
-                                    </td>
-                                    <td>{{ exam.subject }}</td>
-                                    <td>
-                                        <span class="badge bg-info">
-                                            {{ exam.total_questions }} questions
-                                        </span>
-                                    </td>
-                                    <td>
-                                        {% if exam.published %}
-                                        <span class="badge bg-success">Published</span>
-                                        {% else %}
-                                        <span class="badge bg-warning">Draft</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ exam.created_at.strftime('%Y-%m-%d') }}</td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <!-- Student Reports Button (NEW) -->
-                                            <a href="{{ url_for('teacher.exam_student_reports', exam_id=exam.id) }}" 
-                                               class="btn btn-outline-success" 
-                                               title="Student Reports">
-                                                <i class="fas fa-file-alt"></i>
-                                            </a>
-                                            
-                                            <!-- Manage Questions -->
-                                            <a href="{{ url_for('teacher.edit_exam_questions', exam_id=exam.id) }}" 
-                                               class="btn btn-outline-primary" 
-                                               title="Manage Questions">
-                                                <i class="fas fa-list"></i>
-                                            </a>
-                                            
-                                            <!-- Edit Exam -->
-                                            <a href="{{ url_for('teacher.edit_exam', exam_id=exam.id) }}" 
-                                               class="btn btn-outline-secondary" 
-                                               title="Edit">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            
-                                            <!-- View Results -->
-                                            <a href="{{ url_for('teacher.exam_results', exam_id=exam.id) }}" 
-                                               class="btn btn-outline-info" 
-                                               title="Results">
-                                                <i class="fas fa-chart-bar"></i>
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <div class="alert alert-info text-center">
-                        <i class="fas fa-info-circle fa-2x mb-2"></i>
-                        <p class="mb-0">No exams created yet. Create your first exam to get started!</p>
-                        <a href="{{ url_for('teacher.create_exam') }}" class="btn btn-primary mt-2">
-                            <i class="fas fa-plus"></i> Create Exam
-                        </a>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Quick Actions Card -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card border-primary">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4 mb-2">
-                            <a href="{{ url_for('teacher.create_exam') }}" class="btn btn-primary w-100">
-                                <i class="fas fa-plus-circle"></i> Create New Exam
-                            </a>
-                        </div>
-                        <div class="col-md-4 mb-2">
-                            <a href="{{ url_for('teacher.manage_exams') }}" class="btn btn-outline-primary w-100">
-                                <i class="fas fa-list"></i> Manage Exams
-                            </a>
-                        </div>
-                        <div class="col-md-4 mb-2">
-                            <button class="btn btn-outline-info w-100" data-bs-toggle="modal" data-bs-target="#helpModal">
-                                <i class="fas fa-question-circle"></i> Help & Guide
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Help Section -->
-    <div class="row mt-4">
-        <div class="col-md-6">
-            <div class="card border-info">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0"><i class="fas fa-graduation-cap"></i> Student Reports Feature</h5>
-                </div>
-                <div class="card-body">
-                    <h6>Generate Professional Exam Reports</h6>
-                    <p class="text-muted mb-2">Create detailed reports for your students:</p>
-                    <ul class="small">
-                        <li>Click the <span class="badge bg-success"><i class="fas fa-file-alt"></i></span> button next to any exam</li>
-                        <li>View all students who took the exam</li>
-                        <li>Download individual or bulk reports as Word documents</li>
-                        <li>Reports include detailed question analysis</li>
-                        <li>Print-ready format (max 4 pages per student)</li>
-                        <li>Includes school branding and student information</li>
-                    </ul>
-                    <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#helpModal">
-                        <i class="fas fa-book"></i> Learn More
-                    </button>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card border-warning">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0"><i class="fas fa-lightbulb"></i> Tips & Best Practices</h5>
-                </div>
-                <div class="card-body">
-                    <h6>Exam Management Tips</h6>
-                    <ul class="small">
-                        <li><strong>Set Clear Pass Percentage:</strong> Define passing criteria before publishing exams</li>
-                        <li><strong>Test Your Exams:</strong> Preview questions before students take them</li>
-                        <li><strong>Monitor Progress:</strong> Check results dashboard regularly</li>
-                        <li><strong>Download Reports:</strong> Keep records of student performance</li>
-                        <li><strong>Bulk Operations:</strong> Use ZIP download for multiple student reports</li>
-                        <li><strong>Print Settings:</strong> Use duplex printing to save paper</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Help Modal -->
-<div class="modal fade" id="helpModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-book"></i> Student Reports - Complete Guide
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <h6 class="text-primary"><i class="fas fa-file-alt"></i> What are Student Reports?</h6>
-                <p>Professional, print-ready exam reports that include:</p>
-                <ul>
-                    <li><strong>School Information:</strong> Logo, name, and contact details</li>
-                    <li><strong>Student Details:</strong> Name, admission number, and class</li>
-                    <li><strong>Exam Information:</strong> Title, subject, date, and duration</li>
-                    <li><strong>Performance Summary:</strong> Marks, percentage, grade, and status</li>
-                    <li><strong>Question Analysis:</strong> Detailed breakdown of each question with correct/incorrect indicators</li>
-                </ul>
-
-                <hr>
-
-                <h6 class="text-primary"><i class="fas fa-download"></i> How to Generate Reports</h6>
-                <ol>
-                    <li>Find the exam in your dashboard</li>
-                    <li>Click the <span class="badge bg-success"><i class="fas fa-file-alt"></i></span> button</li>
-                    <li>You'll see a list of all students who took the exam</li>
-                    <li>Choose one of these options:
-                        <ul>
-                            <li><strong>Individual Report:</strong> Click download button next to student name</li>
-                            <li><strong>Bulk Download:</strong> Click "Download All Reports (ZIP)"</li>
-                            <li><strong>Selected Students:</strong> Check boxes and click "Download Selected"</li>
-                        </ul>
-                    </li>
-                </ol>
-
-                <hr>
-
-                <h6 class="text-primary"><i class="fas fa-print"></i> Printing Tips</h6>
-                <ul>
-                    <li>Reports are optimized for standard Letter or A4 paper</li>
-                    <li>Each report is maximum 4 pages</li>
-                    <li>Works with any printer (color or black & white)</li>
-                    <li>Consider duplex (double-sided) printing to save paper</li>
-                    <li>Multiple reports can be printed at once from ZIP file</li>
-                </ul>
-
-                <hr>
-
-                <h6 class="text-primary"><i class="fas fa-cog"></i> Customization</h6>
-                <p>To customize your reports with school branding:</p>
-                <ol>
-                    <li>Edit the <code>get_school_settings()</code> function in <code>routes/teacher.py</code></li>
-                    <li>Update school name, address, phone, and email</li>
-                    <li>Add your school logo to <code>static/uploads/school_logo.png</code></li>
-                    <li>Reports will automatically use your branding</li>
-                </ol>
-
-                <hr>
-
-                <h6 class="text-primary"><i class="fas fa-check"></i> Report Features</h6>
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6 class="small">For Multiple Choice:</h6>
-                        <ul class="small">
-                            <li>[CORRECT] = Right answer</li>
-                            <li>[X WRONG] = Student's wrong choice</li>
-                            <li>All options are shown</li>
-                        </ul>
-                    </div>
-                    <div class="col-md-6">
-                        <h6 class="small">For Theory Questions:</h6>
-                        <ul class="small">
-                            <li>Student's answer displayed</li>
-                            <li>Expected answer shown</li>
-                            <li>Marks awarded per question</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <hr>
-
-                <div class="alert alert-info mb-0">
-                    <h6 class="alert-heading"><i class="fas fa-info-circle"></i> Need Help?</h6>
-                    <p class="mb-0 small">
-                        If you encounter any issues, check that Node.js is installed (<code>node --version</code>) 
-                        and that the docx library is available (<code>npm list -g docx</code>). 
-                        See the setup documentation for detailed troubleshooting.
-                    </p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
+{% block title %}Teacher Dashboard — E-Exam Platform{% endblock %}
 
 {% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-    .bg-primary-dark {
-        background-color: rgba(0, 0, 0, 0.1) !important;
-    }
-    .bg-success-dark {
-        background-color: rgba(0, 0, 0, 0.1) !important;
-    }
-    .bg-info-dark {
-        background-color: rgba(0, 0, 0, 0.1) !important;
-    }
-    .bg-warning-dark {
-        background-color: rgba(0, 0, 0, 0.1) !important;
-    }
-    .card {
-        transition: transform 0.2s;
-    }
-    .card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-    .btn-group .btn {
-        border-radius: 0;
-    }
-    .btn-group .btn:first-child {
-        border-top-left-radius: 0.25rem;
-        border-bottom-left-radius: 0.25rem;
-    }
-    .btn-group .btn:last-child {
-        border-top-right-radius: 0.25rem;
-        border-bottom-right-radius: 0.25rem;
-    }
-    /* Highlight the new Student Reports button */
-    .btn-outline-success {
-        font-weight: 600;
-    }
-    .btn-outline-success:hover {
-        background-color: #28a745;
-        border-color: #28a745;
-        color: white;
-    }
+  *, *::before, *::after { box-sizing: border-box; }
+  body { font-family: 'DM Sans', system-ui, sans-serif; font-size: 13.5px;
+         color: #1a2332; -webkit-font-smoothing: antialiased; }
+
+  :root {
+    --navy:   #0f2240; --navym: #1e3a5f; --navyl: #2c5282;
+    --green:  #166534; --greenl: #dcfce7; --greend: #15803d;
+    --sky:    #0369a1; --skyl:   #e0f2fe;
+    --violet: #5b21b6; --violetl:#ede9fe;
+    --amber:  #92400e; --amberl: #fef3c7;
+    --slate:  #475569; --border: #e2e8f0;
+    --surface:#ffffff; --bg: #f0f2f5;
+    --radius: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
+    --tr: .15s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ── Wrap ── */
+  .td-wrap { max-width: 1100px; margin: 0 auto; padding: 14px 12px 36px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* ── Page header ── */
+  .td-header { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+  .td-heading { font-size: 16px; font-weight: 700; color: var(--navy); margin: 0; letter-spacing: -.01em; }
+  .td-sub     { font-size: 12px; color: #94a3b8; margin: 0; }
+
+  /* ── Stat grid ── */
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
+  @media (max-width: 900px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { .stat-grid { grid-template-columns: 1fr 1fr; } }
+
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 11px 13px;
+    box-shadow: var(--shadow); display: flex; align-items: center; gap: 10px;
+    transition: box-shadow var(--tr), transform var(--tr); position: relative; overflow: hidden;
+  }
+  .stat-card::before { content:''; position:absolute; inset:0 auto 0 0; width:3px; border-radius:0 2px 2px 0; }
+  .stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.1); transform: translateY(-1px); }
+
+  .stat-card-navy::before   { background: var(--navym); }
+  .stat-card-green::before  { background: var(--greend); }
+  .stat-card-sky::before    { background: var(--sky); }
+  .stat-card-violet::before { background: var(--violet); }
+
+  .stat-icon { width:36px; height:36px; border-radius:7px; display:flex; align-items:center;
+               justify-content:center; font-size:1rem; flex-shrink:0; }
+  .stat-card-navy   .stat-icon { background:#e8edf5; color:var(--navym); }
+  .stat-card-green  .stat-icon { background:var(--greenl); color:var(--greend); }
+  .stat-card-sky    .stat-icon { background:var(--skyl); color:var(--sky); }
+  .stat-card-violet .stat-icon { background:var(--violetl); color:var(--violet); }
+
+  .stat-val { font-size:1.4rem; font-weight:800; letter-spacing:-.03em; line-height:1; color:var(--navy); }
+  .stat-lbl { font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:#94a3b8; margin-top:1px; }
+  .stat-sub { font-size:10.5px; color:#94a3b8; margin-top:3px; }
+
+  /* ── Panel ── */
+  .panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+           box-shadow:var(--shadow); overflow:hidden; }
+  .panel-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 13px; border-bottom:1px solid var(--border); background:#fafbfc;
+  }
+  .panel-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em;
+                 color:var(--slate); display:flex; align-items:center; gap:5px; }
+  .panel-body  { padding:0; }
+
+  /* ── Exams table ── */
+  .exams-table { width:100%; border-collapse:collapse; }
+  .exams-table th {
+    padding:7px 12px; font-size:10.5px; font-weight:700; text-transform:uppercase;
+    letter-spacing:.05em; color:#94a3b8; background:#fafbfc; border-bottom:1px solid var(--border);
+    white-space:nowrap;
+  }
+  .exams-table td { padding:8px 12px; font-size:12.5px; border-bottom:1px solid #f0f2f5; vertical-align:middle; }
+  .exams-table tr:last-child td { border-bottom:none; }
+  .exams-table tr:hover td { background:#fafbfc; }
+
+  .exam-title  { font-weight:600; color:var(--navy); font-size:13px; }
+  .exam-code   { font-family:'DM Mono',monospace; font-size:10.5px; color:#94a3b8; margin-top:1px; }
+  .exam-subject{ color:var(--slate); }
+
+  .badge-pub   { display:inline-block; padding:2px 8px; border-radius:20px; font-size:10.5px;
+                 font-weight:700; background:var(--greenl); color:var(--green); }
+  .badge-draft { display:inline-block; padding:2px 8px; border-radius:20px; font-size:10.5px;
+                 font-weight:700; background:var(--amberl); color:var(--amber); }
+  .badge-count { display:inline-block; padding:2px 8px; border-radius:20px; font-size:10.5px;
+                 font-weight:600; background:var(--skyl); color:var(--sky); font-family:'DM Mono',monospace; }
+
+  .date-val { font-family:'DM Mono',monospace; font-size:11.5px; color:#94a3b8; }
+
+  /* ── Icon action buttons ── */
+  .action-btns { display:flex; gap:3px; }
+  .act-btn {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:28px; height:28px; border-radius:6px; border:1px solid var(--border);
+    background:var(--surface); color:var(--slate); text-decoration:none;
+    font-size:12px; transition:background var(--tr), border-color var(--tr), color var(--tr);
+    cursor:pointer;
+  }
+  .act-btn:hover { background:#f0f4fa; border-color:#c8d3df; color:var(--navy); }
+  .act-btn-green:hover { background:var(--greenl); border-color:#bbf7d0; color:var(--greend); }
+  .act-btn-blue:hover  { background:var(--skyl);   border-color:#bae6fd; color:var(--sky); }
+  .act-btn-violet:hover{ background:var(--violetl);border-color:#ddd6fe; color:var(--violet); }
+
+  /* ── Empty state ── */
+  .empty-state { text-align:center; padding:32px 20px; }
+  .empty-icon  { font-size:2rem; color:#cbd5e1; margin-bottom:8px; }
+  .empty-state p { font-size:13px; color:#94a3b8; margin:0 0 10px; }
+
+  /* ── Bottom grid ── */
+  .bottom-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:720px) { .bottom-grid { grid-template-columns:1fr; } }
+
+  /* ── Quick actions ── */
+  .qa-list { display:flex; flex-direction:column; gap:3px; padding:10px; }
+  .qa-item {
+    display:flex; align-items:center; gap:9px; padding:7px 9px;
+    border-radius:6px; border:1px solid transparent; text-decoration:none;
+    color:var(--navy); font-size:13px; font-weight:500;
+    transition:background var(--tr), border-color var(--tr), transform var(--tr);
+  }
+  .qa-item:hover { background:#f0f4fa; border-color:var(--border); transform:translateX(2px); color:var(--navym); }
+  .qa-icon { width:30px; height:30px; border-radius:6px; display:flex; align-items:center;
+             justify-content:center; font-size:13px; flex-shrink:0; }
+  .qa-arrow { margin-left:auto; font-size:10px; color:#cbd5e1; }
+
+  /* ── Info list ── */
+  .info-list { padding:10px 13px; display:flex; flex-direction:column; gap:0; }
+  .info-row  { display:flex; align-items:flex-start; gap:8px; padding:5px 0;
+               border-bottom:1px solid #f8fafc; font-size:12.5px; }
+  .info-row:last-child { border-bottom:none; }
+  .info-row i { margin-top:2px; color:#94a3b8; font-size:11px; flex-shrink:0; width:14px; text-align:center; }
+  .info-row span { color:var(--slate); line-height:1.45; }
+
+  /* ── Buttons ── */
+  .btn-primary-sm {
+    display:inline-flex; align-items:center; gap:5px; padding:5px 12px;
+    background:var(--navym); color:#fff; border:none; border-radius:6px;
+    font-size:12px; font-weight:600; font-family:'DM Sans',sans-serif;
+    text-decoration:none; cursor:pointer; transition:background var(--tr);
+  }
+  .btn-primary-sm:hover { background:var(--navyl); color:#fff; }
+
+  .btn-outline-sm {
+    display:inline-flex; align-items:center; gap:5px; padding:5px 12px;
+    background:transparent; color:var(--navym); border:1px solid var(--border);
+    border-radius:6px; font-size:12px; font-weight:600; font-family:'DM Sans',sans-serif;
+    text-decoration:none; cursor:pointer; transition:background var(--tr), border-color var(--tr);
+  }
+  .btn-outline-sm:hover { background:#f0f4fa; border-color:#c8d3df; color:var(--navy); }
+
+  /* ── Help modal ── */
+  .modal-content { border:none; border-radius:12px; box-shadow:0 20px 40px rgba(0,0,0,.18); }
+  .modal-header  { background:linear-gradient(135deg,var(--navy) 0%,var(--navyl) 100%);
+                   color:#fff; border-bottom:none; padding:14px 18px; border-radius:12px 12px 0 0; }
+  .modal-title   { font-size:14px; font-weight:700; }
+  .modal-body    { padding:16px 18px; font-size:13px; }
+  .modal-body h6 { font-size:11.5px; font-weight:700; text-transform:uppercase;
+                   letter-spacing:.06em; color:var(--navym); margin:12px 0 5px; }
+  .modal-body h6:first-child { margin-top:0; }
+  .modal-body ul, .modal-body ol { padding-left:18px; margin:0 0 8px; }
+  .modal-body li { margin-bottom:3px; color:var(--slate); font-size:12.5px; }
+  .modal-body p  { color:var(--slate); margin:0 0 6px; }
+  .modal-body hr { border-color:var(--border); margin:10px 0; }
+  .modal-body .alert { font-size:12px; padding:10px 12px; border-radius:7px; }
+  .modal-footer  { padding:10px 18px; border-top:1px solid var(--border); }
 </style>
+{% endblock %}
+
+{% block content %}
+<div class="td-wrap">
+
+  <!-- Page header -->
+  <div class="td-header">
+    <div>
+      <h1 class="td-heading">Teacher Dashboard</h1>
+      <p class="td-sub">Welcome back, {{ current_user.first_name }}</p>
+    </div>
+    <a href="{{ url_for('teacher.create_exam') }}" class="btn-primary-sm">
+      <i class="fas fa-plus" style="font-size:10px"></i> New Exam
+    </a>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="stat-grid">
+    <div class="stat-card stat-card-navy">
+      <div class="stat-icon"><i class="fas fa-file-alt"></i></div>
+      <div>
+        <div class="stat-val">{{ total_exams }}</div>
+        <div class="stat-lbl">Total Exams</div>
+        <div class="stat-sub">{{ published_exams }} published · {{ unpublished_exams }} draft</div>
+      </div>
+    </div>
+    <div class="stat-card stat-card-green">
+      <div class="stat-icon"><i class="fas fa-question-circle"></i></div>
+      <div>
+        <div class="stat-val">{{ total_questions }}</div>
+        <div class="stat-lbl">Questions</div>
+        <div class="stat-sub">Across all exams</div>
+      </div>
+    </div>
+    <div class="stat-card stat-card-sky">
+      <div class="stat-icon"><i class="fas fa-users"></i></div>
+      <div>
+        <div class="stat-val">{{ total_students }}</div>
+        <div class="stat-lbl">Students</div>
+        <div class="stat-sub">In your classes</div>
+      </div>
+    </div>
+    <div class="stat-card stat-card-violet">
+      <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+      <div>
+        <div class="stat-val">{{ total_attempts }}</div>
+        <div class="stat-lbl">Attempts</div>
+        <div class="stat-sub">Avg score {{ avg_score }}%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Exams -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title"><i class="fas fa-clock" style="color:var(--navym)"></i> Recent Exams</div>
+      <a href="{{ url_for('teacher.manage_exams') }}" class="btn-outline-sm">View All</a>
+    </div>
+    <div class="panel-body">
+      {% if recent_exams %}
+      <div style="overflow-x:auto">
+        <table class="exams-table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Subject</th>
+              <th>Questions</th>
+              <th>Status</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for exam in recent_exams %}
+            <tr>
+              <td>
+                <div class="exam-title">{{ exam.title }}</div>
+                <div class="exam-code">{{ exam.code }}</div>
+              </td>
+              <td class="exam-subject">{{ exam.subject }}</td>
+              <td><span class="badge-count">{{ exam.total_questions }}</span></td>
+              <td>
+                {% if exam.published %}
+                  <span class="badge-pub">Published</span>
+                {% else %}
+                  <span class="badge-draft">Draft</span>
+                {% endif %}
+              </td>
+              <td><span class="date-val">{{ exam.created_at.strftime('%d %b %Y') }}</span></td>
+              <td>
+                <div class="action-btns">
+                  <a href="{{ url_for('teacher.exam_student_reports', exam_id=exam.id) }}"
+                     class="act-btn act-btn-green" title="Student Reports">
+                    <i class="fas fa-file-alt"></i>
+                  </a>
+                  <a href="{{ url_for('teacher.edit_exam_questions', exam_id=exam.id) }}"
+                     class="act-btn" title="Manage Questions">
+                    <i class="fas fa-list"></i>
+                  </a>
+                  <a href="{{ url_for('teacher.edit_exam', exam_id=exam.id) }}"
+                     class="act-btn" title="Edit">
+                    <i class="fas fa-edit"></i>
+                  </a>
+                  <a href="{{ url_for('teacher.exam_results', exam_id=exam.id) }}"
+                     class="act-btn act-btn-blue" title="Results">
+                    <i class="fas fa-chart-bar"></i>
+                  </a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon"><i class="fas fa-file-alt"></i></div>
+        <p>No exams created yet.</p>
+        <a href="{{ url_for('teacher.create_exam') }}" class="btn-primary-sm">
+          <i class="fas fa-plus" style="font-size:10px"></i> Create Exam
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Bottom: Quick Actions + Tips -->
+  <div class="bottom-grid">
+
+    <!-- Quick Actions -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><i class="fas fa-bolt" style="color:#f59e0b"></i> Quick Actions</div>
+      </div>
+      <div class="qa-list">
+        <a href="{{ url_for('teacher.create_exam') }}" class="qa-item">
+          <div class="qa-icon" style="background:#eff6ff;color:#1e40af"><i class="fas fa-plus-circle"></i></div>
+          <span>Create New Exam</span>
+          <i class="fas fa-chevron-right qa-arrow"></i>
+        </a>
+        <a href="{{ url_for('teacher.manage_exams') }}" class="qa-item">
+          <div class="qa-icon" style="background:#f0fdf4;color:var(--greend)"><i class="fas fa-list"></i></div>
+          <span>Manage Exams</span>
+          <i class="fas fa-chevron-right qa-arrow"></i>
+        </a>
+        <a href="{{ url_for('teacher.analytics_performance') }}" class="qa-item">
+          <div class="qa-icon" style="background:var(--violetl);color:var(--violet)"><i class="fas fa-chart-bar"></i></div>
+          <span>Analytics</span>
+          <i class="fas fa-chevron-right qa-arrow"></i>
+        </a>
+        <button class="qa-item" data-bs-toggle="modal" data-bs-target="#helpModal"
+                style="background:none;border:none;cursor:pointer;width:100%;text-align:left;font-family:inherit">
+          <div class="qa-icon" style="background:var(--skyl);color:var(--sky)"><i class="fas fa-question-circle"></i></div>
+          <span>Help &amp; Guide</span>
+          <i class="fas fa-chevron-right qa-arrow"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Tips -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><i class="fas fa-lightbulb" style="color:#f59e0b"></i> Tips &amp; Best Practices</div>
+      </div>
+      <div class="info-list">
+        <div class="info-row"><i class="fas fa-check-circle" style="color:var(--greend)"></i><span><strong>Pass criteria</strong> — Set pass percentage before publishing</span></div>
+        <div class="info-row"><i class="fas fa-eye" style="color:var(--sky)"></i><span><strong>Preview</strong> — Test questions before students sit</span></div>
+        <div class="info-row"><i class="fas fa-tachometer-alt" style="color:var(--violet)"></i><span><strong>Monitor</strong> — Check the results dashboard regularly</span></div>
+        <div class="info-row"><i class="fas fa-download" style="color:var(--navym)"></i><span><strong>Reports</strong> — Download individual or bulk ZIP reports</span></div>
+        <div class="info-row"><i class="fas fa-print" style="color:var(--amber)"></i><span><strong>Print</strong> — Use duplex printing to save paper</span></div>
+        <div class="info-row"><i class="fas fa-file-upload" style="color:var(--green)"></i><span><strong>Bulk import</strong> — Upload questions via CSV/XLSX template</span></div>
+      </div>
+    </div>
+
+  </div><!-- /bottom-grid -->
+
+</div><!-- /td-wrap -->
+
+<!-- Help Modal -->
+<div class="modal fade" id="helpModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-book me-2"></i>Student Reports — Complete Guide</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <h6><i class="fas fa-file-alt me-1"></i> What are Student Reports?</h6>
+        <p>Professional, print-ready exam reports including school branding, student details, performance summary, and per-question analysis.</p>
+        <ul>
+          <li>School logo, name &amp; contact details</li>
+          <li>Student name, admission number &amp; class</li>
+          <li>Marks, percentage, grade &amp; pass/fail status</li>
+          <li>Detailed MCQ and theory question breakdown</li>
+        </ul>
+
+        <hr>
+
+        <h6><i class="fas fa-download me-1"></i> How to Generate Reports</h6>
+        <ol>
+          <li>Find the exam in your dashboard</li>
+          <li>Click the <span style="background:var(--greenl);color:var(--green);padding:1px 6px;border-radius:4px;font-size:11px;font-weight:700"><i class="fas fa-file-alt"></i></span> button</li>
+          <li>View all students who took the exam</li>
+          <li>Download individual reports or bulk ZIP</li>
+        </ol>
+
+        <hr>
+
+        <h6><i class="fas fa-print me-1"></i> Printing Tips</h6>
+        <ul>
+          <li>Optimised for Letter / A4, max 4 pages per student</li>
+          <li>Works colour or black &amp; white</li>
+          <li>Use duplex printing to save paper</li>
+        </ul>
+
+        <hr>
+
+        <h6><i class="fas fa-cog me-1"></i> Customise School Branding</h6>
+        <ol>
+          <li>Edit <code>get_school_settings()</code> in <code>routes/teacher.py</code></li>
+          <li>Update name, address, phone, email</li>
+          <li>Place logo at <code>static/uploads/school_logo.png</code></li>
+        </ol>
+
+        <hr>
+
+        <div class="alert alert-info mb-0">
+          <strong><i class="fas fa-info-circle me-1"></i>Need Help?</strong>
+          Check Node.js is installed (<code>node --version</code>) and the docx library is available (<code>npm list -g docx</code>).
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-outline-sm" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Initialize Bootstrap tooltips
-document.addEventListener('DOMContentLoaded', function() {
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('[title]').forEach(function (el) {
+    new bootstrap.Tooltip(el, { trigger: 'hover' });
+  });
 });
 </script>
 {% endblock %}

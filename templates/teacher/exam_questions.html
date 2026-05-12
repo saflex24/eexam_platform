@@ -3,7 +3,7 @@
 {% block title %}Manage Questions - {{ exam.title }}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/css/katex.min.css') }}">
 <style>
     .question-card {
         margin-bottom: 15px;
@@ -181,8 +181,8 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="{{ url_for('static', filename='vendor/js/katex.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/js/katex-auto-render.min.js') }}"></script>
 <script>
     // Render all LaTeX content on page load
     document.addEventListener('DOMContentLoaded', function() {

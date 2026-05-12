@@ -3,20 +3,7 @@
 {% block title %}Result Details - {{ student_user.first_name }} {{ student_user.last_name }}{% endblock %}
 
 {% block extra_css %}
-<script>
-    window.MathJax = {
-        tex: {
-            inlineMath: [['$', '$'], ['\\(', '\\)']],
-            displayMath: [['$$', '$$'], ['\\[', '\\]']],
-            processEscapes: true
-        },
-        options: {
-            skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
-        }
-    };
-</script>
-<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
-
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/css/katex.min.css') }}">
 <style>
     body {
         font-family: Tahoma, Geneva, Verdana, sans-serif;
@@ -46,9 +33,20 @@
     
     .answer-card {
         break-inside: avoid;
+        -webkit-column-break-inside: avoid;
+        page-break-inside: avoid;
         margin-bottom: 20px;
         font-size: 12pt;
-        page-break-inside: avoid;
+        /* Ensure the entire card including its header stays in one column */
+        display: inline-block;
+        width: 100%;
+    }
+
+    /* Prevent card header from ever being orphaned at top of a column */
+    .answer-card .card-header {
+        break-after: avoid;
+        -webkit-column-break-after: avoid;
+        page-break-after: avoid;
     }
     
     .question-number {
@@ -86,8 +84,21 @@
         border-left: 4px solid #dc3545;
     }
     
+    .option-neutral {
+        background-color: #f8f9fa;
+        border-left: 4px solid #dee2e6;
+    }
+    
     .option-student-answer {
         font-weight: bold;
+    }
+
+    /* Unanswered question card styling */
+    .card.border-unanswered {
+        border-color: #adb5bd !important;
+    }
+    .bg-unanswered {
+        background-color: #6c757d !important;
     }
     
     @media print {
@@ -239,81 +250,148 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0"><i class="fas fa-clipboard-list"></i> Detailed Answer Review</h5>
+                    <h5 class="mb-0">
+                        <i class="fas fa-clipboard-list"></i> Detailed Answer Review
+                        <small class="ms-2" style="font-size:0.8rem;font-weight:400;">
+                            {{ total_questions }} question{{ 's' if total_questions != 1 else '' }} total
+                        </small>
+                    </h5>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Answer Review in Two Columns -->
+    {#
+        Build a lookup dict of question_id → StudentAnswer so we can
+        iterate over ALL questions (including unanswered ones) without
+        a separate DB query in the template.
+    #}
+    {% set answer_map = {} %}
+    {% for ans in answers %}
+        {% if answer_map.update({ans.question_id: ans}) %}{% endif %}
+    {% endfor %}
+
     <div class="row">
         <div class="col-12">
-            {% if answers %}
+            {% if all_questions %}
             <div class="two-column-layout">
-                {% for answer in answers %}
-                <div class="answer-card card mb-3 {% if answer.is_correct %}border-success{% elif answer.is_correct == False %}border-danger{% else %}border-secondary{% endif %}">
-                    <div class="card-header {% if answer.is_correct %}bg-success text-white{% elif answer.is_correct == False %}bg-danger text-white{% else %}bg-secondary text-white{% endif %}">
+                {% for question in all_questions %}
+
+                {# Resolve the StudentAnswer for this question (None if unanswered) #}
+                {% set answer = answer_map.get(question.id) %}
+
+                {# Determine card state #}
+                {% if answer is none %}
+                    {# Question was never attempted #}
+                    {% set card_border   = 'border-unanswered' %}
+                    {% set header_class  = 'bg-unanswered text-white' %}
+                    {% set status_icon   = 'fas fa-ban' %}
+                    {% set status_label  = 'Not Attempted' %}
+                {% elif answer.is_correct == true %}
+                    {% set card_border   = 'border-success' %}
+                    {% set header_class  = 'bg-success text-white' %}
+                    {% set status_icon   = 'fas fa-check-circle' %}
+                    {% set status_label  = 'Correct' %}
+                {% elif answer.is_correct == false %}
+                    {% set card_border   = 'border-danger' %}
+                    {% set header_class  = 'bg-danger text-white' %}
+                    {% set status_icon   = 'fas fa-times-circle' %}
+                    {% set status_label  = 'Incorrect' %}
+                {% else %}
+                    {# Theory question — answered but not yet auto-graded #}
+                    {% set card_border   = 'border-warning' %}
+                    {% set header_class  = 'bg-warning text-dark' %}
+                    {% set status_icon   = 'fas fa-hourglass-half' %}
+                    {% set status_label  = 'Pending Grading' %}
+                {% endif %}
+
+                {# Marks display: 0/marks for unanswered; answer.marks_obtained otherwise #}
+                {% set marks_obtained = 0 if answer is none else (answer.marks_obtained or 0) %}
+
+                <div class="answer-card card mb-3 {{ card_border }}">
+                    <div class="card-header {{ header_class }}">
                         <div class="d-flex justify-content-between align-items-center">
                             <span class="question-number">Question {{ loop.index }}</span>
                             <span>
-                                {% if answer.is_correct %}
-                                <i class="fas fa-check-circle"></i> Correct
-                                {% elif answer.is_correct == False %}
-                                <i class="fas fa-times-circle"></i> Incorrect
-                                {% else %}
-                                <i class="fas fa-hourglass-half"></i> Not Graded
-                                {% endif %}
+                                <i class="{{ status_icon }}"></i> {{ status_label }}
                             </span>
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="question-text">
-                            {{ answer.question.question_text }}
+
+                        <!-- Question text -->
+                        <div class="question-text latex-content">
+                            {{ question.question_text }}
                         </div>
-                        
-                        <p class="mb-2"><strong>Marks:</strong> {{ answer.marks_obtained or 0 }}/{{ answer.question.marks }}</p>
-                        
-                        {% if answer.question.question_type in ['mcq', 'true_false'] %}
+
+                        <!-- Marks -->
+                        <p class="mb-2">
+                            <strong>Marks:</strong>
+                            <span class="{% if marks_obtained == question.marks %}text-success{% elif marks_obtained == 0 %}text-danger{% else %}text-warning{% endif %} fw-bold">
+                                {{ marks_obtained }}/{{ question.marks }}
+                            </span>
+                        </p>
+
+                        <!-- MCQ / True-False options -->
+                        {% if question.question_type in ['mcq', 'true_false'] %}
                         <hr>
                         <div class="answer-text">
                             <p class="mb-2"><strong>Options:</strong></p>
-                            {% for option in answer.question.options %}
-                            <div class="option-item 
-                                {% if option.is_correct %}option-correct{% endif %}
-                                {% if answer.selected_option and answer.selected_option.id == option.id and not option.is_correct %}option-incorrect{% endif %}
-                                {% if answer.selected_option and answer.selected_option.id == option.id %}option-student-answer{% endif %}">
+                            {% for option in question.options %}
+
+                            {# Determine if student chose this option #}
+                            {% set student_chose = (answer is not none and answer.selected_option_id == option.id) %}
+
+                            <div class="option-item latex-content
+                                {% if option.is_correct %}option-correct
+                                {% elif student_chose and not option.is_correct %}option-incorrect
+                                {% else %}option-neutral{% endif %}
+                                {% if student_chose %}option-student-answer{% endif %}">
+
                                 {{ option.option_label }}. {{ option.option_text }}
+
                                 {% if option.is_correct %}
-                                <i class="fas fa-check text-success float-end"></i> <span class="badge bg-success float-end me-2">Correct</span>
+                                <i class="fas fa-check text-success float-end"></i>
+                                <span class="badge bg-success float-end me-2">Correct Answer</span>
                                 {% endif %}
-                                {% if answer.selected_option and answer.selected_option.id == option.id %}
+
+                                {% if student_chose %}
                                 <span class="badge bg-primary float-end me-2">Your Answer</span>
                                 {% endif %}
                             </div>
                             {% endfor %}
-                            
-                            {% if not answer.selected_option %}
-                            <div class="alert alert-warning mt-2 mb-0">
-                                <i class="fas fa-exclamation-triangle"></i> Not answered
+
+                            {% if answer is none or answer.selected_option_id is none %}
+                            <div class="alert alert-secondary mt-2 mb-0">
+                                <i class="fas fa-ban"></i> This question was not attempted
                             </div>
                             {% endif %}
                         </div>
                         {% endif %}
-                        
-                        {% if answer.question.question_type == 'theory' %}
+
+                        <!-- Theory answer -->
+                        {% if question.question_type == 'theory' %}
                         <hr>
                         <p class="mb-2"><strong>Your Answer:</strong></p>
-                        <div class="bg-light p-3 rounded answer-text">
-                            {{ answer.theory_answer or 'Not answered' }}
+                        {% if answer is not none and answer.theory_answer %}
+                        <div class="bg-light p-3 rounded answer-text latex-content">
+                            {{ answer.theory_answer }}
+                        </div>
+                        {% else %}
+                        <div class="alert alert-secondary mb-0">
+                            <i class="fas fa-ban"></i> This question was not attempted
                         </div>
                         {% endif %}
+                        {% endif %}
+
                     </div>
                 </div>
                 {% endfor %}
             </div>
             {% else %}
             <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i> No answers recorded for this exam.
+                <i class="fas fa-info-circle"></i> No questions found for this exam.
             </div>
             {% endif %}
         </div>
@@ -381,13 +459,43 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
+<script src="{{ url_for('static', filename='vendor/js/katex.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/js/katex-auto-render.min.js') }}"></script>
 <script>
-    // Re-trigger MathJax after page fully loads to catch dynamically inserted content
-    document.addEventListener("DOMContentLoaded", function () {
-        if (window.MathJax) {
-            MathJax.typesetPromise();
-        }
-    });
+(function () {
+    'use strict';
+
+    // KaTeX delimiter config — matches the same set used in take_exam.html
+    var KATEX_OPTS = {
+        delimiters: [
+            { left: '$$', right: '$$', display: true  },
+            { left: '$',  right: '$',  display: false },
+            { left: '\\[', right: '\\]', display: true  },
+            { left: '\\(', right: '\\)', display: false }
+        ],
+        throwOnError: false,
+        strict: false
+    };
+
+    function renderAllLatex() {
+        document.querySelectorAll('.latex-content').forEach(function (el) {
+            try {
+                renderMathInElement(el, KATEX_OPTS);
+            } catch (e) {
+                console.warn('[KaTeX] render error:', e);
+            }
+        });
+    }
+
+    // Run once DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', renderAllLatex);
+    } else {
+        renderAllLatex();
+    }
+}());
 </script>
 {% endblock %}

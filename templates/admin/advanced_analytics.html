@@ -4,608 +4,583 @@
 
 {% block extra_css %}
 <style>
-    .analytics-card {
-        border-radius: 15px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        margin-bottom: 25px;
-        transition: transform 0.3s;
+    :root {
+        --navy:   #0f1e3c;
+        --accent: #3b82f6;
+        --cyan:   #06b6d4;
+        --green:  #10b981;
+        --amber:  #f59e0b;
+        --red:    #ef4444;
+        --purple: #8b5cf6;
+        --slate:  #64748b;
+        --border: #e2e8f0;
+        --bg:     #f1f5f9;
+        --card:   #ffffff;
+        --text:   #1e293b;
+        --muted:  #94a3b8;
+        --radius: 6px;
+        --sh:     0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
     }
-    
-    .analytics-card:hover {
-        transform: translateY(-5px);
+
+    /* page */
+    .aa-wrap { padding: 12px 16px; background: var(--bg); min-height: 100vh; }
+
+    /* header */
+    .aa-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+    .aa-header h5 { font-size:.9rem; font-weight:700; color:var(--navy); margin:0; letter-spacing:-.2px; }
+    .aa-header h5 i { color:var(--accent); margin-right:5px; font-size:.85rem; }
+    .aa-header p  { font-size:.68rem; color:var(--muted); margin:1px 0 0 0; }
+
+    /* filter bar */
+    .filter-bar {
+        background:var(--card); border:1px solid var(--border);
+        border-radius:var(--radius); padding:8px 12px; margin-bottom:10px;
+        display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;
     }
-    
-    .metric-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 20px;
+    .filter-bar .fg { flex:1; min-width:110px; }
+    .filter-bar label { font-size:.6rem; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--slate); display:block; margin-bottom:2px; }
+    .filter-bar .form-select { font-size:.71rem; padding:3px 8px; height:27px; border:1px solid var(--border); border-radius:4px; color:var(--text); background:var(--bg); }
+
+    /* stat strip */
+    .stat-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:10px; }
+    @media(max-width:800px){ .stat-strip{ grid-template-columns:repeat(2,1fr); } }
+
+    .sbox {
+        background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+        padding:9px 12px; display:flex; flex-direction:column; gap:1px;
+        box-shadow:var(--sh); position:relative; overflow:hidden;
     }
-    
-    .metric-card.blue {
-        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    .sbox::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+    .sbox.s-purple::before { background:var(--purple); }
+    .sbox.s-blue::before   { background:var(--accent); }
+    .sbox.s-green::before  { background:var(--green); }
+    .sbox.s-amber::before  { background:var(--amber); }
+
+    .sbox-icon { font-size:.75rem; }
+    .sbox.s-purple .sbox-icon { color:var(--purple); }
+    .sbox.s-blue   .sbox-icon { color:var(--accent); }
+    .sbox.s-green  .sbox-icon { color:var(--green); }
+    .sbox.s-amber  .sbox-icon { color:var(--amber); }
+
+    .sbox-val   { font-size:1.4rem; font-weight:800; color:var(--text); line-height:1.1; font-variant-numeric:tabular-nums; }
+    .sbox-label { font-size:.58rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); }
+
+    /* cards */
+    .ac { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--sh); overflow:hidden; }
+    .ac-head {
+        display:flex; align-items:center; justify-content:space-between;
+        padding:6px 11px; border-bottom:1px solid var(--border);
     }
-    
-    .metric-card.green {
-        background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+    .ac-head span { font-size:.7rem; font-weight:700; color:#fff; display:flex; align-items:center; gap:5px; }
+    .ac-head.navy   { background:var(--navy); }
+    .ac-head.blue   { background:#1e3a5f; }
+    .ac-head.green  { background:#064e3b; }
+    .ac-head.red    { background:#7f1d1d; }
+    .ac-head.amber  { background:#78350f; }
+    .ac-head.cyan   { background:#164e63; }
+    .ac-head.purple { background:#3b0764; }
+    .ac-head.slate  { background:#1e293b; }
+    .ac-head.info   { background:#0c4a6e; }
+    .ac-body { padding:10px 12px; }
+    .ac-body-p0 { padding:0; }
+
+    /* two/three col grids */
+    .g2  { display:grid; grid-template-columns:1fr 1fr;     gap:8px; margin-bottom:8px; }
+    .g28 { display:grid; grid-template-columns:2fr 1fr;     gap:8px; margin-bottom:8px; }
+    .g3  { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:8px; }
+    @media(max-width:800px){ .g2,.g28,.g3{ grid-template-columns:1fr; } }
+
+    .chart-wrap { height:180px; position:relative; }
+    .chart-wrap-lg { height:220px; position:relative; }
+    .chart-wrap-xl { height:260px; position:relative; }
+
+    /* tables */
+    .at { width:100%; border-collapse:collapse; font-size:.71rem; }
+    .at thead th { font-size:.6rem; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); padding:4px 8px; border-bottom:1px solid var(--border); white-space:nowrap; background:#fafbfc; }
+    .at tbody td { padding:4px 8px; color:var(--text); border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+    .at tbody tr:last-child td { border-bottom:none; }
+    .at tbody tr:hover td { background:#f8fafc; }
+
+    /* rank */
+    .rk { width:18px; height:18px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:.58rem; font-weight:800; }
+    .rk-gold   { background:#fbbf24; color:#000; }
+    .rk-silver { background:#94a3b8; color:#000; }
+    .rk-bronze { background:#b45309; color:#fff; }
+    .rk-plain  { background:#e2e8f0; color:var(--slate); }
+
+    /* score colours */
+    .sc-hi  { color:var(--green); font-weight:700; }
+    .sc-mid { color:var(--amber); font-weight:700; }
+    .sc-lo  { color:var(--red);   font-weight:700; }
+
+    /* badges */
+    .bp { background:#d1fae5; color:#065f46; font-size:.58rem; font-weight:700; padding:1px 5px; border-radius:3px; }
+    .bf { background:#fee2e2; color:#991b1b; font-size:.58rem; font-weight:700; padding:1px 5px; border-radius:3px; }
+    .bw { background:#fef3c7; color:#92400e; font-size:.58rem; font-weight:700; padding:1px 5px; border-radius:3px; }
+
+    /* trend */
+    .tr-up   { color:var(--green); font-size:.68rem; font-weight:600; }
+    .tr-down { color:var(--red);   font-size:.68rem; font-weight:600; }
+    .tr-flat { color:var(--muted); font-size:.68rem; }
+
+    /* insight items */
+    .ins { font-size:.7rem; padding:5px 8px; margin-bottom:5px; border-left:3px solid; border-radius:3px; background:#f8fafc; color:var(--text); display:flex; gap:6px; align-items:flex-start; }
+    .ins.is { border-color:var(--green);  }
+    .ins.iw { border-color:var(--amber);  }
+    .ins.ii { border-color:var(--accent); }
+    .ins i  { margin-top:1px; flex-shrink:0; font-size:.65rem; }
+
+    /* empty / all-good */
+    .empty { text-align:center; padding:18px; color:var(--muted); font-size:.72rem; }
+    .empty i { display:block; font-size:1.2rem; margin-bottom:4px; }
+    .all-good { text-align:center; padding:14px; color:var(--green); font-size:.72rem; }
+    .all-good i { display:block; font-size:1.1rem; margin-bottom:3px; }
+
+    /* export btn */
+    .btn-xls {
+        display:inline-flex; align-items:center; gap:4px;
+        background:rgba(255,255,255,.15); color:#fff; font-size:.65rem; font-weight:600;
+        padding:3px 9px; border-radius:3px; text-decoration:none; border:1px solid rgba(255,255,255,.25);
+        transition:background .15s;
     }
-    
-    .metric-card.orange {
-        background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-    }
-    
-    .metric-card.red {
-        background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-    }
-    
-    .metric-value {
-        font-size: 2.5rem;
-        font-weight: 700;
-        margin-bottom: 5px;
-    }
-    
-    .metric-label {
-        font-size: 0.9rem;
-        opacity: 0.9;
-    }
-    
-    .chart-container {
-        position: relative;
-        height: 400px;
-        margin-bottom: 20px;
-    }
-    
-    .performance-table {
-        font-size: 0.95rem;
-    }
-    
-    .performance-table th {
-        background-color: #f8f9fa;
-        font-weight: 600;
-    }
-    
-    .trend-up {
-        color: #27ae60;
-    }
-    
-    .trend-down {
-        color: #e74c3c;
-    }
-    
-    .filter-section {
-        background: #f8f9fa;
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 25px;
-    }
-    
-    .insight-item {
-        padding: 10px;
-        margin-bottom: 10px;
-        border-left: 4px solid;
-        background: #f8f9fa;
-        border-radius: 4px;
-    }
-    
-    .insight-item.success {
-        border-left-color: #27ae60;
-    }
-    
-    .insight-item.warning {
-        border-left-color: #f39c12;
-    }
-    
-    .insight-item.info {
-        border-left-color: #3498db;
-    }
+    .btn-xls:hover { background:rgba(255,255,255,.25); color:#fff; }
+
+    /* score badge inline */
+    .sb { font-size:.6rem; font-weight:700; padding:1px 5px; border-radius:3px; }
+    .sb-g { background:#d1fae5; color:#065f46; }
+    .sb-y { background:#fef3c7; color:#92400e; }
+    .sb-r { background:#fee2e2; color:#991b1b; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <h2><i class="fas fa-chart-line"></i> Advanced Student Performance Analytics</h2>
-            <p class="text-muted">Comprehensive insights into student performance and trends</p>
+<div class="aa-wrap">
+
+    <!-- HEADER -->
+    <div class="aa-header">
+        <div>
+            <h5><i class="fas fa-chart-line"></i> Advanced Performance Analytics</h5>
+            <p>Comprehensive insights into student performance and trends</p>
+        </div>
+        <a href="{{ url_for('admin.export_analytics') }}?{{ request.query_string.decode() }}"
+           style="display:inline-flex;align-items:center;gap:5px;background:var(--green);color:#fff;font-size:.71rem;font-weight:600;padding:5px 11px;border-radius:var(--radius);text-decoration:none;">
+            <i class="fas fa-file-excel" style="font-size:.65rem;"></i> Export
+        </a>
+    </div>
+
+    <!-- FILTERS -->
+    <form method="GET" action="{{ url_for('admin.advanced_analytics') }}" id="filterForm">
+        <div class="filter-bar">
+            <div class="fg">
+                <label><i class="fas fa-school" style="font-size:.55rem;"></i> Class</label>
+                <select name="class_id" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Classes</option>
+                    {% for cls in classes %}
+                    <option value="{{ cls.id }}" {% if selected_class == cls.id %}selected{% endif %}>{{ cls.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="fg">
+                <label><i class="fas fa-book" style="font-size:.55rem;"></i> Subject</label>
+                <select name="subject" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Subjects</option>
+                    {% for subject in subjects %}
+                    <option value="{{ subject }}" {% if selected_subject == subject %}selected{% endif %}>{{ subject }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="fg">
+                <label><i class="fas fa-calendar" style="font-size:.55rem;"></i> Period</label>
+                <select name="period" class="form-select" onchange="this.form.submit()">
+                    <option value="all"     {% if selected_period == 'all'     %}selected{% endif %}>All Time</option>
+                    <option value="week"    {% if selected_period == 'week'    %}selected{% endif %}>Last Week</option>
+                    <option value="month"   {% if selected_period == 'month'   %}selected{% endif %}>Last Month</option>
+                    <option value="quarter" {% if selected_period == 'quarter' %}selected{% endif %}>Last Quarter</option>
+                </select>
+            </div>
+            <div class="fg">
+                <label><i class="fas fa-file-alt" style="font-size:.55rem;"></i> Exam</label>
+                <select name="exam_id" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Exams</option>
+                    {% for exam in exams %}
+                    <option value="{{ exam.id }}" {% if selected_exam == exam.id %}selected{% endif %}>{{ exam.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </form>
+
+    <!-- STAT STRIP -->
+    <div class="stat-strip">
+        <div class="sbox s-purple">
+            <div class="sbox-icon"><i class="fas fa-users"></i></div>
+            <div class="sbox-val">{{ overall_stats.total_students }}</div>
+            <div class="sbox-label">Total Students</div>
+        </div>
+        <div class="sbox s-blue">
+            <div class="sbox-icon"><i class="fas fa-percentage"></i></div>
+            <div class="sbox-val">{{ overall_stats.avg_score }}%</div>
+            <div class="sbox-label">Average Score</div>
+        </div>
+        <div class="sbox s-green">
+            <div class="sbox-icon"><i class="fas fa-check-circle"></i></div>
+            <div class="sbox-val">{{ overall_stats.pass_rate }}%</div>
+            <div class="sbox-label">Pass Rate</div>
+        </div>
+        <div class="sbox s-amber">
+            <div class="sbox-icon"><i class="fas fa-file-alt"></i></div>
+            <div class="sbox-val">{{ overall_stats.total_exams }}</div>
+            <div class="sbox-label">Total Exams</div>
         </div>
     </div>
 
-    <!-- Filters -->
-    <div class="filter-section">
-        <form method="GET" action="{{ url_for('admin.advanced_analytics') }}" id="filterForm">
-            <div class="row">
-                <div class="col-md-3">
-                    <label class="form-label"><i class="fas fa-school"></i> Class</label>
-                    <select name="class_id" class="form-select" onchange="this.form.submit()">
-                        <option value="">All Classes</option>
-                        {% for cls in classes %}
-                        <option value="{{ cls.id }}" {% if selected_class == cls.id %}selected{% endif %}>
-                            {{ cls.name }}
-                        </option>
+    <!-- CHARTS ROW 1: distribution + grade -->
+    <div class="g2">
+        <div class="ac">
+            <div class="ac-head blue">
+                <span><i class="fas fa-chart-pie"></i> Performance Distribution</span>
+            </div>
+            <div class="ac-body">
+                <div class="chart-wrap"><canvas id="performanceDistChart"></canvas></div>
+            </div>
+        </div>
+        <div class="ac">
+            <div class="ac-head green">
+                <span><i class="fas fa-chart-bar"></i> Grade Distribution</span>
+            </div>
+            <div class="ac-body">
+                <div class="chart-wrap"><canvas id="gradeDistChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CHARTS ROW 2: trend (wide) + subject -->
+    <div class="g28">
+        <div class="ac">
+            <div class="ac-head info">
+                <span><i class="fas fa-chart-line"></i> Performance Trend Over Time</span>
+            </div>
+            <div class="ac-body">
+                <div class="chart-wrap-lg"><canvas id="trendChart"></canvas></div>
+            </div>
+        </div>
+        <div class="ac">
+            <div class="ac-head amber">
+                <span><i class="fas fa-book"></i> Subject Performance</span>
+            </div>
+            <div class="ac-body">
+                <div class="chart-wrap-lg"><canvas id="subjectChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOP / LOW PERFORMERS -->
+    <div class="g2">
+        <!-- Top Performers -->
+        <div class="ac">
+            <div class="ac-head green">
+                <span><i class="fas fa-trophy"></i> Top 10 Performers</span>
+            </div>
+            <div class="ac-body-p0">
+                {% if top_performers %}
+                <table class="at">
+                    <thead>
+                        <tr>
+                            <th style="width:28px;">#</th>
+                            <th>Student</th>
+                            <th>Class</th>
+                            <th>Avg</th>
+                            <th>Exams</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in top_performers %}
+                        <tr>
+                            <td>
+                                <span class="rk {% if loop.index==1 %}rk-gold{% elif loop.index==2 %}rk-silver{% elif loop.index==3 %}rk-bronze{% else %}rk-plain{% endif %}">
+                                    {% if loop.index <= 3 %}<i class="fas fa-star" style="font-size:.5rem;"></i>{% else %}{{ loop.index }}{% endif %}
+                                </span>
+                            </td>
+                            <td style="font-weight:600;">{{ p.name }}</td>
+                            <td style="color:var(--muted);">{{ p.class_name }}</td>
+                            <td class="sc-hi">{{ p.avg_score }}%</td>
+                            <td style="color:var(--muted);">{{ p.exam_count }}</td>
+                        </tr>
                         {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label"><i class="fas fa-book"></i> Subject</label>
-                    <select name="subject" class="form-select" onchange="this.form.submit()">
-                        <option value="">All Subjects</option>
-                        {% for subject in subjects %}
-                        <option value="{{ subject }}" {% if selected_subject == subject %}selected{% endif %}>
-                            {{ subject }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label"><i class="fas fa-calendar"></i> Time Period</label>
-                    <select name="period" class="form-select" onchange="this.form.submit()">
-                        <option value="all" {% if selected_period == 'all' %}selected{% endif %}>All Time</option>
-                        <option value="week" {% if selected_period == 'week' %}selected{% endif %}>Last Week</option>
-                        <option value="month" {% if selected_period == 'month' %}selected{% endif %}>Last Month</option>
-                        <option value="quarter" {% if selected_period == 'quarter' %}selected{% endif %}>Last Quarter</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label"><i class="fas fa-file-alt"></i> Exam</label>
-                    <select name="exam_id" class="form-select" onchange="this.form.submit()">
-                        <option value="">All Exams</option>
-                        {% for exam in exams %}
-                        <option value="{{ exam.id }}" {% if selected_exam == exam.id %}selected{% endif %}>
-                            {{ exam.title }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-        </form>
-    </div>
-
-    <!-- Key Metrics -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="metric-card">
-                <div class="metric-value">{{ overall_stats.total_students }}</div>
-                <div class="metric-label">
-                    <i class="fas fa-users"></i> Total Students
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="metric-card blue">
-                <div class="metric-value">{{ overall_stats.avg_score }}%</div>
-                <div class="metric-label">
-                    <i class="fas fa-percentage"></i> Average Score
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="metric-card green">
-                <div class="metric-value">{{ overall_stats.pass_rate }}%</div>
-                <div class="metric-label">
-                    <i class="fas fa-check-circle"></i> Pass Rate
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="metric-card orange">
-                <div class="metric-value">{{ overall_stats.total_exams }}</div>
-                <div class="metric-label">
-                    <i class="fas fa-file-alt"></i> Total Exams
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Charts Row 1 -->
-    <div class="row mb-4">
-        <!-- Performance Distribution -->
-        <div class="col-md-6">
-            <div class="card analytics-card">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Performance Distribution</h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="performanceDistChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Grade Distribution -->
-        <div class="col-md-6">
-            <div class="card analytics-card">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Grade Distribution</h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="gradeDistChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Charts Row 2 -->
-    <div class="row mb-4">
-        <!-- Performance Trend -->
-        <div class="col-md-8">
-            <div class="card analytics-card">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0"><i class="fas fa-chart-line"></i> Performance Trend Over Time</h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="trendChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Subject-wise Performance -->
-        <div class="col-md-4">
-            <div class="card analytics-card">
-                <div class="card-header bg-warning text-white">
-                    <h5 class="mb-0"><i class="fas fa-book"></i> Subject Performance</h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="subjectChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Top Performers -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card analytics-card">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0"><i class="fas fa-trophy"></i> Top 10 Performers</h5>
-                </div>
-                <div class="card-body">
-                    {% if top_performers %}
-                    <div class="table-responsive">
-                        <table class="table performance-table">
-                            <thead>
-                                <tr>
-                                    <th>Rank</th>
-                                    <th>Student</th>
-                                    <th>Class</th>
-                                    <th>Avg Score</th>
-                                    <th>Exams</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for performer in top_performers %}
-                                <tr>
-                                    <td>
-                                        {% if loop.index == 1 %}
-                                        <i class="fas fa-medal" style="color: gold;"></i>
-                                        {% elif loop.index == 2 %}
-                                        <i class="fas fa-medal" style="color: silver;"></i>
-                                        {% elif loop.index == 3 %}
-                                        <i class="fas fa-medal" style="color: #cd7f32;"></i>
-                                        {% else %}
-                                        {{ loop.index }}
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ performer.name }}</td>
-                                    <td>{{ performer.class_name }}</td>
-                                    <td>
-                                        <span class="badge bg-success">{{ performer.avg_score }}%</span>
-                                    </td>
-                                    <td>{{ performer.exam_count }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i> No performance data available
-                    </div>
-                    {% endif %}
-                </div>
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty"><i class="fas fa-users"></i>No performance data available</div>
+                {% endif %}
             </div>
         </div>
 
         <!-- Low Performers -->
-        <div class="col-md-6">
-            <div class="card analytics-card">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Students Needing Attention</h5>
-                </div>
-                <div class="card-body">
-                    {% if low_performers %}
-                    <div class="table-responsive">
-                        <table class="table performance-table">
-                            <thead>
-                                <tr>
-                                    <th>Student</th>
-                                    <th>Class</th>
-                                    <th>Avg Score</th>
-                                    <th>Failed</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for student in low_performers %}
-                                <tr>
-                                    <td>{{ student.name }}</td>
-                                    <td>{{ student.class_name }}</td>
-                                    <td>
-                                        <span class="badge bg-danger">{{ student.avg_score }}%</span>
-                                    </td>
-                                    <td>{{ student.failed_count }}/{{ student.exam_count }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <div class="alert alert-success">
-                        <i class="fas fa-check-circle"></i> No students need immediate attention
-                    </div>
-                    {% endif %}
-                </div>
+        <div class="ac">
+            <div class="ac-head red">
+                <span><i class="fas fa-exclamation-triangle"></i> Students Needing Attention</span>
+            </div>
+            <div class="ac-body-p0">
+                {% if low_performers %}
+                <table class="at">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Class</th>
+                            <th>Avg</th>
+                            <th>Failed</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in low_performers %}
+                        <tr>
+                            <td style="font-weight:600;">{{ s.name }}</td>
+                            <td style="color:var(--muted);">{{ s.class_name }}</td>
+                            <td class="sc-lo">{{ s.avg_score }}%</td>
+                            <td style="color:var(--muted);">{{ s.failed_count }}/{{ s.exam_count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="all-good"><i class="fas fa-check-circle"></i>No students need immediate attention</div>
+                {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Class Comparison -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card analytics-card">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Class-wise Performance Comparison</h5>
+    <!-- CLASS COMPARISON CHART -->
+    <div class="ac" style="margin-bottom:8px;">
+        <div class="ac-head blue">
+            <span><i class="fas fa-chart-bar"></i> Class-wise Performance Comparison</span>
+        </div>
+        <div class="ac-body">
+            <div class="chart-wrap-xl"><canvas id="classComparisonChart"></canvas></div>
+        </div>
+    </div>
+
+    <!-- DETAILED PERFORMANCE TABLE -->
+    <div class="ac" style="margin-bottom:8px;">
+        <div class="ac-head slate">
+            <span><i class="fas fa-table"></i> Detailed Performance Report</span>
+            <a href="{{ url_for('admin.export_analytics') }}?{{ request.query_string.decode() }}"
+               class="btn-xls"><i class="fas fa-file-excel" style="font-size:.6rem;"></i> Export</a>
+        </div>
+        <div class="ac-body-p0">
+            {% if detailed_performance %}
+            <div style="overflow-x:auto;">
+                <table class="at">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Adm. No.</th>
+                            <th>Class</th>
+                            <th>Exams</th>
+                            <th>Avg</th>
+                            <th>High</th>
+                            <th>Low</th>
+                            <th>Pass%</th>
+                            <th>Trend</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in detailed_performance %}
+                        <tr>
+                            <td style="font-weight:600;white-space:nowrap;">{{ s.name }}</td>
+                            <td style="color:var(--muted);">{{ s.admission_number }}</td>
+                            <td style="color:var(--muted);">{{ s.class_name }}</td>
+                            <td style="color:var(--muted);">{{ s.exam_count }}</td>
+                            <td>
+                                <span class="sb {% if s.avg_score >= 75 %}sb-g{% elif s.avg_score >= 50 %}sb-y{% else %}sb-r{% endif %}">
+                                    {{ s.avg_score }}%
+                                </span>
+                            </td>
+                            <td class="sc-hi">{{ s.highest_score }}%</td>
+                            <td class="sc-lo">{{ s.lowest_score }}%</td>
+                            <td style="color:var(--muted);">{{ s.pass_rate }}%</td>
+                            <td>
+                                {% if s.trend == 'improving' %}
+                                <span class="tr-up"><i class="fas fa-arrow-up"></i> Up</span>
+                                {% elif s.trend == 'declining' %}
+                                <span class="tr-down"><i class="fas fa-arrow-down"></i> Down</span>
+                                {% else %}
+                                <span class="tr-flat"><i class="fas fa-minus"></i> Stable</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty"><i class="fas fa-table"></i>No performance data for selected filters</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- INSIGHTS / CONCERNS / RECOMMENDATIONS -->
+    <div class="g3">
+        <!-- Key Insights -->
+        <div class="ac">
+            <div class="ac-head info">
+                <span><i class="fas fa-lightbulb"></i> Key Insights</span>
+            </div>
+            <div class="ac-body">
+                {% if key_insights %}
+                {% for insight in key_insights %}
+                <div class="ins is">
+                    <i class="fas fa-check-circle" style="color:var(--green);"></i>
+                    <span>{{ insight }}</span>
                 </div>
-                <div class="card-body">
-                    <div class="chart-container" style="height: 500px;">
-                        <canvas id="classComparisonChart"></canvas>
-                    </div>
+                {% endfor %}
+                {% else %}
+                <p style="font-size:.7rem;color:var(--muted);text-align:center;padding:10px 0;margin:0;">No insights available</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Areas of Concern -->
+        <div class="ac">
+            <div class="ac-head amber">
+                <span><i class="fas fa-exclamation-circle"></i> Areas of Concern</span>
+            </div>
+            <div class="ac-body">
+                {% if concerns %}
+                {% for concern in concerns %}
+                <div class="ins iw">
+                    <i class="fas fa-exclamation-triangle" style="color:var(--amber);"></i>
+                    <span>{{ concern }}</span>
                 </div>
+                {% endfor %}
+                {% else %}
+                <p style="font-size:.7rem;color:var(--muted);text-align:center;padding:10px 0;margin:0;">No concerns identified</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recommendations -->
+        <div class="ac">
+            <div class="ac-head green">
+                <span><i class="fas fa-bullseye"></i> Recommendations</span>
+            </div>
+            <div class="ac-body">
+                {% if recommendations %}
+                {% for rec in recommendations %}
+                <div class="ins ii">
+                    <i class="fas fa-arrow-right" style="color:var(--accent);"></i>
+                    <span>{{ rec }}</span>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p style="font-size:.7rem;color:var(--muted);text-align:center;padding:10px 0;margin:0;">No recommendations at this time</p>
+                {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Detailed Performance Table -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card analytics-card">
-                <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-table"></i> Detailed Performance Report</h5>
-                    <a href="{{ url_for('admin.export_analytics') }}?{{ request.query_string.decode() }}" 
-                       class="btn btn-sm btn-light">
-                        <i class="fas fa-file-excel"></i> Export to Excel
-                    </a>
-                </div>
-                <div class="card-body">
-                    {% if detailed_performance %}
-                    <div class="table-responsive">
-                        <table class="table table-striped performance-table" id="performanceTable">
-                            <thead>
-                                <tr>
-                                    <th>Student Name</th>
-                                    <th>Admission No.</th>
-                                    <th>Class</th>
-                                    <th>Exams</th>
-                                    <th>Avg Score</th>
-                                    <th>Highest</th>
-                                    <th>Lowest</th>
-                                    <th>Pass Rate</th>
-                                    <th>Trend</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for student in detailed_performance %}
-                                <tr>
-                                    <td>{{ student.name }}</td>
-                                    <td>{{ student.admission_number }}</td>
-                                    <td>{{ student.class_name }}</td>
-                                    <td>{{ student.exam_count }}</td>
-                                    <td>
-                                        <span class="badge {% if student.avg_score >= 75 %}bg-success{% elif student.avg_score >= 50 %}bg-warning{% else %}bg-danger{% endif %}">
-                                            {{ student.avg_score }}%
-                                        </span>
-                                    </td>
-                                    <td>{{ student.highest_score }}%</td>
-                                    <td>{{ student.lowest_score }}%</td>
-                                    <td>{{ student.pass_rate }}%</td>
-                                    <td>
-                                        {% if student.trend == 'improving' %}
-                                        <i class="fas fa-arrow-up trend-up"></i> Improving
-                                        {% elif student.trend == 'declining' %}
-                                        <i class="fas fa-arrow-down trend-down"></i> Declining
-                                        {% else %}
-                                        <i class="fas fa-minus text-muted"></i> Stable
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i> No performance data available for the selected filters
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Insights -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card analytics-card">
-                <div class="card-header bg-info text-white">
-                    <h6 class="mb-0"><i class="fas fa-lightbulb"></i> Key Insights</h6>
-                </div>
-                <div class="card-body">
-                    {% if key_insights %}
-                    {% for insight in key_insights %}
-                    <div class="insight-item success">
-                        <i class="fas fa-check-circle text-success"></i> {{ insight }}
-                    </div>
-                    {% endfor %}
-                    {% else %}
-                    <p class="text-muted">No insights available</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card analytics-card">
-                <div class="card-header bg-warning text-white">
-                    <h6 class="mb-0"><i class="fas fa-exclamation-circle"></i> Areas of Concern</h6>
-                </div>
-                <div class="card-body">
-                    {% if concerns %}
-                    {% for concern in concerns %}
-                    <div class="insight-item warning">
-                        <i class="fas fa-exclamation-triangle text-warning"></i> {{ concern }}
-                    </div>
-                    {% endfor %}
-                    {% else %}
-                    <p class="text-muted">No concerns identified</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card analytics-card">
-                <div class="card-header bg-success text-white">
-                    <h6 class="mb-0"><i class="fas fa-bullseye"></i> Recommendations</h6>
-                </div>
-                <div class="card-body">
-                    {% if recommendations %}
-                    {% for recommendation in recommendations %}
-                    <div class="insight-item info">
-                        <i class="fas fa-arrow-right text-success"></i> {{ recommendation }}
-                    </div>
-                    {% endfor %}
-                    {% else %}
-                    <p class="text-muted">No recommendations at this time</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+</div>{# /aa-wrap #}
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+<script src="{{ url_for('static', filename='vendor/js/chart.umd.js') }}"></script>
 <script>
-    // Performance Distribution Chart
-    const perfDistCtx = document.getElementById('performanceDistChart').getContext('2d');
-    new Chart(perfDistCtx, {
+(function(){
+    const DEF = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { font:{ size:9 }, boxWidth:9, padding:7 } } }
+    };
+
+    // Performance Distribution — doughnut
+    new Chart(document.getElementById('performanceDistChart').getContext('2d'), {
         type: 'doughnut',
         data: {
             labels: {{ performance_dist_labels|tojson }},
-            datasets: [{
-                data: {{ performance_dist_data|tojson }},
-                backgroundColor: ['#27ae60', '#f39c12', '#e74c3c'],
-                borderWidth: 2,
-                borderColor: '#fff'
-            }]
+            datasets: [{ data: {{ performance_dist_data|tojson }},
+                backgroundColor: ['#10b981','#f59e0b','#ef4444'],
+                borderWidth: 1, borderColor: '#fff' }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom' }
+        options: { ...DEF, cutout: '60%',
+            plugins: { legend: { position:'right', labels:{ font:{size:9}, boxWidth:9, padding:7 } } }
+        }
+    });
+
+    // Grade Distribution — bar
+    new Chart(document.getElementById('gradeDistChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: {{ grade_labels|tojson }},
+            datasets: [{ label:'Students', data: {{ grade_data|tojson }},
+                backgroundColor: ['#10b981','#3b82f6','#f59e0b','#f97316','#ef4444'],
+                borderRadius: 3, borderWidth: 0 }]
+        },
+        options: { ...DEF,
+            scales: {
+                x: { ticks:{ font:{size:9} }, grid:{ display:false } },
+                y: { beginAtZero:true, ticks:{ font:{size:9}, stepSize:1 }, grid:{ color:'#f1f5f9' } }
+            },
+            plugins: { legend:{ display:false } }
+        }
+    });
+
+    // Trend — line
+    new Chart(document.getElementById('trendChart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: {{ trend_labels|tojson }},
+            datasets: [{ label:'Average Score', data: {{ trend_data|tojson }},
+                borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,.07)',
+                tension: 0.4, fill: true, borderWidth:2, pointRadius:3, pointBackgroundColor:'#3b82f6' }]
+        },
+        options: { ...DEF,
+            scales: {
+                x: { ticks:{ font:{size:9} }, grid:{ display:false } },
+                y: { beginAtZero:true, max:100,
+                     ticks:{ font:{size:9}, callback: v => v+'%' },
+                     grid:{ color:'#f1f5f9' } }
             }
         }
     });
 
-    // Grade Distribution Chart
-    const gradeDistCtx = document.getElementById('gradeDistChart').getContext('2d');
-    new Chart(gradeDistCtx, {
-        type: 'bar',
-        data: {
-            labels: {{ grade_labels|tojson }},
-            datasets: [{
-                label: 'Number of Students',
-                data: {{ grade_data|tojson }},
-                backgroundColor: ['#27ae60', '#3498db', '#f39c12', '#e67e22', '#e74c3c']
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
-            plugins: { legend: { display: false } }
-        }
-    });
-
-    // Trend Chart
-    const trendCtx = document.getElementById('trendChart').getContext('2d');
-    new Chart(trendCtx, {
-        type: 'line',
-        data: {
-            labels: {{ trend_labels|tojson }},
-            datasets: [{
-                label: 'Average Score',
-                data: {{ trend_data|tojson }},
-                borderColor: '#3498db',
-                backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                tension: 0.4,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true, max: 100 } }
-        }
-    });
-
-    // Subject Chart
-    const subjectCtx = document.getElementById('subjectChart').getContext('2d');
-    new Chart(subjectCtx, {
+    // Subject — horizontal bar
+    new Chart(document.getElementById('subjectChart').getContext('2d'), {
         type: 'bar',
         data: {
             labels: {{ subject_labels|tojson }},
-            datasets: [{
-                label: 'Avg Score',
-                data: {{ subject_data|tojson }},
-                backgroundColor: '#667eea'
-            }]
+            datasets: [{ label:'Avg Score', data: {{ subject_data|tojson }},
+                backgroundColor: '#8b5cf6', borderRadius:3, borderWidth:0 }]
         },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: { x: { beginAtZero: true, max: 100 } },
-            plugins: { legend: { display: false } }
+        options: { ...DEF, indexAxis:'y',
+            scales: {
+                x: { beginAtZero:true, max:100, ticks:{ font:{size:9}, callback: v=>v+'%' }, grid:{ color:'#f1f5f9' } },
+                y: { ticks:{ font:{size:9} }, grid:{ display:false } }
+            },
+            plugins: { legend:{ display:false } }
         }
     });
 
-    // Class Comparison Chart
-    const classCompCtx = document.getElementById('classComparisonChart').getContext('2d');
-    new Chart(classCompCtx, {
+    // Class Comparison — grouped bar
+    new Chart(document.getElementById('classComparisonChart').getContext('2d'), {
         type: 'bar',
         data: {
             labels: {{ class_labels|tojson }},
             datasets: [
-                { label: 'Average Score', data: {{ class_avg_data|tojson }}, backgroundColor: '#3498db' },
-                { label: 'Pass Rate', data: {{ class_pass_data|tojson }}, backgroundColor: '#27ae60' }
+                { label:'Average Score', data: {{ class_avg_data|tojson }},
+                  backgroundColor:'#3b82f6', borderRadius:3, borderWidth:0 },
+                { label:'Pass Rate',     data: {{ class_pass_data|tojson }},
+                  backgroundColor:'#10b981', borderRadius:3, borderWidth:0 }
             ]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true, max: 100 } },
-            plugins: { legend: { position: 'top' } }
+        options: { ...DEF,
+            scales: {
+                x: { ticks:{ font:{size:9} }, grid:{ display:false } },
+                y: { beginAtZero:true, max:100,
+                     ticks:{ font:{size:9}, callback: v=>v+'%' },
+                     grid:{ color:'#f1f5f9' } }
+            },
+            plugins: { legend:{ position:'top', labels:{ font:{size:9}, boxWidth:9, padding:7 } } }
         }
     });
+})();
 </script>
 {% endblock %}

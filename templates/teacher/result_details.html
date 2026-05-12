@@ -1,151 +1,457 @@
 {% extends "base.html" %}
-
-{% block title %}Result Details - E-Exam Platform{% endblock %}
+{% block title %}Result Details — E-Exam Platform{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h2><i class="fas fa-chart-line"></i> Result Details</h2>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.dashboard') }}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.manage_exams') }}">Exams</a></li>
-                    <li class="breadcrumb-item"><a href="{{ url_for('teacher.exam_results', exam_id=result.exam_id) }}">Results</a></li>
-                    <li class="breadcrumb-item active">Details</li>
-                </ol>
-            </nav>
-        </div>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body { font-family: 'DM Sans', system-ui, sans-serif; font-size: 13.5px;
+         color: #1a2332; background: #f0f2f5; -webkit-font-smoothing: antialiased; }
+
+  :root {
+    --navy:    #0f2240;
+    --navym:   #1e3a5f;
+    --green:   #166534;
+    --greenl:  #dcfce7;
+    --greend:  #15803d;
+    --red:     #991b1b;
+    --redl:    #fee2e2;
+    --redd:    #dc2626;
+    --amber:   #92400e;
+    --amberl:  #fef3c7;
+    --slate:   #475569;
+    --slatel:  #f1f5f9;
+    --muted:   #94a3b8;
+    --border:  #e2e8f0;
+    --surface: #ffffff;
+    --radius:  8px;
+    --shadow:  0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
+  }
+
+  /* ── Layout ── */
+  .rd-wrap    { max-width: 980px; margin: 0 auto; padding: 16px 12px 40px; }
+  .rd-header  { margin-bottom: 14px; }
+
+  /* ── Breadcrumb ── */
+  .breadcrumb { display: flex; align-items: center; gap: 4px; font-size: 11.5px;
+                color: var(--muted); list-style: none; margin: 0 0 6px; padding: 0; flex-wrap: wrap; }
+  .breadcrumb a { color: var(--navym); text-decoration: none; font-weight: 500; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb li + li::before { content: '/'; margin-right: 4px; }
+
+  /* ── Page title ── */
+  .rd-title { font-size: 17px; font-weight: 700; color: var(--navy); margin: 0; letter-spacing: -.01em; }
+
+  /* ── Info cards row ── */
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  @media (max-width: 640px) { .info-grid { grid-template-columns: 1fr; } }
+
+  .info-card { background: var(--surface); border: 1px solid var(--border);
+               border-radius: var(--radius); padding: 12px 14px; box-shadow: var(--shadow); }
+  .info-card-title {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--muted); margin-bottom: 8px; display: flex; align-items: center; gap: 5px;
+  }
+  .info-row { display: flex; align-items: baseline; gap: 6px; padding: 3px 0;
+              border-bottom: 1px solid #f8fafc; font-size: 12.5px; }
+  .info-row:last-child { border-bottom: none; }
+  .info-lbl { font-weight: 600; color: var(--slate); white-space: nowrap; min-width: 90px; font-size: 12px; }
+  .info-val { color: var(--navy); font-size: 12.5px; }
+
+  /* ── Scorebar ── */
+  .score-hero { display: flex; align-items: center; gap: 10px; margin: 6px 0 8px; }
+  .score-pct  { font-size: 2rem; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
+  .score-pass { color: var(--greend); }
+  .score-fail { color: var(--redd); }
+  .score-bar-wrap { flex: 1; }
+  .score-bar-track { height: 7px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+  .score-bar-fill  { height: 100%; border-radius: 4px; transition: width .5s ease; }
+  .score-bar-pass  { background: linear-gradient(90deg, #22c55e, #16a34a); }
+  .score-bar-fail  { background: linear-gradient(90deg, #f87171, #dc2626); }
+  .score-sub       { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* ── Stat chips ── */
+  .stat-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px;
+          border-radius: 20px; font-size: 11.5px; font-weight: 600; }
+  .chip-green  { background: var(--greenl); color: var(--green); }
+  .chip-red    { background: var(--redl);   color: var(--red); }
+  .chip-amber  { background: var(--amberl); color: var(--amber); }
+  .chip-slate  { background: var(--slatel); color: var(--slate); }
+
+  /* ── Section heading ── */
+  .section-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 14px 0 8px; padding-bottom: 6px; border-bottom: 2px solid var(--border);
+  }
+  .section-title {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .07em; color: var(--slate);
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  /* ── Legend ── */
+  .legend { display: flex; gap: 10px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--slate); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+  .ld-correct   { background: #22c55e; }
+  .ld-incorrect { background: #ef4444; }
+  .ld-unattempt { background: #cbd5e1; }
+
+  /* ── Question cards ── */
+  .q-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 7px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: box-shadow .15s;
+  }
+  .q-card:hover { box-shadow: 0 3px 10px rgba(0,0,0,.09); }
+
+  /* Left accent bar */
+  .q-card-correct    { border-left: 3px solid #22c55e; }
+  .q-card-incorrect  { border-left: 3px solid #ef4444; }
+  .q-card-unattempted{ border-left: 3px solid #cbd5e1; }
+
+  .q-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 12px; gap: 8px; border-bottom: 1px solid #f0f2f5;
+  }
+  .q-header-correct    { background: #f0fdf4; }
+  .q-header-incorrect  { background: #fff5f5; }
+  .q-header-unattempted{ background: #f8fafc; }
+
+  .q-num { font-size: 11px; font-weight: 700; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .q-badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 2px 8px; border-radius: 20px; font-size: 10.5px; font-weight: 700;
+    letter-spacing: .02em;
+  }
+  .qb-correct    { background: var(--greenl); color: var(--green); }
+  .qb-incorrect  { background: var(--redl); color: var(--red); }
+  .qb-unattempted{ background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
+
+  .q-marks { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted);
+             white-space: nowrap; margin-left: auto; }
+
+  .q-body { padding: 9px 12px; }
+  .q-text { font-size: 13px; font-weight: 500; color: var(--navy); line-height: 1.5; margin: 0 0 7px; }
+
+  /* Options */
+  .opts-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+  .opt-item {
+    display: flex; align-items: flex-start; gap: 7px;
+    padding: 4px 9px; border-radius: 5px; font-size: 12.5px; line-height: 1.45;
+    border: 1px solid transparent;
+  }
+  .opt-label { font-family: 'DM Mono', monospace; font-size: 11.5px; font-weight: 600;
+               min-width: 18px; margin-top: 1px; flex-shrink: 0; }
+
+  /* Option states */
+  .opt-neutral    { background: #fafbfc; border-color: #f0f2f5; color: var(--slate); }
+  .opt-correct-hi { background: #dcfce7; border-color: #bbf7d0; color: var(--green); }
+  .opt-wrong-hi   { background: #fee2e2; border-color: #fecaca; color: var(--red); }
+  .opt-missed     { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+
+  .opt-tag {
+    display: inline-flex; align-items: center; gap: 2px;
+    padding: 0 5px; border-radius: 3px; font-size: 9.5px; font-weight: 700;
+    letter-spacing: .04em; white-space: nowrap; flex-shrink: 0; margin-top: 2px;
+  }
+  .tag-yours   { background: #bfdbfe; color: #1e40af; }
+  .tag-correct { background: #bbf7d0; color: #166534; }
+
+  /* Theory answer box */
+  .theory-box {
+    border-radius: 5px; padding: 7px 10px; font-size: 12.5px; line-height: 1.55;
+    border: 1px solid; margin-top: 4px;
+  }
+  .theory-answered { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+  .theory-empty    { background: #f8fafc; border-color: #e2e8f0; color: var(--muted); font-style: italic; }
+
+  /* Unattempted overlay feel */
+  .q-unattempted-note {
+    display: flex; align-items: center; gap: 6px; padding: 6px 10px;
+    background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 5px;
+    font-size: 12px; color: #94a3b8; margin-top: 4px;
+  }
+
+  .q-footer { display: flex; align-items: center; gap: 8px; padding: 5px 12px 7px;
+              font-size: 11.5px; color: var(--muted); flex-wrap: wrap; }
+  .q-footer-val { font-family: 'DM Mono', monospace; font-weight: 600; }
+  .q-footer .sep { color: #e2e8f0; }
+
+  /* ── Back button ── */
+  .btn-back {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); color: var(--slate); font-size: 13px; font-weight: 600;
+    text-decoration: none; transition: background .15s, border-color .15s;
+  }
+  .btn-back:hover { background: #f0f4fa; border-color: #c8d3df; color: var(--navy); }
+
+  /* ── Review tag ── */
+  .review-tag { display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px;
+                border-radius: 3px; background: #fef9c3; color: #92400e;
+                font-size: 10px; font-weight: 700; border: 1px solid #fde68a; }
+
+  /* ── Progress ring (optional cosmetic) ── */
+  .progress-summary { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+  .pstat { text-align: center; min-width: 44px; }
+  .pstat-num { font-size: 1.2rem; font-weight: 800; line-height: 1; }
+  .pstat-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-top: 2px; }
+</style>
+
+{#
+  ─────────────────────────────────────────────────────────────────────────
+  Build an answer lookup dict in Jinja2.
+  The route passes `answers` (list of StudentAnswer) and all questions are
+  fetched via result.exam.questions (or we rely on the answers list + the
+  full question list the route must supply as `all_questions`).
+
+  Required template variables (all already sent by result_details view):
+    result           – ExamResult
+    student_user     – User
+    answers          – list[StudentAnswer]   (attempted only)
+    exam_session     – ExamSession | None
+    correct_count    – int
+    incorrect_count  – int
+    unattempted_count– int
+
+  We build `answer_map` here: { question_id -> answer | None }
+  and iterate over all questions in order.
+  ─────────────────────────────────────────────────────────────────────────
+#}
+
+{% set answer_map = {} %}
+{% for a in answers %}
+  {% if answer_map.update({a.question_id: a}) %}{% endif %}
+{% endfor %}
+
+{% set all_questions = result.exam.questions | sort(attribute='order') %}
+
+<div class="rd-wrap">
+
+  <!-- Header -->
+  <div class="rd-header">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li><a href="{{ url_for('teacher.dashboard') }}">Dashboard</a></li>
+        <li><a href="{{ url_for('teacher.manage_exams') }}">Exams</a></li>
+        <li><a href="{{ url_for('teacher.exam_results', exam_id=result.exam_id) }}">Results</a></li>
+        <li>Details</li>
+      </ol>
+    </nav>
+    <h1 class="rd-title">Result Details</h1>
+  </div>
+
+  <!-- Info grid -->
+  <div class="info-grid">
+
+    <!-- Student info -->
+    <div class="info-card">
+      <div class="info-card-title">
+        <i class="fas fa-user" style="font-size:11px;color:var(--navym)"></i> Student Information
+      </div>
+      <div class="info-row"><span class="info-lbl">Name</span><span class="info-val">{{ result.student_user.full_name }}</span></div>
+      <div class="info-row"><span class="info-lbl">Email</span><span class="info-val" style="word-break:break-all">{{ result.student_user.email }}</span></div>
+      <div class="info-row">
+        <span class="info-lbl">Submitted</span>
+        <span class="info-val">{{ result.submitted_at.strftime('%d %b %Y, %H:%M') }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-lbl">Time Taken</span>
+        <span class="info-val">
+          {% if result.exam_session and result.exam_session.time_taken %}
+            {{ result.exam_session.time_taken }} min
+          {% elif result.exam_session and result.exam_session.start_time and result.exam_session.end_time %}
+            {{ ((result.exam_session.end_time - result.exam_session.start_time).total_seconds() / 60) | int }} min
+          {% else %}
+            <span style="color:var(--muted)">Not recorded</span>
+          {% endif %}
+        </span>
+      </div>
+      <div class="info-row"><span class="info-lbl">Exam</span><span class="info-val">{{ result.exam.title }}</span></div>
     </div>
 
-    <!-- Student & Exam Info -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-user"></i> Student Information</h5>
-                </div>
-                <div class="card-body">
-                    <p><strong>Name:</strong> {{ result.student_user.full_name }}</p>
-                    <p><strong>Email:</strong> {{ result.student_user.email }}</p>
-                    <p><strong>Submitted At:</strong> {{ result.submitted_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
-                    {% if result.exam_session and result.exam_session.time_taken %}
-<p><strong>Time Taken:</strong> {{ result.exam_session.time_taken }} minutes</p>
-{% elif result.exam_session and result.exam_session.start_time and result.exam_session.end_time %}
-<p><strong>Time Taken:</strong> {{ ((result.exam_session.end_time - result.exam_session.start_time).total_seconds() / 60) | int }} minutes</p>
-{% else %}
-<p><strong>Time Taken:</strong> Not recorded</p>
-{% endif %}
-                </div>
-            </div>
-        </div>
+    <!-- Score summary -->
+    <div class="info-card">
+      <div class="info-card-title">
+        <i class="fas fa-chart-bar" style="font-size:11px;color:var(--navym)"></i> Score Summary
+      </div>
 
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Score Summary</h5>
-                </div>
-                <div class="card-body">
-                    <p><strong>Marks Obtained:</strong> {{ result.marks_obtained }} / {{ result.total_marks }}</p>
-                    <p><strong>Percentage:</strong> 
-                        <span class="badge {% if result.is_passed %}bg-success{% else %}bg-danger{% endif %} fs-6">
-                            {{ "%.2f"|format(result.percentage) }}%
-                        </span>
-                    </p>
-                    <p><strong>Status:</strong> 
-                        {% if result.is_passed %}
-                        <span class="badge bg-success">Passed</span>
-                        {% else %}
-                        <span class="badge bg-danger">Failed</span>
-                        {% endif %}
-                    </p>
-                    <p><strong>Correct:</strong> {{ result.correct_answers }} | 
-                       <strong>Incorrect:</strong> {{ result.incorrect_answers }} | 
-                       <strong>Unattempted:</strong> {{ result.unattempted }}</p>
-                </div>
-            </div>
+      <div class="score-hero">
+        <div class="score-pct {% if result.is_passed %}score-pass{% else %}score-fail{% endif %}">
+          {{ "%.1f"|format(result.percentage) }}%
         </div>
-    </div>
-
-    <!-- Answer Details -->
-    <div class="card">
-        <div class="card-header">
-            <h5 class="mb-0"><i class="fas fa-list"></i> Answer Details</h5>
-        </div>
-        <div class="card-body">
-            {% if answers %}
-            {% for answer in answers %}
-            <div class="card mb-3 {% if answer.is_correct %}border-success{% elif answer.is_correct == False %}border-danger{% else %}border-warning{% endif %}">
-                <div class="card-header {% if answer.is_correct %}bg-success bg-opacity-10{% elif answer.is_correct == False %}bg-danger bg-opacity-10{% else %}bg-warning bg-opacity-10{% endif %}">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <strong>Question {{ loop.index }}</strong>
-                        <span class="badge {% if answer.is_correct %}bg-success{% elif answer.is_correct == False %}bg-danger{% else %}bg-warning{% endif %}">
-                            {% if answer.is_correct %}Correct{% elif answer.is_correct == False %}Incorrect{% else %}Unattempted{% endif %}
-                        </span>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <p><strong>Question:</strong> {{ answer.question.question_text }}</p>
-                    
-                    {% if answer.question.question_type == 'mcq' or answer.question.question_type == 'true_false' %}
-                    <p><strong>Student's Answer:</strong> 
-                        {% if answer.selected_option %}
-                        {{ answer.selected_option.option_label }}. {{ answer.selected_option.option_text }}
-                        {% else %}
-                        <span class="text-muted">Not Attempted</span>
-                        {% endif %}
-                    </p>
-                    
-                    <p><strong>Correct Answer:</strong> 
-                        {% for option in answer.question.options %}
-                            {% if option.is_correct %}
-                            <span class="text-success">{{ option.option_label }}. {{ option.option_text }}</span>
-                            {% endif %}
-                        {% endfor %}
-                    </p>
-                    
-                    <p><strong>All Options:</strong></p>
-                    <ul>
-                        {% for option in answer.question.options %}
-                        <li>
-                            <strong>{{ option.option_label }}.</strong> {{ option.option_text }}
-                            {% if option.is_correct %}
-                            <span class="badge bg-success">Correct</span>
-                            {% endif %}
-                            {% if answer.selected_option and answer.selected_option.id == option.id %}
-                            <span class="badge bg-primary">Student's Choice</span>
-                            {% endif %}
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    
-                    {% elif answer.question.question_type == 'theory' %}
-                    <p><strong>Student's Answer:</strong></p>
-                    <div class="border p-3 bg-light">
-                        {{ answer.theory_answer if answer.theory_answer else '<em>Not Attempted</em>' }}
-                    </div>
-                    {% endif %}
-                    
-                    <p class="mb-0 mt-2">
-                        <strong>Marks:</strong> {{ answer.marks_obtained }} / {{ answer.question.marks }} |
-                        <strong>Time Spent:</strong> {{ answer.time_spent_seconds }} seconds
-                        {% if answer.marked_for_review %}
-                        | <span class="badge bg-warning">Marked for Review</span>
-                        {% endif %}
-                    </p>
-                </div>
-            </div>
-            {% endfor %}
+        <div class="score-bar-wrap">
+          <div class="score-bar-track">
+            <div class="score-bar-fill {% if result.is_passed %}score-bar-pass{% else %}score-bar-fail{% endif %}"
+                 style="width:{{ [result.percentage, 100] | min }}%"></div>
+          </div>
+          <div class="score-sub">
+            {{ result.marks_obtained }} / {{ result.total_marks }} marks &nbsp;·&nbsp;
+            {% if result.is_passed %}
+              <span style="color:var(--greend);font-weight:600">Passed</span>
             {% else %}
-            <p class="text-center text-muted">No answer details available</p>
+              <span style="color:var(--redd);font-weight:600">Failed</span>
             {% endif %}
+          </div>
         </div>
+      </div>
+
+      <div class="stat-chips">
+        <span class="chip chip-green"><i class="fas fa-check" style="font-size:9px"></i>{{ correct_count }} Correct</span>
+        <span class="chip chip-red"><i class="fas fa-times" style="font-size:9px"></i>{{ incorrect_count }} Incorrect</span>
+        <span class="chip chip-amber"><i class="fas fa-minus" style="font-size:9px"></i>{{ unattempted_count }} Skipped</span>
+        <span class="chip chip-slate"><i class="fas fa-list" style="font-size:9px"></i>{{ all_questions | length }} Total</span>
+      </div>
     </div>
 
-    <div class="mt-4">
-        <a href="{{ url_for('teacher.exam_results', exam_id=result.exam_id) }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Back to Results
-        </a>
+  </div><!-- /info-grid -->
+
+  <!-- ── Answer Details ── -->
+  <div class="section-head">
+    <div class="section-title">
+      <i class="fas fa-list-alt" style="color:var(--navym)"></i>
+      Answer Details
+      <span style="font-size:11px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">
+        ({{ all_questions | length }} questions)
+      </span>
     </div>
-</div>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-dot ld-correct"></span>Correct</span>
+      <span class="legend-item"><span class="legend-dot ld-incorrect"></span>Incorrect</span>
+      <span class="legend-item"><span class="legend-dot ld-unattempt"></span>Unattempted</span>
+    </div>
+  </div>
+
+  {% if all_questions %}
+    {% for question in all_questions %}
+      {% set answer = answer_map.get(question.id) %}
+
+      {# ── Determine state ── #}
+      {% if answer is none %}
+        {% set state = 'unattempted' %}
+      {% elif answer.is_correct %}
+        {% set state = 'correct' %}
+      {% else %}
+        {% set state = 'incorrect' %}
+      {% endif %}
+
+      <div class="q-card q-card-{{ state }}">
+
+        <!-- Question header -->
+        <div class="q-header q-header-{{ state }}">
+          <span class="q-num">Q{{ loop.index }}</span>
+
+          {% if state == 'correct' %}
+            <span class="q-badge qb-correct"><i class="fas fa-check" style="font-size:9px"></i>Correct</span>
+          {% elif state == 'incorrect' %}
+            <span class="q-badge qb-incorrect"><i class="fas fa-times" style="font-size:9px"></i>Incorrect</span>
+          {% else %}
+            <span class="q-badge qb-unattempted"><i class="fas fa-minus" style="font-size:9px"></i>Unattempted</span>
+          {% endif %}
+
+          {% if answer and answer.marked_for_review %}
+            <span class="review-tag"><i class="fas fa-bookmark" style="font-size:8px"></i>Review</span>
+          {% endif %}
+
+          <span class="q-marks">
+            {% if answer %}{{ answer.marks_obtained }}/{{ question.marks }}{% else %}0/{{ question.marks }}{% endif %} mk
+          </span>
+        </div>
+
+        <!-- Question body -->
+        <div class="q-body">
+          <p class="q-text">{{ question.question_text }}</p>
+
+          {% set q_type = question.question_type | lower %}
+
+          {# ── MCQ / True–False ── #}
+          {% if q_type in ('mcq', 'true_false', 'multiple_choice', 'objective') %}
+            <ul class="opts-list">
+              {% for option in question.options | sort(attribute='option_label') %}
+                {% set is_selected = answer and answer.selected_option_id == option.id %}
+
+                {% if option.is_correct and is_selected %}
+                  {% set opt_cls = 'opt-correct-hi' %}
+                {% elif option.is_correct and not is_selected %}
+                  {% set opt_cls = 'opt-missed' %}
+                {% elif is_selected and not option.is_correct %}
+                  {% set opt_cls = 'opt-wrong-hi' %}
+                {% else %}
+                  {% set opt_cls = 'opt-neutral' %}
+                {% endif %}
+
+                <li class="opt-item {{ opt_cls }}">
+                  <span class="opt-label">{{ option.option_label }}.</span>
+                  <span style="flex:1">{{ option.option_text }}</span>
+                  {% if is_selected and option.is_correct %}
+                    <span class="opt-tag tag-yours">✓ Your answer</span>
+                  {% elif is_selected and not option.is_correct %}
+                    <span class="opt-tag tag-yours" style="background:#fecaca;color:#991b1b">✗ Your answer</span>
+                  {% elif option.is_correct %}
+                    <span class="opt-tag tag-correct">Correct</span>
+                  {% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+
+            {% if state == 'unattempted' %}
+              <div class="q-unattempted-note">
+                <i class="fas fa-info-circle" style="font-size:11px"></i>
+                No option was selected for this question.
+              </div>
+            {% endif %}
+
+          {# ── Theory ── #}
+          {% elif q_type in ('theory', 'essay', 'short_answer', 'short') %}
+            {% if answer and answer.theory_answer and answer.theory_answer | string | trim and answer.theory_answer | string | trim | lower != 'none' %}
+              <div class="theory-box theory-answered">{{ answer.theory_answer }}</div>
+            {% elif state == 'unattempted' %}
+              <div class="q-unattempted-note">
+                <i class="fas fa-info-circle" style="font-size:11px"></i>
+                No answer was provided for this question.
+              </div>
+            {% else %}
+              <div class="theory-box theory-empty">No answer provided</div>
+            {% endif %}
+          {% endif %}
+
+        </div><!-- /q-body -->
+
+        <!-- Question footer -->
+        <div class="q-footer">
+          <span>Marks: <span class="q-footer-val" style="color:{% if state == 'correct' %}var(--greend){% elif state == 'incorrect' %}var(--redd){% else %}var(--muted){% endif %}">
+            {% if answer %}{{ answer.marks_obtained }}{% else %}0{% endif %}/{{ question.marks }}
+          </span></span>
+          {% if answer and answer.time_spent_seconds %}
+            <span class="sep">·</span>
+            <span>Time: <span class="q-footer-val">{{ answer.time_spent_seconds }}s</span></span>
+          {% endif %}
+        </div>
+
+      </div><!-- /q-card -->
+    {% endfor %}
+
+  {% else %}
+    <div style="text-align:center;padding:40px 20px;color:var(--muted);font-size:13px">
+      <i class="fas fa-clipboard" style="font-size:2rem;opacity:.3;display:block;margin-bottom:8px"></i>
+      No questions found for this exam.
+    </div>
+  {% endif %}
+
+  <!-- Back button -->
+  <div style="margin-top:16px">
+    <a href="{{ url_for('teacher.exam_results', exam_id=result.exam_id) }}" class="btn-back">
+      <i class="fas fa-arrow-left" style="font-size:11px"></i> Back to Results
+    </a>
+  </div>
+
+</div><!-- /rd-wrap -->
 {% endblock %}

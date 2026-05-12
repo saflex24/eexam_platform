@@ -32,7 +32,7 @@ class User(UserMixin, db.Model):
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    profile_picture = db.Column(db.String(255))
+    
     
     # Relationships with explicit foreign_keys to avoid ambiguity
     exams_created = db.relationship(

@@ -12,185 +12,422 @@
         margin-bottom: 2rem;
         box-shadow: var(--shadow-md);
         border: 1px solid var(--border);
+        animation: fadeInUp 0.6s ease-out;
+        animation-fill-mode: both;
+    }
+    
+    .settings-section:nth-child(1) { animation-delay: 0.1s; }
+    .settings-section:nth-child(2) { animation-delay: 0.2s; }
+    .settings-section:nth-child(3) { animation-delay: 0.3s; }
+    .settings-section:nth-child(4) { animation-delay: 0.4s; }
+    
+    .settings-section h4 {
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .settings-section h4 i {
+        width: 42px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-lg);
+        background: var(--gradient-primary);
+        color: white;
+        font-size: 1.125rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control, .form-select {
+        border: 2px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 0.75rem 1rem;
+        transition: var(--transition);
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+    
+    .logo-preview {
+        max-width: 200px;
+        max-height: 100px;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        border: 2px solid var(--border);
+        padding: 0.5rem;
+        background: white;
+    }
+    
+    .color-input-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .color-input-wrapper input[type="color"] {
+        width: 60px;
+        height: 45px;
+        border: 2px solid var(--border);
+        border-radius: var(--radius-lg);
+        cursor: pointer;
+    }
+    
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 34px;
+    }
+    
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #ccc;
+        transition: .4s;
+        border-radius: 34px;
+    }
+    
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 26px;
+        width: 26px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+    
+    input:checked + .slider {
+        background: var(--gradient-primary);
+    }
+    
+    input:checked + .slider:before {
+        transform: translateX(26px);
+    }
+    
+    .upload-area {
+        border: 2px dashed var(--border);
+        border-radius: var(--radius-lg);
+        padding: 2rem;
+        text-align: center;
+        transition: var(--transition);
+        cursor: pointer;
+    }
+    
+    .upload-area:hover {
+        border-color: var(--primary);
+        background: rgba(99, 102, 241, 0.03);
+    }
+    
+    .upload-area i {
+        font-size: 3rem;
+        color: var(--primary);
+        margin-bottom: 1rem;
+    }
+    
+    .file-input-label {
+        display: block;
+        cursor: pointer;
+    }
+    
+    .file-input-label:hover .upload-area {
+        border-color: var(--primary);
+        background: rgba(99, 102, 241, 0.03);
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-
     <!-- Page Header -->
     <div class="dashboard-header">
-        <h2><i class="fas fa-cog"></i> System Settings</h2>
+        <h2>
+            <i class="fas fa-cog"></i>
+            System Settings
+        </h2>
         <p class="subtitle">Customize your school information, branding, and system preferences</p>
     </div>
 
-    {% if settings %}
     <form method="POST" enctype="multipart/form-data">
-
-        <!-- ================= SCHOOL INFO ================= -->
+        <!-- School Information -->
         <div class="settings-section">
-            <h4><i class="fas fa-school"></i> School Information</h4>
-
+            <h4>
+                <i class="fas fa-school"></i>
+                School Information
+            </h4>
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label class="form-label">School Name *</label>
-                    <input type="text" class="form-control" name="school_name"
-                           value="{{ settings.school_name or '' }}" required>
+                    <label class="form-label">School Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="school_name" 
+                           value="{{ settings.school_name }}" required>
+                    <small class="text-muted">Full name of your institution</small>
                 </div>
-
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Short Name</label>
-                    <input type="text" class="form-control" name="school_short_name"
-                           value="{{ settings.school_short_name or '' }}">
+                    <input type="text" class="form-control" name="school_short_name" 
+                           value="{{ settings.school_short_name }}">
+                    <small class="text-muted">Abbreviated name for compact displays</small>
                 </div>
             </div>
-
+            
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label>Email</label>
-                    <input type="email" class="form-control" name="school_email"
+                    <label class="form-label">Email Address</label>
+                    <input type="email" class="form-control" name="school_email" 
                            value="{{ settings.school_email or '' }}">
+                    <small class="text-muted">Official contact email</small>
                 </div>
-
                 <div class="col-md-6 mb-3">
-                    <label>Phone</label>
-                    <input type="text" class="form-control" name="school_phone"
+                    <label class="form-label">Phone Number</label>
+                    <input type="text" class="form-control" name="school_phone" 
                            value="{{ settings.school_phone or '' }}">
+                    <small class="text-muted">Main contact number</small>
                 </div>
             </div>
-
-            <div class="mb-3">
-                <label>Address</label>
-                <textarea class="form-control" name="school_address">{{ settings.school_address or '' }}</textarea>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Website</label>
+                    <input type="url" class="form-control" name="school_website" 
+                           value="{{ settings.school_website or '' }}" 
+                           placeholder="https://example.com">
+                    <small class="text-muted">Official website URL</small>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Address</label>
+                    <textarea class="form-control" name="school_address" rows="3">{{ settings.school_address or '' }}</textarea>
+                    <small class="text-muted">Physical address</small>
+                </div>
             </div>
         </div>
 
-        <!-- ================= BRANDING ================= -->
+        <!-- Branding & Logo -->
         <div class="settings-section">
-            <h4><i class="fas fa-palette"></i> Branding</h4>
-
+            <h4>
+                <i class="fas fa-palette"></i>
+                Branding & Logo
+            </h4>
+            
             <div class="row">
-                <div class="col-md-6">
-
-                    <!-- LOGO -->
-                    <label>Logo</label>
-
+                <!-- School Logo -->
+                <div class="col-md-6 mb-4">
+                    <label class="form-label">School Logo</label>
+                    
                     {% if settings.school_logo %}
-                        <div class="mb-2">
-                            <img src="{{ url_for('static', filename=settings.school_logo) }}"
-                                 class="img-fluid"
-                                 style="max-height:100px;"
-                                 onerror="this.style.display='none'">
-
-                            <br>
-                            <a href="{{ url_for('admin.remove_logo') }}"
-                               class="btn btn-danger btn-sm mt-2"
-                               onclick="return confirm('Remove logo?')">
-                                Remove Logo
-                            </a>
+                    <div class="mb-3">
+                        <img src="{{ url_for('static', filename=settings.school_logo) }}" 
+                             alt="School Logo" class="logo-preview">
+                        <div class="mt-2">
+                            <form method="POST" action="{{ url_for('admin.remove_logo') }}" style="display: inline;">
+                                <button type="submit" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i> Remove Logo
+                                </button>
+                            </form>
                         </div>
+                    </div>
                     {% endif %}
-
-                    <input type="file" name="school_logo" class="form-control">
+                    
+                    <label for="school_logo" class="file-input-label">
+                        <div class="upload-area">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p class="mb-0"><strong>Click to upload logo</strong></p>
+                            <small class="text-muted">PNG, JPG, SVG (Max 2MB)</small>
+                        </div>
+                    </label>
+                    <input type="file" id="school_logo" name="school_logo" 
+                           accept="image/*" style="display: none;">
                 </div>
-
-                <div class="col-md-6">
-
-                    <!-- FAVICON -->
-                    <label>Favicon</label>
-
+                
+                <!-- Favicon -->
+                <div class="col-md-6 mb-4">
+                    <label class="form-label">Favicon</label>
+                    
                     {% if settings.school_favicon %}
-                        <div class="mb-2">
-                            <img src="{{ url_for('static', filename=settings.school_favicon) }}"
-                                 width="32" height="32"
-                                 onerror="this.style.display='none'">
-
-                            <br>
-                            <a href="{{ url_for('admin.remove_favicon') }}"
-                               class="btn btn-danger btn-sm mt-2"
-                               onclick="return confirm('Remove favicon?')">
-                                Remove Favicon
-                            </a>
+                    <div class="mb-3">
+                        <img src="{{ url_for('static', filename=settings.school_favicon) }}" 
+                             alt="Favicon" style="width: 32px; height: 32px;">
+                        <div class="mt-2">
+                            <form method="POST" action="{{ url_for('admin.remove_favicon') }}" style="display: inline;">
+                                <button type="submit" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i> Remove Favicon
+                                </button>
+                            </form>
                         </div>
+                    </div>
                     {% endif %}
-
-                    <input type="file" name="school_favicon" class="form-control">
+                    
+                    <label for="school_favicon" class="file-input-label">
+                        <div class="upload-area">
+                            <i class="fas fa-image"></i>
+                            <p class="mb-0"><strong>Click to upload favicon</strong></p>
+                            <small class="text-muted">ICO, PNG (16x16 or 32x32)</small>
+                        </div>
+                    </label>
+                    <input type="file" id="school_favicon" name="school_favicon" 
+                           accept="image/x-icon,image/png" style="display: none;">
                 </div>
             </div>
-
-            <!-- COLORS -->
-            <div class="row mt-3">
-                <div class="col-md-6">
-                    <label>Primary Color</label>
-                    <input type="color" name="primary_color"
-                           value="{{ settings.primary_color or '#6366f1' }}">
+            
+            <!-- Color Scheme -->
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Primary Color</label>
+                    <div class="color-input-wrapper">
+                        <input type="color" name="primary_color" 
+                               value="{{ settings.primary_color }}" 
+                               id="primary_color">
+                        <input type="text" class="form-control" 
+                               value="{{ settings.primary_color }}" 
+                               id="primary_color_text" readonly>
+                    </div>
+                    <small class="text-muted">Main brand color</small>
                 </div>
-
-                <div class="col-md-6">
-                    <label>Secondary Color</label>
-                    <input type="color" name="secondary_color"
-                           value="{{ settings.secondary_color or '#10b981' }}">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Secondary Color</label>
+                    <div class="color-input-wrapper">
+                        <input type="color" name="secondary_color" 
+                               value="{{ settings.secondary_color }}"
+                               id="secondary_color">
+                        <input type="text" class="form-control" 
+                               value="{{ settings.secondary_color }}" 
+                               id="secondary_color_text" readonly>
+                    </div>
+                    <small class="text-muted">Accent color</small>
                 </div>
             </div>
         </div>
 
-        <!-- ================= SYSTEM SETTINGS ================= -->
+        <!-- System Settings -->
         <div class="settings-section">
-            <h4><i class="fas fa-sliders-h"></i> System Settings</h4>
-
+            <h4>
+                <i class="fas fa-sliders-h"></i>
+                System Settings
+            </h4>
+            
             <div class="row">
-                <div class="col-md-4">
-                    <label>Student Registration</label><br>
-                    <input type="checkbox" name="allow_student_registration"
-                        {{ 'checked' if settings.allow_student_registration else '' }}>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label d-block">Student Registration</label>
+                    <label class="switch">
+                        <input type="checkbox" name="allow_student_registration" 
+                               {{ 'checked' if settings.allow_student_registration else '' }}>
+                        <span class="slider"></span>
+                    </label>
+                    <small class="d-block text-muted mt-2">Allow students to self-register</small>
                 </div>
-
-                <div class="col-md-4">
-                    <label>Maintenance Mode</label><br>
-                    <input type="checkbox" name="maintenance_mode"
-                        {{ 'checked' if settings.maintenance_mode else '' }}>
+                
+                <div class="col-md-4 mb-3">
+                    <label class="form-label d-block">Maintenance Mode</label>
+                    <label class="switch">
+                        <input type="checkbox" name="maintenance_mode" 
+                               {{ 'checked' if settings.maintenance_mode else '' }}>
+                        <span class="slider"></span>
+                    </label>
+                    <small class="d-block text-muted mt-2">Disable public access temporarily</small>
                 </div>
-
-                <div class="col-md-4">
-                    <label>Timezone</label>
+                
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Timezone</label>
                     <select class="form-select" name="timezone">
-                        <option value="UTC" {{ 'selected' if settings.timezone=='UTC' else '' }}>UTC</option>
-                        <option value="Africa/Lagos" {{ 'selected' if settings.timezone=='Africa/Lagos' else '' }}>Africa/Lagos</option>
+                        <option value="UTC" {{ 'selected' if settings.timezone == 'UTC' else '' }}>UTC</option>
+                        <option value="Africa/Lagos" {{ 'selected' if settings.timezone == 'Africa/Lagos' else '' }}>Africa/Lagos (WAT)</option>
+                        <option value="America/New_York" {{ 'selected' if settings.timezone == 'America/New_York' else '' }}>America/New York (EST)</option>
+                        <option value="Europe/London" {{ 'selected' if settings.timezone == 'Europe/London' else '' }}>Europe/London (GMT)</option>
+                        <option value="Asia/Dubai" {{ 'selected' if settings.timezone == 'Asia/Dubai' else '' }}>Asia/Dubai (GST)</option>
                     </select>
                 </div>
             </div>
         </div>
 
-        <!-- ================= FOOTER ================= -->
+        <!-- Footer Settings -->
         <div class="settings-section">
-            <h4><i class="fas fa-align-center"></i> Footer</h4>
-
+            <h4>
+                <i class="fas fa-align-center"></i>
+                Footer Settings
+            </h4>
+            
             <div class="mb-3">
-                <label>Footer Text</label>
-                <textarea class="form-control" name="footer_text">{{ settings.footer_text or '' }}</textarea>
+                <label class="form-label">Footer Text</label>
+                <textarea class="form-control" name="footer_text" rows="3">{{ settings.footer_text or '' }}</textarea>
+                <small class="text-muted">Additional information to display in footer</small>
             </div>
-
+            
             <div class="mb-3">
-                <label>Copyright</label>
-                <input type="text" class="form-control" name="copyright_text"
-                       value="{{ settings.copyright_text or '' }}">
+                <label class="form-label">Copyright Text</label>
+                <input type="text" class="form-control" name="copyright_text" 
+                       value="{{ settings.copyright_text or '' }}"
+                       placeholder="© 2024 Your School Name. All rights reserved.">
+                <small class="text-muted">Copyright notice</small>
             </div>
         </div>
 
-        <!-- ACTION BUTTONS -->
+        <!-- Action Buttons -->
         <div class="d-flex justify-content-between mb-4">
-            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">Cancel</a>
-            <button type="submit" class="btn btn-primary">Save Settings</button>
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Cancel
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Save Settings
+            </button>
         </div>
-
     </form>
-
-    {% else %}
-    <div class="alert alert-danger">
-        Settings not loaded. Please initialize system settings.
-    </div>
-    {% endif %}
-
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Color picker sync
+    document.getElementById('primary_color').addEventListener('input', function(e) {
+        document.getElementById('primary_color_text').value = e.target.value;
+    });
+    
+    document.getElementById('secondary_color').addEventListener('input', function(e) {
+        document.getElementById('secondary_color_text').value = e.target.value;
+    });
+    
+    // File input preview
+    document.getElementById('school_logo').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const fileName = file.name;
+            const uploadArea = this.previousElementSibling.querySelector('.upload-area p');
+            uploadArea.innerHTML = `<strong>Selected:</strong> ${fileName}`;
+        }
+    });
+    
+    document.getElementById('school_favicon').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const fileName = file.name;
+            const uploadArea = this.previousElementSibling.querySelector('.upload-area p');
+            uploadArea.innerHTML = `<strong>Selected:</strong> ${fileName}`;
+        }
+    });
+</script>
 {% endblock %}
