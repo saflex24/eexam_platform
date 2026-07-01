@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% block title %}Teacher Class & Subject Assignments{% endblock %}
+
+{% block extra_css %}
+<style>
+.ta-page { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+.ta-page h2 { font-size: 18px; font-weight: 700; color: #1a1a2e; margin: 0 0 4px; }
+.ta-page .sub { font-size: 12px; color: #7c8494; margin: 0 0 1.5rem; }
+
+.ta-grid { display: grid; grid-template-columns: 380px 1fr; gap: 16px; }
+@media(max-width: 900px) { .ta-grid { grid-template-columns: 1fr; } }
+
+/* panel */
+.ta-panel { background: #fff; border: 1px solid #e8ecf2; border-radius: 12px; overflow: hidden; }
+.ta-panel-head {
+    padding: 12px 16px; border-bottom: 1px solid #f0f3f7; background: #fafbfd;
+    font-size: 12px; font-weight: 700; color: #1a1a2e; text-transform: uppercase;
+    letter-spacing: .6px; display: flex; align-items: center; gap: 8px;
+}
+.ta-panel-head i { color: #667eea; font-size: 12px; }
+.ta-panel-body { padding: 16px; }
+
+/* form elements */
+.f-group { margin-bottom: 13px; }
+.f-group label {
+    display: block; font-size: 11px; font-weight: 600; color: #6b7280;
+    text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px;
+}
+.f-group select, .f-group input[type=text] {
+    width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px;
+    font-size: 13px; color: #1a1a2e; outline: none; transition: border-color .18s;
+    background: #fff;
+}
+.f-group select:focus, .f-group input[type=text]:focus { border-color: #667eea; }
+.btn-assign {
+    background: #667eea; color: #fff; border: none; border-radius: 8px;
+    padding: 9px 18px; font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: background .18s; width: 100%;
+}
+.btn-assign:hover { background: #5a6fd6; }
+
+/* subject hint chips */
+.subj-hints { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; min-height: 20px; }
+.subj-chip {
+    background: #ede9fe; color: #5b21b6; border-radius: 20px;
+    padding: 3px 10px; font-size: 11px; font-weight: 600; cursor: pointer;
+    transition: background .15s;
+}
+.subj-chip:hover { background: #ddd6fe; }
+
+/* table */
+.ta-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ta-table th {
+    padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .5px; color: #9aa3b0;
+    border-bottom: 1px solid #f0f3f7; background: #fafbfd; white-space: nowrap;
+}
+.ta-table td { padding: 10px 14px; border-bottom: 1px solid #f5f7fa; vertical-align: middle; }
+.ta-table tr:last-child td { border-bottom: none; }
+.ta-table tr:hover td { background: #fafbfd; }
+
+.badge-subj {
+    background: #ede9fe; color: #5b21b6; border-radius: 6px;
+    padding: 3px 10px; font-size: 11px; font-weight: 600; display: inline-block;
+}
+.badge-class {
+    background: #e0f2fe; color: #0369a1; border-radius: 6px;
+    padding: 3px 10px; font-size: 11px; font-weight: 600; display: inline-block;
+}
+.teacher-cell { display: flex; align-items: center; gap: 9px; }
+.ta-avatar {
+    width: 32px; height: 32px; border-radius: 50%; background: #667eea;
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; flex-shrink: 0;
+}
+.td-name { font-weight: 600; color: #1a1a2e; font-size: 13px; }
+.td-id   { font-size: 11px; color: #9aa3b0; }
+.btn-remove {
+    background: none; border: 1px solid #fecaca; color: #ef4444;
+    border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 600;
+    cursor: pointer; transition: background .15s;
+}
+.btn-remove:hover { background: #fee2e2; }
+
+/* filter bar */
+.filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.filter-bar select {
+    padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 8px;
+    font-size: 12px; color: #374151; outline: none;
+}
+.filter-bar select:focus { border-color: #667eea; }
+
+.ta-empty { text-align: center; color: #9aa3b0; padding: 2.5rem 1rem; }
+.ta-empty i { font-size: 32px; display: block; margin-bottom: 10px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ta-page">
+    <h2><i class="fas fa-chalkboard-teacher" style="color:#667eea;margin-right:8px"></i>Teacher Class &amp; Subject Assignments</h2>
+    <p class="sub">Assign teachers to classes with their specific subjects. One teacher can handle multiple classes/subjects.</p>
+
+    <div class="ta-grid">
+
+        {# ── Assignment form ── #}
+        <div class="ta-panel" style="align-self:start">
+            <div class="ta-panel-head"><i class="fas fa-plus-circle"></i> New Assignment</div>
+            <div class="ta-panel-body">
+                <form method="POST" action="{{ url_for('admin.teacher_assignments') }}" id="assignForm">
+                    <input type="hidden" name="action" value="assign">
+
+                    <div class="f-group">
+                        <label>Teacher <span style="color:#ef4444">*</span></label>
+                        <select name="teacher_id" id="teacherSelect" required onchange="loadSubjectHints(this.value)">
+                            <option value="">— Select teacher —</option>
+                            {% for t in teachers %}
+                            <option value="{{ t.id }}">
+                                {{ t.user.full_name }} ({{ t.teacher_id }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="f-group">
+                        <label>Class <span style="color:#ef4444">*</span></label>
+                        <select name="class_id" required>
+                            <option value="">— Select class —</option>
+                            {% for c in classes %}
+                            <option value="{{ c.id }}">{{ c.full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="f-group">
+                        <label>Subject <span style="color:#ef4444">*</span></label>
+                        {% if subjects %}
+                        <select name="subject" id="subjectInput" class="f-group select" required
+                                style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;color:#1a1a2e;outline:none;background:#fff">
+                            <option value="">— Select subject —</option>
+                            {% for s in subjects %}
+                            <option value="{{ s }}">{{ s }}</option>
+                            {% endfor %}
+                        </select>
+                        {% else %}
+                        <input type="text" name="subject" id="subjectInput"
+                               placeholder="e.g. Mathematics, English Language" required
+                               style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;color:#1a1a2e;outline:none;box-sizing:border-box">
+                        {% endif %}
+                        <div style="margin-top:6px;font-size:11px;color:#9aa3b0">
+                            <a href="{{ url_for('admin.manage_subjects') }}" target="_blank" style="color:#667eea">
+                                <i class="fas fa-external-link-alt"></i> Manage subject list
+                            </a>
+                        </div>
+                        <div class="subj-hints" id="subjectHints"></div>
+                    </div>
+
+                    <button type="submit" class="btn-assign">
+                        <i class="fas fa-link" style="margin-right:6px"></i>Assign
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        {# ── Assignments table ── #}
+        <div class="ta-panel">
+            <div class="ta-panel-head">
+                <i class="fas fa-table"></i> Current Assignments
+                <span style="margin-left:auto;font-size:11px;color:#9aa3b0;font-weight:400;text-transform:none">
+                    {{ assignments|length }} record{{ 's' if assignments|length != 1 else '' }}
+                </span>
+            </div>
+            <div style="padding:12px 14px 0;border-bottom:1px solid #f0f3f7">
+                <div class="filter-bar">
+                    <select id="filterTeacher" onchange="filterTable()">
+                        <option value="">All teachers</option>
+                        {% for t in teachers %}
+                        <option value="{{ t.id }}">{{ t.user.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                    <select id="filterClass" onchange="filterTable()">
+                        <option value="">All classes</option>
+                        {% for c in classes %}
+                        <option value="{{ c.id }}">{{ c.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                    <select id="filterSubject" onchange="filterTable()">
+                        <option value="">All subjects</option>
+                        {% for s in subjects %}
+                        <option value="{{ s }}">{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            {% if assignments %}
+            <div style="overflow-x:auto">
+                <table class="ta-table" id="assignTable">
+                    <thead>
+                        <tr>
+                            <th>Teacher</th>
+                            <th>Class</th>
+                            <th>Subject</th>
+                            <th>Assigned</th>
+                            <th style="text-align:right">Remove</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in assignments %}
+                        <tr data-teacher="{{ a.teacher_id }}"
+                            data-class="{{ a.class_id }}"
+                            data-subject="{{ a.subject }}">
+                            <td>
+                                <div class="teacher-cell">
+                                    <div class="ta-avatar">{{ a.teacher.user.full_name[:2] }}</div>
+                                    <div>
+                                        <div class="td-name">{{ a.teacher.user.full_name }}</div>
+                                        <div class="td-id">{{ a.teacher.teacher_id }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="badge-class">{{ a.class_info.full_name }}</span></td>
+                            <td><span class="badge-subj">{{ a.subject }}</span></td>
+                            <td style="font-size:11px;color:#9aa3b0">
+                                {{ a.created_at.strftime('%d %b %Y') if a.created_at else '—' }}
+                            </td>
+                            <td style="text-align:right">
+                                <form method="POST" action="{{ url_for('admin.teacher_assignments') }}"
+                                      onsubmit="return confirm('Remove this assignment?')">
+                                    <input type="hidden" name="action" value="remove">
+                                    <input type="hidden" name="assign_id" value="{{ a.id }}">
+                                    <button type="submit" class="btn-remove">
+                                        <i class="fas fa-times"></i> Remove
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="ta-empty">
+                <i class="fas fa-chalkboard"></i>
+                <strong>No assignments yet</strong>
+                <p style="font-size:12px;margin-top:4px">Use the form on the left to assign teachers to classes.</p>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Load subject hints when teacher changes
+function loadSubjectHints(teacherId) {
+    const hintsEl = document.getElementById('subjectHints');
+    if (!teacherId) {
+        hintsEl.innerHTML = '<span style="font-size:11px;color:#c4c9d4">Select a teacher to see suggested subjects</span>';
+        return;
+    }
+    hintsEl.innerHTML = '<span style="font-size:11px;color:#c4c9d4">Loading…</span>';
+    fetch(`/admin/teacher-assignments/api/subjects?teacher_id=${teacherId}`)
+        .then(r => r.json())
+        .then(subjects => {
+            if (!subjects.length) {
+                hintsEl.innerHTML = '<span style="font-size:11px;color:#c4c9d4">No subjects on record</span>';
+                return;
+            }
+            hintsEl.innerHTML = subjects.map(s =>
+                `<span class="subj-chip" onclick="document.getElementById('subjectInput').value='${s}'">${s}</span>`
+            ).join('');
+        })
+        .catch(() => { hintsEl.innerHTML = ''; });
+}
+
+// Client-side filter
+function filterTable() {
+    const tFilter = document.getElementById('filterTeacher').value;
+    const cFilter = document.getElementById('filterClass').value;
+    const sFilter = document.getElementById('filterSubject').value;
+    document.querySelectorAll('#assignTable tbody tr').forEach(row => {
+        const tMatch = !tFilter || row.dataset.teacher === tFilter;
+        const cMatch = !cFilter || row.dataset.class === cFilter;
+        const sMatch = !sFilter || row.dataset.subject === sFilter;
+        row.style.display = (tMatch && cMatch && sMatch) ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

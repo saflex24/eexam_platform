@@ -385,6 +385,46 @@ body {
         </span>
     </div>
 
+    {# ── Term / Session banner ── #}
+    {% if current_term %}
+    <div style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:12px;
+                padding:.9rem 1.2rem;display:flex;align-items:center;justify-content:space-between;
+                margin-bottom:1.25rem;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;align-items:center;gap:12px">
+            <i class="fas fa-bookmark" style="font-size:20px;opacity:.8"></i>
+            <div>
+                <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;opacity:.75">Current Academic Term</div>
+                <div style="font-size:16px;font-weight:700;line-height:1.2">
+                    {{ current_term.session_name }} &mdash; {{ current_term.term }} Term
+                </div>
+                {% if current_term.start_date and current_term.end_date %}
+                <div style="font-size:11px;opacity:.75;margin-top:2px">
+                    {{ current_term.start_date.strftime('%d %b %Y') }} &rarr; {{ current_term.end_date.strftime('%d %b %Y') }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <a href="{{ url_for('admin.manage_term') }}"
+           style="background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.35);
+                  border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;text-decoration:none;
+                  transition:background .18s"
+           onmouseover="this.style.background='rgba(255,255,255,.28)'"
+           onmouseout="this.style.background='rgba(255,255,255,.18)'">
+            <i class="fas fa-cog" style="margin-right:5px"></i>Manage Terms
+        </a>
+    </div>
+    {% else %}
+    <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:10px;
+                padding:.75rem 1.1rem;display:flex;align-items:center;gap:10px;
+                margin-bottom:1.25rem;font-size:12.5px;color:#6d4c00">
+        <i class="fas fa-exclamation-triangle" style="color:#f59e0b"></i>
+        No current academic term set.
+        <a href="{{ url_for('admin.manage_term') }}" style="color:#667eea;font-weight:700;margin-left:4px">
+            Set one now &rarr;
+        </a>
+    </div>
+    {% endif %}
+
     {# ── Stat cards ── #}
     <div class="db-stat-row">
         <div class="db-stat s1">
@@ -574,6 +614,15 @@ body {
                     </a>
                     <a href="{{ url_for('admin.create_teacher') }}" class="db-action-link">
                         <i class="fas fa-chalkboard-teacher"></i> Add teacher
+                    </a>
+                    <a href="{{ url_for('admin.teacher_assignments') }}" class="db-action-link">
+                        <i class="fas fa-link"></i> Assign teachers to classes
+                    </a>
+                    <a href="{{ url_for('admin.manage_subjects') }}" class="db-action-link">
+                        <i class="fas fa-book"></i> Manage subjects
+                    </a>
+                    <a href="{{ url_for('admin.manage_term') }}" class="db-action-link">
+                        <i class="fas fa-calendar-alt"></i> Manage academic term
                     </a>
                 </div>
             </div>

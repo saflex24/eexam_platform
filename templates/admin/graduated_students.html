@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}Graduated Students{% endblock %}
+
+{% block extra_css %}
+<style>
+.gr-page { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+.gr-head { display:flex; align-items:flex-start; justify-content:space-between;
+           flex-wrap:wrap; gap:12px; margin-bottom:1.25rem; }
+.gr-head h2 { font-size:18px; font-weight:700; color:#1a1a2e; margin:0 0 4px; }
+.gr-head p  { font-size:12px; color:#7c8494; margin:0; }
+
+.gr-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:1.25rem; }
+@media(max-width:600px){ .gr-stats { grid-template-columns:1fr 1fr; } }
+.stat-card { background:#fff; border:1px solid #e8ecf2; border-radius:12px;
+             padding:1rem 1.2rem; display:flex; align-items:center; gap:12px; }
+.stat-icon { width:38px; height:38px; border-radius:10px; display:flex; align-items:center;
+             justify-content:center; font-size:15px; color:#fff; flex-shrink:0; }
+.stat-val  { font-size:24px; font-weight:700; color:#1a1a2e; line-height:1; }
+.stat-lbl  { font-size:11px; color:#9aa3b0; text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }
+
+.filter-strip { background:#fff; border:1px solid #e8ecf2; border-radius:10px;
+                padding:11px 14px; display:flex; flex-wrap:wrap; gap:10px;
+                align-items:center; margin-bottom:1rem; }
+.filter-strip select { padding:7px 10px; border:1px solid #d1d5db; border-radius:8px;
+                       font-size:13px; color:#374151; outline:none; background:#fff; }
+.filter-strip select:focus { border-color:#667eea; }
+
+.gr-panel { background:#fff; border:1px solid #e8ecf2; border-radius:12px; overflow:hidden; }
+.gr-panel-head { padding:12px 16px; border-bottom:1px solid #f0f3f7; background:#fafbfd;
+                 font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.6px;
+                 color:#1a1a2e; display:flex; align-items:center; gap:8px; }
+.gr-panel-head i { color:#667eea; }
+.gr-panel-head .cnt { margin-left:auto; font-size:11px; color:#9aa3b0;
+                      font-weight:400; text-transform:none; letter-spacing:0; }
+
+.at { width:100%; border-collapse:collapse; font-size:13px; }
+.at th { padding:10px 14px; text-align:left; font-size:11px; font-weight:700;
+         text-transform:uppercase; letter-spacing:.5px; color:#9aa3b0;
+         border-bottom:1px solid #f0f3f7; background:#fafbfd; white-space:nowrap; }
+.at td { padding:10px 14px; border-bottom:1px solid #f5f7fa; vertical-align:middle; }
+.at tr:last-child td { border-bottom:none; }
+.at tr:hover td { background:#fafbfd; }
+
+.av { width:32px;height:32px;border-radius:50%;background:#8b5cf6;color:#fff;
+      display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0; }
+.name-cell { display:flex; align-items:center; gap:9px; }
+.nm { font-weight:600; color:#1a1a2e; font-size:13px; }
+.ad { font-size:11px; color:#9aa3b0; }
+.badge-grad { background:#ede9fe;color:#5b21b6;border-radius:6px;
+              padding:3px 9px;font-size:11px;font-weight:700;display:inline-flex;
+              align-items:center;gap:4px; }
+
+.gr-empty { text-align:center; padding:3rem 1rem; color:#9aa3b0; }
+.gr-empty i { font-size:36px; display:block; margin-bottom:12px; }
+
+.back-btn { background:#f0f4ff; color:#667eea; border:1px solid #c7d2fe;
+            border-radius:9px; padding:8px 16px; font-size:13px; font-weight:600;
+            text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+.back-btn:hover { background:#e0e7ff; color:#667eea; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="gr-page">
+
+  <div class="gr-head">
+    <div>
+      <h2><i class="fas fa-graduation-cap" style="color:#8b5cf6;margin-right:8px"></i>Graduated Students</h2>
+      <p>Students who have completed the terminal class and graduated. Their login accounts are deactivated.</p>
+    </div>
+    <a href="{{ url_for('admin.promotion_dashboard') }}" class="back-btn">
+      <i class="fas fa-arrow-left"></i> Back to Promotion
+    </a>
+  </div>
+
+  {# ── Stats ── #}
+  <div class="gr-stats">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#8b5cf6"><i class="fas fa-graduation-cap"></i></div>
+      <div>
+        <div class="stat-val">{{ students|length }}</div>
+        <div class="stat-lbl">
+          {% if session_filter %}Session Results{% else %}Total Graduated{% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f59e0b"><i class="fas fa-calendar-alt"></i></div>
+      <div>
+        <div class="stat-val">{{ sessions|length }}</div>
+        <div class="stat-lbl">Sessions</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#9ca3af"><i class="fas fa-user-slash"></i></div>
+      <div>
+        <div class="stat-val">{{ students|length }}</div>
+        <div class="stat-lbl">Deactivated Accounts</div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Filter ── #}
+  <form method="GET" action="{{ url_for('admin.graduated_students') }}">
+    <div class="filter-strip">
+      <label style="font-size:12px;font-weight:600;color:#6b7280">Filter by session:</label>
+      <select name="session" onchange="this.form.submit()">
+        <option value="">All Sessions</option>
+        {% for s in sessions %}
+        <option value="{{ s }}" {{ 'selected' if session_filter == s }}>{{ s }}</option>
+        {% endfor %}
+      </select>
+      {% if session_filter %}
+      <a href="{{ url_for('admin.graduated_students') }}"
+         style="font-size:12px;color:#667eea;font-weight:600">Clear</a>
+      {% endif %}
+    </div>
+  </form>
+
+  {# ── Table ── #}
+  <div class="gr-panel">
+    <div class="gr-panel-head">
+      <i class="fas fa-list"></i> Graduated Students
+      <span class="cnt">{{ students|length }} record{{ 's' if students|length != 1 }}</span>
+    </div>
+
+    {% if students %}
+    <div style="overflow-x:auto">
+      <table class="at">
+        <thead>
+          <tr>
+            <th style="padding-left:16px">#</th>
+            <th>Student</th>
+            <th>Adm. No.</th>
+            <th>Last Class</th>
+            <th>Session</th>
+            <th>Graduated</th>
+            <th>Account</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in students %}
+          <tr>
+            <td style="padding-left:16px;color:#9aa3b0;font-size:11px">{{ loop.index }}</td>
+            <td>
+              <div class="name-cell">
+                <div class="av">{{ s.user.full_name[:2] if s.user else '??' }}</div>
+                <div>
+                  <div class="nm">{{ s.user.full_name if s.user else '—' }}</div>
+                  {% if s.user and s.user.email %}
+                  <div class="ad">{{ s.user.email }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+            <td style="color:#9aa3b0">{{ s.admission_number }}</td>
+            <td>{{ s.class_info.full_name if s.class_info else '—' }}</td>
+            <td>
+              {% if s.graduation_session %}
+              <span class="badge-grad">
+                <i class="fas fa-bookmark" style="font-size:8px"></i>
+                {{ s.graduation_session }}
+              </span>
+              {% else %}—{% endif %}
+            </td>
+            <td style="font-size:11px;color:#9aa3b0">{{ s.updated_at.strftime('%d %b %Y') }}</td>
+            <td>
+              <span style="background:#fef3f2;color:#b91c1c;border-radius:5px;
+                           padding:2px 8px;font-size:10.5px;font-weight:700">
+                <i class="fas fa-lock" style="font-size:8px;margin-right:3px"></i>Deactivated
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="gr-empty">
+      <i class="fas fa-graduation-cap"></i>
+      <strong>No graduated students{% if session_filter %} for {{ session_filter }}{% endif %}</strong>
+      <p style="font-size:12px;margin-top:6px">
+        Run a promotion at the end of a session to graduate terminal-class students.
+      </p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

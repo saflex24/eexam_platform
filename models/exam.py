@@ -230,6 +230,13 @@ class ExamSession(db.Model):
     user_agent = db.Column(db.String(500), nullable=True)
     ip_address = db.Column(db.String(50), nullable=True)
 
+    # Persisted randomization order — set once when the student first opens
+    # the exam, then reused on every reload so question/option order never
+    # changes mid-session. Read by get_ordered_questions/get_ordered_options
+    # helpers in routes/admin.py for consistent review and grading display.
+    question_order = db.Column(db.Text, nullable=True)   # JSON list of question IDs
+    option_order   = db.Column(db.Text, nullable=True)   # JSON dict: {"<question_id>": [option_id, ...]}
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

@@ -238,6 +238,29 @@ body {
     font-weight: 600;
 }
 
+/* ── Sub-links (indented) ── */
+.ep-sub-link {
+    padding-left: 42px;
+    font-size: 13px;
+    color: rgba(255,255,255,.60) !important;
+}
+.ep-sub-link::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.3);
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+.ep-sub-link:hover { color: rgba(255,255,255,.90) !important; }
+.ep-sub-link.active {
+    color: #fff !important;
+    background: rgba(255,255,255,.10);
+    border-left-color: var(--ep-accent);
+}
+
 /* ─── MAIN CONTENT ──────────────────────────────────────────────────────── */
 .ep-main-content {
     min-width: 0;

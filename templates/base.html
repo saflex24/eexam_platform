@@ -87,14 +87,109 @@
         <div class="col-auto ep-sidebar d-none d-md-flex">
             <div class="ep-sidebar-inner">
                 {% if current_user.role.name == 'Admin' %}
-                <div class="ep-sidebar-section-label">Navigation</div>
-                <a class="ep-nav-link" href="{{ url_for('admin.dashboard') }}"><i class="fas fa-chart-line fa-fw"></i><span>Dashboard</span></a>
-                <a class="ep-nav-link" href="{{ url_for('admin.manage_students') }}"><i class="fas fa-users fa-fw"></i><span>Students</span></a>
-                <a class="ep-nav-link" href="{{ url_for('admin.manage_teachers') }}"><i class="fas fa-chalkboard-user fa-fw"></i><span>Teachers</span></a>
-                <a class="ep-nav-link" href="{{ url_for('admin.manage_exams') }}"><i class="fas fa-file-alt fa-fw"></i><span>Exams</span></a>
+                {# ── OVERVIEW ── #}
+                <a class="ep-nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}"
+                   href="{{ url_for('admin.dashboard') }}">
+                    <i class="fas fa-gauge fa-fw"></i><span>Dashboard</span>
+                </a>
+
+                {# ── PEOPLE ── #}
+                <div class="ep-sidebar-section-label mt-3">People</div>
+                <a class="ep-nav-link {% if request.endpoint in ('admin.manage_students','admin.create_student','admin.edit_student') %}active{% endif %}"
+                   href="{{ url_for('admin.manage_students') }}">
+                    <i class="fas fa-user-graduate fa-fw"></i><span>Students</span>
+                </a>
+                <a class="ep-nav-link {% if request.endpoint in ('admin.manage_teachers','admin.create_teacher','admin.edit_teacher') %}active{% endif %}"
+                   href="{{ url_for('admin.manage_teachers') }}">
+                    <i class="fas fa-chalkboard-user fa-fw"></i><span>Teachers</span>
+                </a>
+                <a class="ep-nav-link ep-sub-link {% if request.endpoint == 'admin.teacher_assignments' %}active{% endif %}"
+                   href="{{ url_for('admin.teacher_assignments') }}">
+                    <i class="fas fa-link fa-fw"></i><span>Assignments</span>
+                </a>
+                <a class="ep-nav-link {% if request.endpoint in ('admin.manage_users','admin.edit_user') %}active{% endif %}"
+                   href="{{ url_for('admin.manage_users') }}">
+                    <i class="fas fa-users-gear fa-fw"></i><span>User Accounts</span>
+                </a>
+
+                {# ── ACADEMICS ── #}
+                <div class="ep-sidebar-section-label mt-3">Academics</div>
+                <a class="ep-nav-link {% if request.endpoint in ('admin.manage_classes','admin.create_class','admin.edit_class') %}active{% endif %}"
+                   href="{{ url_for('admin.manage_classes') }}">
+                    <i class="fas fa-layer-group fa-fw"></i><span>Classes</span>
+                </a>
+                <a class="ep-nav-link {% if request.endpoint in ('admin.manage_subjects','admin.create_subject','admin.edit_subject') %}active{% endif %}"
+                   href="{{ url_for('admin.manage_subjects') }}">
+                    <i class="fas fa-book fa-fw"></i><span>Subjects</span>
+                </a>
+                <a class="ep-nav-link {% if request.endpoint == 'admin.manage_term' %}active{% endif %}"
+                   href="{{ url_for('admin.manage_term') }}">
+                    <i class="fas fa-calendar-alt fa-fw"></i><span>Term / Session</span>
+                </a>
+
+                {# ── EXAMS ── #}
+                <div class="ep-sidebar-section-label mt-3">Exams</div>
+                <a class="ep-nav-link {% if request.endpoint == 'admin.manage_exams' %}active{% endif %}"
+                   href="{{ url_for('admin.manage_exams') }}">
+                    <i class="fas fa-file-alt fa-fw"></i><span>All Exams</span>
+                </a>
+                <a class="ep-nav-link ep-sub-link {% if request.endpoint in ('admin.exam_results',) %}active{% endif %}"
+                   href="{{ url_for('admin.manage_exams') }}">
+                    <i class="fas fa-poll fa-fw"></i><span>Results</span>
+                </a>
+
+                {# ── REPORTS ── #}
                 <div class="ep-sidebar-section-label mt-3">Reports</div>
-                <a class="ep-nav-link" href="{{ url_for('admin.advanced_analytics') }}"><i class="fas fa-chart-bar fa-fw"></i><span>Analytics</span></a>
-                <a class="ep-nav-link" href="{{ url_for('admin.proctoring_reports') }}"><i class="fas fa-eye fa-fw"></i><span>Proctoring</span></a>
+                <a class="ep-nav-link {% if request.endpoint == 'admin.advanced_analytics' %}active{% endif %}"
+                   href="{{ url_for('admin.advanced_analytics') }}">
+                    <i class="fas fa-chart-bar fa-fw"></i><span>Analytics</span>
+                </a>
+                <a class="ep-nav-link ep-sub-link {% if request.endpoint == 'admin.student_reports' %}active{% endif %}"
+                   href="{{ url_for('admin.student_reports') }}">
+                    <i class="fas fa-file-chart-column fa-fw"></i><span>Student Reports</span>
+                </a>
+                <a class="ep-nav-link {% if request.endpoint == 'admin.proctoring_reports' %}active{% endif %}"
+                   href="{{ url_for('admin.proctoring_reports') }}">
+                    <i class="fas fa-eye fa-fw"></i><span>Proctoring</span>
+                </a>
+
+                {# ── PROMOTION ── #}
+                <div class="ep-sidebar-section-label mt-3">Promotion</div>
+                <a class="ep-nav-link {% if request.endpoint in ('admin.promotion_dashboard','admin.promote_single_student','admin.run_promotion','admin.rollback_promotion') %}active{% endif %}"
+                   href="{{ url_for('admin.promotion_dashboard') }}">
+                    <i class="fas fa-level-up-alt fa-fw"></i><span>Promote Students</span>
+                </a>
+                <a class="ep-nav-link ep-sub-link {% if request.endpoint == 'admin.promotion_class_config' %}active{% endif %}"
+                   href="{{ url_for('admin.promotion_class_config') }}">
+                    <i class="fas fa-sliders fa-fw"></i><span>Class Config</span>
+                </a>
+                <a class="ep-nav-link ep-sub-link {% if request.endpoint == 'admin.graduated_students' %}active{% endif %}"
+                   href="{{ url_for('admin.graduated_students') }}">
+                    <i class="fas fa-graduation-cap fa-fw"></i><span>Graduated</span>
+                </a>
+
+                {# ── SYSTEM ── #}
+                <div class="ep-sidebar-section-label mt-3">System</div>
+                <a class="ep-nav-link {% if request.endpoint == 'admin.admin_settings' %}active{% endif %}"
+                   href="{{ url_for('admin.admin_settings') }}">
+                    <i class="fas fa-cog fa-fw"></i><span>Settings</span>
+                </a>
+                <a class="ep-nav-link {% if request.endpoint == 'admin.activity_log' %}active{% endif %}"
+                   href="{{ url_for('admin.activity_log') }}">
+                    <i class="fas fa-history fa-fw"></i><span>Activity Log</span>
+                </a>
+                <a class="ep-nav-link {% if request.endpoint == 'admin.incomplete_questions' %}active{% endif %}"
+                   href="{{ url_for('admin.incomplete_questions') }}">
+                    <i class="fas fa-stethoscope fa-fw"></i><span>Question Diagnostics</span>
+                </a>
+                <a class="ep-nav-link {% if request.endpoint == 'admin.randomization_status' %}active{% endif %}"
+                   href="{{ url_for('admin.randomization_status') }}">
+                    <i class="fas fa-random fa-fw"></i><span>Randomization Status</span>
+                </a>
+                <a class="ep-nav-link" href="{{ url_for('auth.logout') }}"
+                   style="color:rgba(248,113,113,.85) !important;">
+                    <i class="fas fa-right-from-bracket fa-fw"></i><span>Logout</span>
+                </a>
                 {% elif current_user.role.name == 'Teacher' %}
                 <div class="ep-sidebar-section-label">Navigation</div>
                 <a class="ep-nav-link" href="{{ url_for('teacher.dashboard') }}"><i class="fas fa-gauge fa-fw"></i><span>Dashboard</span></a>

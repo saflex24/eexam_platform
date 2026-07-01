@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+
+{% block title %}Proctoring Detail - {{ student.full_name }} - E-Exam Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --navy:   #0f1e3c;
+        --accent: #3b82f6;
+        --cyan:   #06b6d4;
+        --green:  #10b981;
+        --amber:  #f59e0b;
+        --red:    #ef4444;
+        --purple: #8b5cf6;
+        --slate:  #64748b;
+        --border: #e2e8f0;
+        --bg:     #f1f5f9;
+        --card:   #ffffff;
+        --text:   #1e293b;
+        --muted:  #94a3b8;
+        --radius: 6px;
+        --sh:     0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
+    }
+
+    .pd-wrap { padding: 12px 16px; background: var(--bg); min-height: 100vh; }
+
+    /* back link */
+    .pd-back {
+        display:inline-flex; align-items:center; gap:5px;
+        font-size:.7rem; font-weight:600; color:var(--slate);
+        text-decoration:none; margin-bottom:10px;
+    }
+    .pd-back:hover { color:var(--accent); }
+
+    /* header card */
+    .pd-header {
+        background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+        box-shadow:var(--sh); padding:14px 16px; margin-bottom:12px;
+        display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
+    }
+    .pd-id {
+        display:flex; align-items:center; gap:11px;
+    }
+    .pd-avatar {
+        width:42px; height:42px; border-radius:50%; background:var(--navy);
+        color:#fff; display:flex; align-items:center; justify-content:center;
+        font-size:.85rem; font-weight:700; flex-shrink:0;
+    }
+    .pd-name { font-size:.92rem; font-weight:700; color:var(--navy); margin:0; }
+    .pd-meta { font-size:.65rem; color:var(--muted); margin-top:2px; }
+    .pd-meta span { margin-right:10px; }
+    .pd-meta i { width:11px; color:var(--slate); margin-right:2px; }
+
+    .pd-actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .btn-f {
+        font-size:.68rem; font-weight:700; padding:6px 13px; border-radius:5px;
+        border:1px solid var(--border); background:var(--card); color:var(--text);
+        text-decoration:none; display:inline-flex; align-items:center; gap:5px;
+        transition:.15s;
+    }
+    .btn-f:hover { background:var(--bg); color:var(--text); }
+    .btn-f.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .btn-f.primary:hover { background:#2563eb; color:#fff; }
+
+    /* exam info strip */
+    .pd-exam-strip {
+        background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+        box-shadow:var(--sh); padding:11px 16px; margin-bottom:12px;
+        display:flex; flex-wrap:wrap; gap:18px; align-items:center;
+    }
+    .pd-exam-item { display:flex; flex-direction:column; gap:1px; }
+    .pd-exam-item .lbl { font-size:.58rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); }
+    .pd-exam-item .val { font-size:.78rem; font-weight:600; color:var(--text); }
+
+    .status-pill {
+        font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.4px;
+        padding:3px 9px; border-radius:99px; display:inline-block;
+    }
+    .status-completed { background:#dcfce7; color:#15803d; }
+    .status-in_progress, .status-started { background:#dbeafe; color:#1d4ed8; }
+    .status-pending { background:#fef3c7; color:#92400e; }
+    .status-auto_submitted { background:#fee2e2; color:#b91c1c; }
+
+    /* stat strip */
+    .stat-strip { display:grid; grid-template-columns:repeat(6,1fr); gap:7px; margin-bottom:12px; }
+    @media(max-width:900px){ .stat-strip{ grid-template-columns:repeat(3,1fr); } }
+    @media(max-width:560px){ .stat-strip{ grid-template-columns:repeat(2,1fr); } }
+
+    .sbox {
+        background:var(--card); border:1px solid var(--border);
+        border-radius:var(--radius); padding:9px 11px;
+        display:flex; flex-direction:column; gap:1px;
+        box-shadow:var(--sh); position:relative; overflow:hidden;
+    }
+    .sbox::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+    .sbox.c1::before { background:var(--accent); }
+    .sbox.c2::before { background:var(--red); }
+    .sbox.c3::before { background:var(--amber); }
+    .sbox.c4::before { background:var(--purple); }
+    .sbox.c5::before { background:var(--cyan); }
+    .sbox.c6::before { background:var(--navy); }
+
+    .sbox-val   { font-size:1.25rem; font-weight:800; line-height:1.1; font-variant-numeric:tabular-nums; color:var(--text); }
+    .sbox-label { font-size:.58rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); }
+    .sbox.c1 .sbox-val { color:var(--accent); }
+    .sbox.c2 .sbox-val { color:var(--red); }
+    .sbox.c3 .sbox-val { color:var(--amber); }
+    .sbox.c4 .sbox-val { color:var(--purple); }
+    .sbox.c5 .sbox-val { color:var(--cyan); }
+    .sbox.c6 .sbox-val { color:var(--navy); }
+
+    /* timeline card */
+    .pd-card {
+        background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+        box-shadow:var(--sh); overflow:hidden;
+    }
+    .pd-card-head {
+        padding:10px 16px; border-bottom:1px solid var(--border);
+        display:flex; align-items:center; justify-content:space-between;
+        background:#fbfcfe;
+    }
+    .pd-card-head h6 { font-size:.75rem; font-weight:700; color:var(--navy); margin:0; }
+    .pd-card-head h6 i { color:var(--red); margin-right:5px; }
+    .pd-card-head .count { font-size:.62rem; color:var(--muted); font-weight:600; }
+
+    /* timeline */
+    .tl { padding:14px 16px; }
+    .tl-item { display:flex; gap:11px; position:relative; padding-bottom:16px; }
+    .tl-item:last-child { padding-bottom:0; }
+    .tl-item::before {
+        content:''; position:absolute; left:13px; top:24px; bottom:0; width:1px;
+        background:var(--border);
+    }
+    .tl-item:last-child::before { display:none; }
+    .tl-dot {
+        width:26px; height:26px; border-radius:50%; flex-shrink:0;
+        display:flex; align-items:center; justify-content:center;
+        font-size:.62rem; color:#fff; z-index:1;
+    }
+    .tl-dot.high   { background:var(--red); }
+    .tl-dot.medium { background:var(--amber); }
+    .tl-dot.low    { background:var(--slate); }
+    .tl-body { flex:1; padding-top:2px; }
+    .tl-head { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+    .tl-type { font-size:.74rem; font-weight:700; color:var(--text); }
+    .tl-time { font-size:.62rem; color:var(--muted); white-space:nowrap; }
+    .tl-detail { font-size:.68rem; color:var(--slate); margin-top:3px; line-height:1.4; }
+
+    .vb {
+        font-size:.6rem; font-weight:700; padding:2px 8px; border-radius:99px;
+        display:inline-block; text-transform:uppercase; letter-spacing:.3px;
+    }
+    .vb-danger  { background:#fee2e2; color:#b91c1c; }
+    .vb-warning { background:#fef3c7; color:#92400e; }
+    .vb-info    { background:#dbeafe; color:#1d4ed8; }
+    .vb-slate   { background:#e2e8f0; color:#475569; }
+    .vb-dark    { background:#1e293b; color:#fff; }
+
+    .sv { font-size:.58rem; font-weight:800; padding:1px 7px; border-radius:4px; letter-spacing:.3px; }
+    .sv-high   { background:#fee2e2; color:#b91c1c; }
+    .sv-medium { background:#fef3c7; color:#92400e; }
+    .sv-low    { background:#e2e8f0; color:#475569; }
+
+    .pd-empty {
+        text-align:center; padding:36px 16px; color:var(--muted);
+    }
+    .pd-empty i { font-size:1.8rem; margin-bottom:8px; color:var(--green); display:block; }
+    .pd-empty p { font-size:.75rem; margin:0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pd-wrap">
+
+    <a href="{{ url_for('admin.proctoring_reports') }}" class="pd-back">
+        <i class="fas fa-arrow-left"></i> Back to Proctoring Reports
+    </a>
+
+    {# ── Student header ── #}
+    <div class="pd-header">
+        <div class="pd-id">
+            <div class="pd-avatar">{{ student.full_name[:2]|upper if student.full_name else '??' }}</div>
+            <div>
+                <p class="pd-name">{{ student.full_name }}</p>
+                <div class="pd-meta">
+                    <span><i class="fas fa-id-card"></i>{{ student_profile.admission_number or '—' }}</span>
+                    {% if student_profile.class_info %}
+                    <span><i class="fas fa-layer-group"></i>{{ student_profile.class_info.full_name }}</span>
+                    {% endif %}
+                    <span><i class="fas fa-envelope"></i>{{ student.email or '—' }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="pd-actions">
+            <a href="{{ url_for('admin.export_proctoring_report', exam_id=exam.id) }}" class="btn-f">
+                <i class="fas fa-file-excel"></i> Export Exam Report
+            </a>
+            <a href="{{ url_for('admin.proctoring_reports', student_id=student.id) }}" class="btn-f primary">
+                <i class="fas fa-history"></i> All Sessions
+            </a>
+        </div>
+    </div>
+
+    {# ── Exam info strip ── #}
+    <div class="pd-exam-strip">
+        <div class="pd-exam-item">
+            <span class="lbl">Exam</span>
+            <span class="val">{{ exam.title }}</span>
+        </div>
+        <div class="pd-exam-item">
+            <span class="lbl">Subject</span>
+            <span class="val">{{ exam.subject or '—' }}</span>
+        </div>
+        <div class="pd-exam-item">
+            <span class="lbl">Session Code</span>
+            <span class="val">{{ exam_session.session_code }}</span>
+        </div>
+        <div class="pd-exam-item">
+            <span class="lbl">Status</span>
+            <span class="val">
+                <span class="status-pill status-{{ exam_session.status }}">
+                    {{ exam_session.status.replace('_',' ')|title }}
+                </span>
+            </span>
+        </div>
+        <div class="pd-exam-item">
+            <span class="lbl">Started</span>
+            <span class="val">{{ exam_session.start_time.strftime('%d %b %Y, %I:%M %p') if exam_session.start_time else '—' }}</span>
+        </div>
+        <div class="pd-exam-item">
+            <span class="lbl">Ended</span>
+            <span class="val">{{ exam_session.end_time.strftime('%d %b %Y, %I:%M %p') if exam_session.end_time else '—' }}</span>
+        </div>
+        {% if exam_session.auto_submitted %}
+        <div class="pd-exam-item">
+            <span class="lbl">&nbsp;</span>
+            <span class="vb vb-danger">Auto-Submitted</span>
+        </div>
+        {% endif %}
+    </div>
+
+    {# ── Violation stat strip ── #}
+    <div class="stat-strip">
+        <div class="sbox c1">
+            <span class="sbox-val">{{ total_violations }}</span>
+            <span class="sbox-label">Total Violations</span>
+        </div>
+        <div class="sbox c2">
+            <span class="sbox-val">{{ violation_summary.tab_switches }}</span>
+            <span class="sbox-label">Tab Switches</span>
+        </div>
+        <div class="sbox c3">
+            <span class="sbox-val">{{ violation_summary.copy_attempts }}</span>
+            <span class="sbox-label">Copy Attempts</span>
+        </div>
+        <div class="sbox c4">
+            <span class="sbox-val">{{ violation_summary.paste_attempts }}</span>
+            <span class="sbox-label">Paste Attempts</span>
+        </div>
+        {% if 'face_violations' in violation_summary %}
+        <div class="sbox c5">
+            <span class="sbox-val">{{ violation_summary.face_violations }}</span>
+            <span class="sbox-label">Face Violations</span>
+        </div>
+        {% endif %}
+        {% if 'fullscreen_exits' in violation_summary %}
+        <div class="sbox c6">
+            <span class="sbox-val">{{ violation_summary.fullscreen_exits }}</span>
+            <span class="sbox-label">Fullscreen Exits</span>
+        </div>
+        {% endif %}
+    </div>
+
+    {# ── Event timeline ── #}
+    <div class="pd-card">
+        <div class="pd-card-head">
+            <h6><i class="fas fa-shield-alt"></i>Proctoring Event Timeline</h6>
+            <span class="count">{{ logs|length }} event{{ 's' if logs|length != 1 }}</span>
+        </div>
+
+        {% if logs %}
+        <div class="tl">
+            {% for log in logs %}
+            <div class="tl-item">
+                <div class="tl-dot {{ log.severity or 'low' }}">
+                    {% if log.severity == 'high' %}
+                    <i class="fas fa-exclamation"></i>
+                    {% elif log.severity == 'medium' %}
+                    <i class="fas fa-exclamation-triangle" style="font-size:.55rem"></i>
+                    {% else %}
+                    <i class="fas fa-info" style="font-size:.55rem"></i>
+                    {% endif %}
+                </div>
+                <div class="tl-body">
+                    <div class="tl-head">
+                        <span class="tl-type">
+                            {{ (log.violation_type or log.event_type).replace('_',' ').title() }}
+                        </span>
+                        <span style="display:flex;align-items:center;gap:6px">
+                            {% if log.severity == 'high' %}
+                            <span class="sv sv-high">HIGH</span>
+                            {% elif log.severity == 'medium' %}
+                            <span class="sv sv-medium">MED</span>
+                            {% else %}
+                            <span class="sv sv-low">LOW</span>
+                            {% endif %}
+                            <span class="tl-time">{{ log.timestamp.strftime('%d %b, %I:%M:%S %p') if log.timestamp else '—' }}</span>
+                        </span>
+                    </div>
+                    {% if log.details %}
+                    <div class="tl-detail">{{ log.details }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="pd-empty">
+            <i class="fas fa-check-circle"></i>
+            <p>No proctoring violations recorded for this session.</p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

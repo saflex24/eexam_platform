@@ -67,6 +67,9 @@
                         <a href="{{ url_for('admin.exam_results', id=exam.id) }}" class="btn btn-sm btn-info" title="View Results">
                             <i class="fas fa-chart-bar"></i>
                         </a>
+                        <a href="{{ url_for('admin.inspect_exam_raw', exam_id=exam.id) }}" class="btn btn-sm btn-secondary" title="Inspect Raw Question Data">
+                            <i class="fas fa-database"></i>
+                        </a>
                         
                         <form method="POST" action="{{ url_for('teacher.delete_exam', exam_id=exam.id) }}" style="display:inline;">
                             <button type="submit" class="btn btn-sm btn-danger" title="Delete" onclick="return confirm('Are you sure?');">

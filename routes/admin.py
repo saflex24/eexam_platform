@@ -6,8 +6,9 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import current_user, login_required
 from extensions import db
 from models.user import User, Student, Teacher, Role
-from models.class_model import Class
+from models.class_model import Class, AcademicTerm, TeacherSubjectClass, Subject, PromotionHistory
 from utils.decorators import admin_required
+from utils.exam_shuffle import get_ordered_questions as _get_ordered_questions, get_ordered_options, build_ordered_options_map
 from utils.file_handler import (
     save_upload_file, import_students_from_csv, import_teachers_from_csv,
     generate_student_template, generate_teacher_template
@@ -34,51 +35,15 @@ admin_bp = Blueprint('admin', __name__)
 # ══════════════════════════════════════════════════════════════════════════
 # HELPER: Resolve question/option order for a session
 # ══════════════════════════════════════════════════════════════════════════
+# Implementation now lives in utils/exam_shuffle.py (single source of
+# truth, shared with routes/student.py — see import above). This wrapper
+# exists only because every existing call site in this file uses the
+# (exam_id, exam_session) signature; the shared module needs the Question
+# model class passed explicitly so it has no app-specific imports.
 
 def get_ordered_questions(exam_id, exam_session=None):
-    """
-    Return Question objects in the order the student actually saw them.
-    If the ExamSession stored a randomised question_order JSON list of IDs,
-    use that; otherwise fall back to Question.order / Question.id.
-    """
-    base_qs = {q.id: q for q in Question.query.filter_by(exam_id=exam_id).all()}
+    return _get_ordered_questions(Question, exam_id, exam_session)
 
-    if exam_session and hasattr(exam_session, 'question_order') and exam_session.question_order:
-        try:
-            ordered_ids = json.loads(exam_session.question_order)
-            ordered = [base_qs[qid] for qid in ordered_ids if qid in base_qs]
-            listed = set(ordered_ids)
-            extras = sorted(
-                [q for q in base_qs.values() if q.id not in listed],
-                key=lambda q: (q.order or 0, q.id)
-            )
-            return ordered + extras
-        except (json.JSONDecodeError, KeyError, TypeError):
-            pass
-
-    return sorted(base_qs.values(), key=lambda q: (q.order or 0, q.id))
-
-
-def get_ordered_options(question, exam_session=None):
-    """
-    Return QuestionOption objects in the order the student actually saw them.
-    """
-    options = list(question.options)
-
-    if exam_session and hasattr(exam_session, 'option_order') and exam_session.option_order:
-        try:
-            option_order_map = json.loads(exam_session.option_order)
-            ordered_ids = option_order_map.get(str(question.id))
-            if ordered_ids:
-                opt_by_id = {o.id: o for o in options}
-                ordered = [opt_by_id[oid] for oid in ordered_ids if oid in opt_by_id]
-                listed = set(ordered_ids)
-                extras = [o for o in options if o.id not in listed]
-                return ordered + extras
-        except (json.JSONDecodeError, KeyError, TypeError):
-            pass
-
-    return sorted(options, key=lambda o: o.option_label or '')
 
 
 def get_correct_answer_text(question):
@@ -150,7 +115,9 @@ def dashboard():
             print(f"⚠ Error calculating top students: {str(e)}")
             top_students = []
 
-        return render_template('admin/dashboard.html',
+        current_term = AcademicTerm.query.filter_by(is_current=True).first()
+
+        return render_template("admin/dashboard.html",
                                total_students=total_students,
                                total_teachers=total_teachers,
                                total_classes=total_classes,
@@ -158,7 +125,8 @@ def dashboard():
                                avg_score=round(avg_score, 2),
                                total_submissions=total_submissions,
                                recent_results=recent_results,
-                               top_students=top_students)
+                               top_students=top_students,
+                               current_term=current_term)
 
     except Exception as e:
         print(f"=== ERROR IN DASHBOARD ===\n{str(e)}")
@@ -247,13 +215,64 @@ def advanced_analytics():
         trend_labels = sorted(trend_data_dict.keys())[-10:]
         trend_data   = [round(sum(trend_data_dict[d]) / len(trend_data_dict[d]), 2) for d in trend_labels]
 
-        subject_performance = defaultdict(list)
+        # ── Per-subject performance ───────────────────────────────────────
+        # Build exam→subject map once to avoid N+1 queries
+        exam_subject_map = {e.id: e.subject for e in Exam.query.filter_by(is_deleted=False).all() if e.subject}
+
+        subject_performance = defaultdict(list)   # subject → [percentage, …]
+        subject_student_map = defaultdict(dict)   # subject → {student_id: [percentage, …]}
         for r in all_results:
-            exam = Exam.query.get(r.exam_id)
-            if exam and exam.subject:
-                subject_performance[exam.subject].append(r.percentage)
-        subject_labels = list(subject_performance.keys())
-        subject_data   = [round(sum(v) / len(v), 2) if v else 0 for v in subject_performance.values()]
+            subj = exam_subject_map.get(r.exam_id)
+            if subj:
+                subject_performance[subj].append(r.percentage)
+                subject_student_map[subj].setdefault(r.student_id, []).append(r.percentage)
+
+        subject_labels = sorted(subject_performance.keys())
+        subject_data   = [round(sum(subject_performance[s]) / len(subject_performance[s]), 2)
+                          for s in subject_labels]
+
+        # Detailed per-subject stats (for table)
+        subject_detail = []
+        for subj in subject_labels:
+            scores       = subject_performance[subj]
+            s_students   = subject_student_map[subj]   # {student_id: [scores]}
+            total_att    = len(scores)
+            pass_count_s = sum(1 for sc in scores if sc >= 50)
+            fail_count_s = total_att - pass_count_s
+            avg_s        = round(sum(scores) / total_att, 1) if total_att else 0
+            hi_s         = round(max(scores), 1) if scores else 0
+            lo_s         = round(min(scores), 1) if scores else 0
+            pass_rate_s  = round((pass_count_s / total_att) * 100, 1) if total_att else 0
+            n_students   = len(s_students)
+
+            # Per-student breakdown for this subject (top 5 + bottom 5)
+            per_stu = []
+            for sid, sc_list in s_students.items():
+                u   = User.query.get(sid)
+                stu = Student.query.filter_by(user_id=sid).first()
+                if u:
+                    per_stu.append({
+                        'name':       u.full_name,
+                        'class_name': stu.class_info.name if stu and stu.class_info else '—',
+                        'avg':        round(sum(sc_list) / len(sc_list), 1),
+                        'attempts':   len(sc_list),
+                        'passed':     sum(1 for sc in sc_list if sc >= 50),
+                    })
+            per_stu.sort(key=lambda x: x['avg'], reverse=True)
+
+            subject_detail.append({
+                'subject':     subj,
+                'avg':         avg_s,
+                'high':        hi_s,
+                'low':         lo_s,
+                'pass_rate':   pass_rate_s,
+                'total_att':   total_att,
+                'pass_count':  pass_count_s,
+                'fail_count':  fail_count_s,
+                'n_students':  n_students,
+                'per_student': per_stu,
+            })
+        # ──────────────────────────────────────────────────────────────────
 
         class_performance = {}
         for cls in Class.query.filter_by(is_active=True).all():
@@ -331,10 +350,13 @@ def advanced_analytics():
         top_performers.sort(key=lambda x: x['avg_score'], reverse=True)
         low_performers.sort(key=lambda x: x['avg_score'])
 
-        all_classes  = Class.query.filter_by(is_active=True).all()
-        all_subjects = Exam.query.filter_by(is_deleted=False).with_entities(Exam.subject).distinct().all()
-        subject_list = [s[0] for s in all_subjects if s[0]]
-        all_exams    = Exam.query.filter_by(is_deleted=False).all()
+        all_classes     = Class.query.filter_by(is_active=True).all()
+        # Build subject filter list: master Subject table + any used in exams
+        master_subj_names = [s.name for s in Subject.query.filter_by(is_active=True).order_by(Subject.name).all()]
+        exam_subj_raw     = Exam.query.filter_by(is_deleted=False).with_entities(Exam.subject).distinct().all()
+        exam_subj_names   = [s[0] for s in exam_subj_raw if s[0]]
+        subject_list      = sorted(set(master_subj_names + exam_subj_names))
+        all_exams         = Exam.query.filter_by(is_deleted=False).all()
 
         return render_template('admin/advanced_analytics.html',
                                overall_stats=overall_stats,
@@ -352,9 +374,10 @@ def advanced_analytics():
                                top_performers=top_performers[:10],
                                low_performers=low_performers[:10],
                                student_insights=student_insights,
-                               all_classes=all_classes,
-                               all_subjects=subject_list,
-                               all_exams=all_exams,
+                               classes=all_classes,
+                               subjects=subject_list,
+                               subject_detail=subject_detail,
+                               exams=all_exams,
                                selected_class=selected_class,
                                selected_subject=selected_subject,
                                selected_period=selected_period,
@@ -986,7 +1009,8 @@ def create_teacher():
             db.session.rollback()
             flash(f'Error creating teacher: {str(e)}', 'danger')
 
-    return render_template('admin/teacher_form.html', teacher=None)
+    all_subjects = Subject.query.filter_by(is_active=True).order_by(Subject.name).all()
+    return render_template('admin/teacher_form.html', teacher=None, all_subjects=all_subjects)
 
 
 @admin_bp.route('/teacher/<int:id>/edit', methods=['GET', 'POST'])
@@ -1035,7 +1059,8 @@ def edit_teacher(id):
                 db.session.rollback()
                 flash(f'Error updating teacher: {str(e)}', 'danger')
 
-        return render_template('admin/teacher_form.html', teacher=teacher)
+        all_subjects = Subject.query.filter_by(is_active=True).order_by(Subject.name).all()
+        return render_template('admin/teacher_form.html', teacher=teacher, all_subjects=all_subjects)
     except Exception as e:
         print(f"ERROR in edit_teacher: {str(e)}")
         traceback.print_exc()
@@ -2131,11 +2156,84 @@ def student_reports():
         return redirect(url_for('admin.dashboard'))
 
 
-def generate_summary_report(class_id, exam_id):
+
+# ── Safe docx importer — falls back to xlsxwriter CSV if python-docx missing ──
+def _try_import_docx():
+    """Returns (Document, Pt, WD_ALIGN_PARAGRAPH) or raises ImportError with hint."""
     try:
         from docx import Document
         from docx.shared import Pt
         from docx.enum.text import WD_ALIGN_PARAGRAPH
+        return Document, Pt, WD_ALIGN_PARAGRAPH
+    except ImportError:
+        raise ImportError(
+            "python-docx is not installed. Run: pip install python-docx\n"
+            "On Windows: open your project folder in cmd and run:\n"
+            "  pip install python-docx"
+        )
+
+
+def _report_to_xlsx(report_data, report_title, filename_prefix):
+    """Fallback Excel export used when python-docx is unavailable."""
+    import io, xlsxwriter
+    buf = io.BytesIO()
+    wb  = xlsxwriter.Workbook(buf)
+    ws  = wb.add_worksheet('Report')
+
+    bold  = wb.add_format({'bold': True, 'bg_color': '#667eea', 'font_color': '#ffffff'})
+    norm  = wb.add_format({'border': 1})
+    pass_ = wb.add_format({'border': 1, 'font_color': '#2e7d32'})
+    fail_ = wb.add_format({'border': 1, 'font_color': '#b91c1c'})
+
+    ws.write(0, 0, report_title, wb.add_format({'bold': True, 'font_size': 14}))
+    ws.write(1, 0, f"Generated: {datetime.now().strftime('%B %d, %Y %H:%M')}")
+
+    headers = ['#', 'Admission No.', 'Student Name', 'Class', 'Score / Marks', 'Status']
+    for col, h in enumerate(headers):
+        ws.write(3, col, h, bold)
+
+    for row_i, sd in enumerate(report_data['students'], start=4):
+        ws.write(row_i, 0, row_i - 3, norm)
+        ws.write(row_i, 1, sd['student'].admission_number, norm)
+        ws.write(row_i, 2, sd['student'].user.full_name, norm)
+        ws.write(row_i, 3, sd['class_name'], norm)
+        ws.write(row_i, 4, f"{sd['marks']} ({sd['percentage']})" if sd['marks'] != 'N/A' else sd['percentage'], norm)
+        fmt = pass_ if 'Pass' in str(sd['status']) else fail_
+        ws.write(row_i, 5, sd['status'], fmt)
+
+    # Stats sheet
+    ws2 = wb.add_worksheet('Statistics')
+    ws2.write(0, 0, 'Metric', bold); ws2.write(0, 1, 'Value', bold)
+    for i, (k, v) in enumerate(report_data.get('statistics', {}).items(), start=1):
+        ws2.write(i, 0, format_key(k)); ws2.write(i, 1, format_value(v))
+
+    wb.close()
+    buf.seek(0)
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename  = f"{filename_prefix}_{timestamp}.xlsx"
+    output_path = os.path.join(tempfile.gettempdir(), filename)
+    with open(output_path, 'wb') as f_out:
+        f_out.write(buf.getvalue())
+    return filename, output_path
+
+
+def generate_summary_report(class_id, exam_id):
+    try:
+        try:
+            Document, Pt, WD_ALIGN_PARAGRAPH = _try_import_docx()
+        except ImportError as docx_err:
+            # Fallback to Excel
+            report_data = get_report_data(class_id, exam_id)
+            if not report_data['students']:
+                flash('No data found for the selected filters.', 'warning')
+                return redirect(url_for('admin.student_reports'))
+            fname, fpath = _report_to_xlsx(report_data, report_data['title'], 'Summary_Report')
+            flash('python-docx not installed — exported as Excel instead. '
+                  'Run: pip install python-docx to enable Word reports.', 'warning')
+            return send_file(
+                fpath, as_attachment=True, download_name=fname,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
 
         report_data = get_report_data(class_id, exam_id)
         if not report_data['students']:
@@ -2163,8 +2261,8 @@ def generate_summary_report(class_id, exam_id):
         doc.add_heading('Summary Statistics', level=2)
         stats_tbl = doc.add_table(rows=len(report_data['statistics']) + 1, cols=2)
         stats_tbl.style = 'Light Grid Accent 1'
-        for cell in stats_tbl.rows[0].cells:
-            cell.text = ['Metric', 'Value'][stats_tbl.rows[0].cells.index(cell)]
+        for i, cell in enumerate(stats_tbl.rows[0].cells):
+            cell.text = ['Metric', 'Value'][i]
             for p in cell.paragraphs:
                 for r in p.runs: r.font.bold = True
         for idx, (k, v) in enumerate(report_data['statistics'].items(), start=1):
@@ -2192,9 +2290,12 @@ def generate_summary_report(class_id, exam_id):
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename  = (f"Student_Report_{class_name.replace(' ','_')}"
                      f"_{exam_title.replace(' ','_')}_{timestamp}.docx")
-        doc.save(f'/mnt/user-data/outputs/{filename}')
-        flash(f'Report "{filename}" generated successfully!', 'success')
-        return redirect(url_for('admin.student_reports'))
+        filepath  = os.path.join(tempfile.gettempdir(), filename)
+        doc.save(filepath)
+        return send_file(
+            filepath, as_attachment=True, download_name=filename,
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
     except Exception as e:
         print(f"ERROR in generate_summary_report: {str(e)}")
         traceback.print_exc()
@@ -2204,9 +2305,20 @@ def generate_summary_report(class_id, exam_id):
 
 def generate_detailed_report(class_id, exam_id):
     try:
-        from docx import Document
-        from docx.shared import Pt
-        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        try:
+            Document, Pt, WD_ALIGN_PARAGRAPH = _try_import_docx()
+        except ImportError:
+            report_data = get_report_data(class_id, exam_id)
+            if not report_data['students']:
+                flash('No data found for the selected filters.', 'warning')
+                return redirect(url_for('admin.student_reports'))
+            fname, fpath = _report_to_xlsx(report_data, 'Detailed Student Report', 'Detailed_Report')
+            flash('python-docx not installed — exported as Excel instead. '
+                  'Run: pip install python-docx to enable Word reports.', 'warning')
+            return send_file(
+                fpath, as_attachment=True, download_name=fname,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
 
         report_data = get_report_data(class_id, exam_id)
         if not report_data['students']:
@@ -2285,9 +2397,12 @@ def generate_detailed_report(class_id, exam_id):
 
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename  = f"Detailed_Student_Report_{timestamp}.docx"
-        doc.save(f'/mnt/user-data/outputs/{filename}')
-        flash(f'Detailed report "{filename}" generated successfully!', 'success')
-        return redirect(url_for('admin.student_reports'))
+        filepath  = os.path.join(tempfile.gettempdir(), filename)
+        doc.save(filepath)
+        return send_file(
+            filepath, as_attachment=True, download_name=filename,
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
     except Exception as e:
         print(f"ERROR in generate_detailed_report: {str(e)}")
         traceback.print_exc()
@@ -2297,9 +2412,20 @@ def generate_detailed_report(class_id, exam_id):
 
 def generate_performance_report(class_id, exam_id):
     try:
-        from docx import Document
-        from docx.shared import Pt
-        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        try:
+            Document, Pt, WD_ALIGN_PARAGRAPH = _try_import_docx()
+        except ImportError:
+            report_data = get_report_data(class_id, exam_id)
+            if not report_data['students']:
+                flash('No data found for the selected filters.', 'warning')
+                return redirect(url_for('admin.student_reports'))
+            fname, fpath = _report_to_xlsx(report_data, 'Performance Analysis Report', 'Performance_Report')
+            flash('python-docx not installed — exported as Excel instead. '
+                  'Run: pip install python-docx to enable Word reports.', 'warning')
+            return send_file(
+                fpath, as_attachment=True, download_name=fname,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
 
         report_data = get_report_data(class_id, exam_id)
         if not report_data['students']:
@@ -2359,9 +2485,12 @@ def generate_performance_report(class_id, exam_id):
 
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename  = f"Performance_Report_{timestamp}.docx"
-        doc.save(f'/mnt/user-data/outputs/{filename}')
-        flash(f'Performance report "{filename}" generated successfully!', 'success')
-        return redirect(url_for('admin.student_reports'))
+        filepath  = os.path.join(tempfile.gettempdir(), filename)
+        doc.save(filepath)
+        return send_file(
+            filepath, as_attachment=True, download_name=filename,
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
     except Exception as e:
         print(f"ERROR in generate_performance_report: {str(e)}")
         traceback.print_exc()
@@ -2726,3 +2855,816 @@ def log_proctoring_violation():
     db.session.commit()
 
     return jsonify({'status': 'ok'})
+
+# ══════════════════════════════════════════════════════════════════════════
+# ACADEMIC TERM / SESSION MANAGEMENT
+# ══════════════════════════════════════════════════════════════════════════
+
+@admin_bp.route('/term', methods=['GET', 'POST'])
+@admin_required
+def manage_term():
+    """View and set the current academic term/session."""
+    try:
+        if request.method == 'POST':
+            action = request.form.get('action')
+
+            if action == 'set_current':
+                term_id = request.form.get('term_id', type=int)
+                if term_id:
+                    AcademicTerm.query.update({AcademicTerm.is_current: False})
+                    term = AcademicTerm.query.get_or_404(term_id)
+                    term.is_current = True
+                    db.session.commit()
+                    flash(f'{term.session_name} – {term.term} Term set as current.', 'success')
+
+            elif action == 'create':
+                session_name = request.form.get('session_name', '').strip()
+                term         = request.form.get('term', '').strip()
+                start_date   = request.form.get('start_date') or None
+                end_date     = request.form.get('end_date') or None
+                make_current = request.form.get('make_current') == '1'
+
+                if not session_name or not term:
+                    flash('Session name and term are required.', 'danger')
+                else:
+                    if make_current:
+                        AcademicTerm.query.update({AcademicTerm.is_current: False})
+                    new_term = AcademicTerm(
+                        session_name=session_name,
+                        term=term,
+                        is_current=make_current,
+                        start_date=datetime.strptime(start_date, '%Y-%m-%d').date() if start_date else None,
+                        end_date=datetime.strptime(end_date, '%Y-%m-%d').date() if end_date else None,
+                    )
+                    db.session.add(new_term)
+                    db.session.commit()
+                    flash('Academic term created successfully.', 'success')
+
+            elif action == 'delete':
+                term_id = request.form.get('term_id', type=int)
+                term = AcademicTerm.query.get_or_404(term_id)
+                db.session.delete(term)
+                db.session.commit()
+                flash('Term deleted.', 'success')
+
+            return redirect(url_for('admin.manage_term'))
+
+        terms        = AcademicTerm.query.order_by(AcademicTerm.session_name.desc(),
+                                                    AcademicTerm.term).all()
+        current_term = AcademicTerm.query.filter_by(is_current=True).first()
+        return render_template('admin/manage_term.html', terms=terms, current_term=current_term)
+
+    except Exception as e:
+        traceback.print_exc()
+        flash(f'Error: {str(e)}', 'danger')
+        return redirect(url_for('admin.dashboard'))
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# TEACHER → CLASS + SUBJECT ASSIGNMENT
+# ══════════════════════════════════════════════════════════════════════════
+
+@admin_bp.route('/teacher-assignments', methods=['GET', 'POST'])
+@admin_required
+def teacher_assignments():
+    """Admin assigns classes and subjects to teachers."""
+    try:
+        if request.method == 'POST':
+            action     = request.form.get('action')
+            teacher_id = request.form.get('teacher_id', type=int)
+            class_id   = request.form.get('class_id', type=int)
+            subject    = request.form.get('subject', '').strip()
+
+            if action == 'assign':
+                if not all([teacher_id, class_id, subject]):
+                    flash('Teacher, class and subject are required.', 'danger')
+                else:
+                    existing = TeacherSubjectClass.query.filter_by(
+                        teacher_id=teacher_id, class_id=class_id, subject=subject
+                    ).first()
+                    if existing:
+                        flash('This assignment already exists.', 'warning')
+                    else:
+                        db.session.add(TeacherSubjectClass(
+                            teacher_id=teacher_id, class_id=class_id, subject=subject
+                        ))
+                        db.session.commit()
+                        flash('Assignment saved successfully.', 'success')
+
+            elif action == 'remove':
+                assign_id = request.form.get('assign_id', type=int)
+                row = TeacherSubjectClass.query.get_or_404(assign_id)
+                db.session.delete(row)
+                db.session.commit()
+                flash('Assignment removed.', 'success')
+
+            return redirect(url_for('admin.teacher_assignments'))
+
+        teachers    = Teacher.query.filter_by(is_active=True).join(User).order_by(
+                          User.first_name, User.last_name).all()
+        classes     = Class.query.filter_by(is_active=True).order_by(Class.name).all()
+        assignments = TeacherSubjectClass.query.all()
+
+        # Subject master list (falls back to ad-hoc list if none in DB)
+        master_subjects = [s.name for s in Subject.query.filter_by(is_active=True).order_by(Subject.name).all()]
+        if not master_subjects:
+            master_subjects = sorted(set(
+                [t.subject for t in teachers if t.subject] +
+                [a.subject for a in assignments if a.subject]
+            ))
+        subjects = master_subjects
+
+        return render_template('admin/teacher_assignments.html',
+                               teachers=teachers,
+                               classes=classes,
+                               assignments=assignments,
+                               subjects=subjects)
+    except Exception as e:
+        traceback.print_exc()
+        flash(f'Error: {str(e)}', 'danger')
+        return redirect(url_for('admin.dashboard'))
+
+
+@admin_bp.route('/teacher-assignments/api/subjects')
+@admin_required
+def api_teacher_subjects():
+    """Return subjects already assigned to a teacher (for AJAX subject suggestions)."""
+    teacher_id = request.args.get('teacher_id', type=int)
+    teacher    = Teacher.query.get(teacher_id)
+    if not teacher:
+        return jsonify([])
+    subjects = list({teacher.subject} | {
+        a.subject for a in TeacherSubjectClass.query.filter_by(teacher_id=teacher_id).all()
+    })
+    return jsonify(sorted(subjects))
+
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# SUBJECT MANAGEMENT
+# ══════════════════════════════════════════════════════════════════════════
+
+@admin_bp.route('/subjects')
+@admin_required
+def manage_subjects():
+    """List all subjects."""
+    try:
+        search   = request.args.get('search', '').strip()
+        category = request.args.get('category', '').strip()
+        status   = request.args.get('status', 'active')
+
+        query = Subject.query
+        if search:
+            query = query.filter(Subject.name.ilike(f'%{search}%') |
+                                 Subject.code.ilike(f'%{search}%'))
+        if category:
+            query = query.filter_by(category=category)
+        if status == 'active':
+            query = query.filter_by(is_active=True)
+        elif status == 'inactive':
+            query = query.filter_by(is_active=False)
+
+        subjects    = query.order_by(Subject.name).all()
+        categories  = sorted(set(
+            s.category for s in Subject.query.all() if s.category
+        ))
+        total_active   = Subject.query.filter_by(is_active=True).count()
+        total_inactive = Subject.query.filter_by(is_active=False).count()
+
+        return render_template('admin/subjects.html',
+                               subjects=subjects,
+                               categories=categories,
+                               search=search,
+                               category_filter=category,
+                               status_filter=status,
+                               total_active=total_active,
+                               total_inactive=total_inactive)
+    except Exception as e:
+        traceback.print_exc()
+        flash(f'Error loading subjects: {str(e)}', 'danger')
+        return redirect(url_for('admin.dashboard'))
+
+
+@admin_bp.route('/subjects/create', methods=['GET', 'POST'])
+@admin_required
+def create_subject():
+    """Create a new subject."""
+    try:
+        if request.method == 'POST':
+            name        = request.form.get('name', '').strip()
+            code        = request.form.get('code', '').strip().upper() or None
+            category    = request.form.get('category', '').strip() or None
+            description = request.form.get('description', '').strip() or None
+
+            if not name:
+                flash('Subject name is required.', 'danger')
+                return redirect(url_for('admin.create_subject'))
+
+            if Subject.query.filter(Subject.name.ilike(name)).first():
+                flash(f'A subject named "{name}" already exists.', 'danger')
+                return redirect(url_for('admin.create_subject'))
+
+            if code and Subject.query.filter_by(code=code).first():
+                flash(f'Subject code "{code}" is already in use.', 'danger')
+                return redirect(url_for('admin.create_subject'))
+
+            subject = Subject(name=name, code=code,
+                              category=category, description=description)
+            db.session.add(subject)
+            db.session.commit()
+            flash(f'Subject "{name}" created successfully.', 'success')
+            return redirect(url_for('admin.manage_subjects'))
+
+        categories = sorted(set(
+            s.category for s in Subject.query.all() if s.category
+        ))
+        return render_template('admin/subject_form.html',
+                               subject=None, categories=categories)
+    except Exception as e:
+        traceback.print_exc()
+        flash(f'Error: {str(e)}', 'danger')
+        return redirect(url_for('admin.manage_subjects'))
+
+
+@admin_bp.route('/subjects/<int:id>/edit', methods=['GET', 'POST'])
+@admin_required
+def edit_subject(id):
+    """Edit an existing subject."""
+    try:
+        subject = Subject.query.get_or_404(id)
+
+        if request.method == 'POST':
+            name        = request.form.get('name', '').strip()
+            code        = request.form.get('code', '').strip().upper() or None
+            category    = request.form.get('category', '').strip() or None
+            description = request.form.get('description', '').strip() or None
+
+            if not name:
+                flash('Subject name is required.', 'danger')
+                return redirect(url_for('admin.edit_subject', id=id))
+
+            dup_name = Subject.query.filter(
+                Subject.name.ilike(name), Subject.id != id
+            ).first()
+            if dup_name:
+                flash(f'A subject named "{name}" already exists.', 'danger')
+                return redirect(url_for('admin.edit_subject', id=id))
+
+            if code:
+                dup_code = Subject.query.filter(
+                    Subject.code == code, Subject.id != id
+                ).first()
+                if dup_code:
+                    flash(f'Subject code "{code}" is already in use.', 'danger')
+                    return redirect(url_for('admin.edit_subject', id=id))
+
+            subject.name        = name
+            subject.code        = code
+            subject.category    = category
+            subject.description = description
+            subject.updated_at  = datetime.utcnow()
+            db.session.commit()
+            flash(f'Subject "{name}" updated successfully.', 'success')
+            return redirect(url_for('admin.manage_subjects'))
+
+        categories = sorted(set(
+            s.category for s in Subject.query.all() if s.category
+        ))
+        return render_template('admin/subject_form.html',
+                               subject=subject, categories=categories)
+    except Exception as e:
+        traceback.print_exc()
+        flash(f'Error: {str(e)}', 'danger')
+        return redirect(url_for('admin.manage_subjects'))
+
+
+@admin_bp.route('/subjects/<int:id>/toggle', methods=['POST'])
+@admin_required
+def toggle_subject(id):
+    """Activate or deactivate a subject."""
+    subject = Subject.query.get_or_404(id)
+    subject.is_active = not subject.is_active
+    db.session.commit()
+    state = 'activated' if subject.is_active else 'deactivated'
+    flash(f'Subject "{subject.name}" {state}.', 'success')
+    return redirect(url_for('admin.manage_subjects'))
+
+
+@admin_bp.route('/subjects/<int:id>/delete', methods=['POST'])
+@admin_required
+def delete_subject(id):
+    """Hard-delete a subject (only if not in use)."""
+    subject = Subject.query.get_or_404(id)
+    # Safety: check usage in TeacherSubjectClass and Exam
+    in_use_tsc  = TeacherSubjectClass.query.filter_by(subject=subject.name).count()
+    in_use_exam = 0
+    try:
+        from models.exam import Exam as _Exam
+        in_use_exam = _Exam.query.filter_by(subject=subject.name, is_deleted=False).count()
+    except Exception:
+        pass
+    if in_use_tsc or in_use_exam:
+        flash(
+            f'Cannot delete "{subject.name}" — it is used in '
+            f'{in_use_tsc} assignment(s) and {in_use_exam} exam(s). '
+            'Deactivate it instead.',
+            'warning'
+        )
+        return redirect(url_for('admin.manage_subjects'))
+    db.session.delete(subject)
+    db.session.commit()
+    flash(f'Subject "{subject.name}" deleted.', 'success')
+    return redirect(url_for('admin.manage_subjects'))
+
+
+@admin_bp.route('/subjects/api/list')
+@admin_required
+def api_subjects_list():
+    """JSON list of active subject names (used by other forms)."""
+    subjects = Subject.query.filter_by(is_active=True).order_by(Subject.name).all()
+    return jsonify([{'id': s.id, 'name': s.name, 'code': s.code,
+                     'category': s.category} for s in subjects])
+
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# STUDENT PROMOTION
+# ══════════════════════════════════════════════════════════════════════════
+
+@admin_bp.route('/promote', methods=['GET'])
+@admin_required
+def promotion_dashboard():
+    """Show the promotion dashboard — preview students per class and their destination."""
+    try:
+        current_term  = AcademicTerm.query.filter_by(is_current=True).first()
+        all_classes   = Class.query.filter_by(is_active=True).order_by(Class.level, Class.name).all()
+
+        # Build preview: for each class, list active students + their destination
+        class_previews = []
+        for cls in all_classes:
+            students = Student.query.filter_by(class_id=cls.id, is_active=True, status='active').all()
+            if cls.is_terminal:
+                destination = None
+                action      = 'graduate'
+            elif cls.next_class_id:
+                destination = Class.query.get(cls.next_class_id)
+                action      = 'promote'
+            else:
+                # Auto-detect: next class by level
+                destination = (Class.query
+                               .filter(Class.level == cls.level + 1, Class.is_active == True)
+                               .order_by(Class.name)
+                               .first())
+                action = 'promote' if destination else 'no_target'
+
+            class_previews.append({
+                'class':       cls,
+                'students':    students,
+                'count':       len(students),
+                'destination': destination,
+                'action':      action,
+            })
+
+        # Recent promotion history
+        history = (PromotionHistory.query
+                   .order_by(PromotionHistory.created_at.desc())
+                   .limit(50).all())
+
+        # Promotion history grouped by session
+        session_history = {}
+        for h in history:
+            session_history.setdefault(h.session_name, []).append(h)
+
+        return render_template('admin/promotion_dashboard.html',
+                               class_previews=class_previews,
+                               current_term=current_term,
+                               session_history=session_history)
+    except Exception as e:
+        traceback.print_exc()
+        flash(f'Error loading promotion page: {str(e)}', 'danger')
+        return redirect(url_for('admin.dashboard'))
+
+
+@admin_bp.route('/promote/run', methods=['POST'])
+@admin_required
+def run_promotion():
+    """Execute bulk promotion for selected class(es) or all classes."""
+    try:
+        session_name = request.form.get('session_name', '').strip()
+        mode         = request.form.get('mode', 'all')       # all | class
+        class_ids    = request.form.getlist('class_ids', type=int)
+        note         = request.form.get('note', '').strip()
+
+        if not session_name:
+            flash('Session name is required to run promotion.', 'danger')
+            return redirect(url_for('admin.promotion_dashboard'))
+
+        # Duplicate-check: don't run same session twice
+        already_done = PromotionHistory.query.filter_by(session_name=session_name).first()
+        if already_done:
+            flash(f'Promotion for session "{session_name}" has already been run. '
+                  'Use the rollback feature if you need to redo it.', 'warning')
+            return redirect(url_for('admin.promotion_dashboard'))
+
+        if mode == 'all':
+            classes = Class.query.filter_by(is_active=True).order_by(Class.level.desc()).all()
+        else:
+            classes = Class.query.filter(Class.id.in_(class_ids), Class.is_active == True).all()
+
+        promoted    = 0
+        graduated   = 0
+        no_target   = 0
+        skipped     = 0
+
+        for cls in classes:
+            students = Student.query.filter_by(class_id=cls.id, is_active=True, status='active').all()
+
+            if cls.is_terminal:
+                dest    = None
+                action  = 'graduated'
+            elif cls.next_class_id:
+                dest    = Class.query.get(cls.next_class_id)
+                action  = 'promoted'
+            else:
+                dest    = (Class.query
+                           .filter(Class.level == cls.level + 1, Class.is_active == True)
+                           .order_by(Class.name)
+                           .first())
+                action  = 'promoted' if dest else None
+
+            for student in students:
+                if action == 'graduated':
+                    # Mark student as graduated; deactivate login
+                    student.status             = 'graduated'
+                    student.graduation_session = session_name
+                    student.is_active          = False
+                    student.class_id           = cls.id   # keep last class for records
+                    if student.user:
+                        student.user.is_active = False
+
+                    db.session.add(PromotionHistory(
+                        student_id     = student.id,
+                        from_class_id  = cls.id,
+                        to_class_id    = None,
+                        session_name   = session_name,
+                        promotion_type = 'graduated',
+                        promoted_by    = current_user.id,
+                        note           = note or f'Graduated at end of {session_name}'
+                    ))
+                    graduated += 1
+
+                elif action == 'promoted' and dest:
+                    old_class_id   = student.class_id
+                    student.class_id = dest.id
+
+                    db.session.add(PromotionHistory(
+                        student_id     = student.id,
+                        from_class_id  = old_class_id,
+                        to_class_id    = dest.id,
+                        session_name   = session_name,
+                        promotion_type = 'promoted',
+                        promoted_by    = current_user.id,
+                        note           = note
+                    ))
+                    promoted += 1
+
+                else:
+                    no_target += 1
+
+        db.session.commit()
+
+        msg = []
+        if promoted:  msg.append(f'{promoted} student(s) promoted')
+        if graduated: msg.append(f'{graduated} student(s) graduated (accounts deactivated)')
+        if no_target: msg.append(f'{no_target} student(s) skipped (no target class)')
+        flash('. '.join(msg) + f' for session {session_name}.', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        traceback.print_exc()
+        flash(f'Promotion failed: {str(e)}', 'danger')
+
+    return redirect(url_for('admin.promotion_dashboard'))
+
+
+@admin_bp.route('/promote/single', methods=['POST'])
+@admin_required
+def promote_single_student():
+    """Manually promote or graduate a single student."""
+    try:
+        student_id   = request.form.get('student_id', type=int)
+        action       = request.form.get('action')          # promote | graduate | repeat | transfer
+        to_class_id  = request.form.get('to_class_id', type=int)
+        session_name = request.form.get('session_name', '').strip()
+        note         = request.form.get('note', '').strip()
+
+        student = Student.query.get_or_404(student_id)
+        old_class_id = student.class_id
+
+        if action == 'graduate':
+            student.status             = 'graduated'
+            student.graduation_session = session_name
+            student.is_active          = False
+            if student.user:
+                student.user.is_active = False
+            ptype = 'graduated'
+            dest_id = None
+
+        elif action == 'promote' and to_class_id:
+            student.class_id = to_class_id
+            student.status   = 'active'
+            ptype   = 'promoted'
+            dest_id = to_class_id
+
+        elif action == 'repeat':
+            # Student stays in same class (just log it)
+            ptype   = 'repeated'
+            dest_id = old_class_id
+
+        elif action == 'transfer' and to_class_id:
+            student.class_id = to_class_id
+            student.status   = 'active'
+            ptype   = 'transferred'
+            dest_id = to_class_id
+
+        else:
+            flash('Invalid action or missing destination class.', 'danger')
+            return redirect(url_for('admin.promotion_dashboard'))
+
+        db.session.add(PromotionHistory(
+            student_id     = student.id,
+            from_class_id  = old_class_id,
+            to_class_id    = dest_id,
+            session_name   = session_name or 'Manual',
+            promotion_type = ptype,
+            promoted_by    = current_user.id,
+            note           = note
+        ))
+        db.session.commit()
+        flash(f'{student.user.full_name} has been {ptype}.', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        traceback.print_exc()
+        flash(f'Error: {str(e)}', 'danger')
+
+    return redirect(url_for('admin.promotion_dashboard'))
+
+
+@admin_bp.route('/promote/rollback', methods=['POST'])
+@admin_required
+def rollback_promotion():
+    """Rollback an entire session's promotion — restore students to previous classes."""
+    try:
+        session_name = request.form.get('session_name', '').strip()
+        if not session_name:
+            flash('Session name is required for rollback.', 'danger')
+            return redirect(url_for('admin.promotion_dashboard'))
+
+        records = PromotionHistory.query.filter_by(session_name=session_name).all()
+        if not records:
+            flash(f'No promotion records found for session "{session_name}".', 'warning')
+            return redirect(url_for('admin.promotion_dashboard'))
+
+        restored = 0
+        for record in records:
+            student = Student.query.get(record.student_id)
+            if not student:
+                continue
+            # Restore previous class
+            student.class_id = record.from_class_id
+            if record.promotion_type == 'graduated':
+                student.status             = 'active'
+                student.graduation_session = None
+                student.is_active          = True
+                if student.user:
+                    student.user.is_active = True
+            else:
+                student.status = 'active'
+            restored += 1
+
+        # Remove history records for this session
+        PromotionHistory.query.filter_by(session_name=session_name).delete()
+        db.session.commit()
+        flash(f'Rollback complete — {restored} student(s) restored to their previous classes '
+              f'(session "{session_name}" cleared).', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        traceback.print_exc()
+        flash(f'Rollback failed: {str(e)}', 'danger')
+
+    return redirect(url_for('admin.promotion_dashboard'))
+
+
+@admin_bp.route('/promote/class-config', methods=['GET', 'POST'])
+@admin_required
+def promotion_class_config():
+    """Configure promotion order (level) and terminal classes."""
+    try:
+        classes = Class.query.filter_by(is_active=True).order_by(Class.level, Class.name).all()
+
+        if request.method == 'POST':
+            for cls in classes:
+                level_val    = request.form.get(f'level_{cls.id}', type=int)
+                is_terminal  = request.form.get(f'terminal_{cls.id}') == '1'
+                next_cls_id  = request.form.get(f'next_{cls.id}', type=int) or None
+                if level_val is not None:
+                    cls.level         = level_val
+                    cls.is_terminal   = is_terminal
+                    cls.next_class_id = next_cls_id
+            db.session.commit()
+            flash('Class promotion configuration saved.', 'success')
+            return redirect(url_for('admin.promotion_class_config'))
+
+        return render_template('admin/promotion_class_config.html', classes=classes)
+    except Exception as e:
+        traceback.print_exc()
+        flash(f'Error: {str(e)}', 'danger')
+        return redirect(url_for('admin.promotion_dashboard'))
+
+
+@admin_bp.route('/promote/graduated')
+@admin_required
+def graduated_students():
+    """View all graduated students."""
+    try:
+        session_filter = request.args.get('session', '')
+        query = Student.query.filter_by(status='graduated')
+        if session_filter:
+            query = query.filter_by(graduation_session=session_filter)
+        students = query.all()
+        sessions = db.session.query(Student.graduation_session)\
+                     .filter(Student.status == 'graduated')\
+                     .filter(Student.graduation_session.isnot(None))\
+                     .distinct().all()
+        sessions = sorted([s[0] for s in sessions], reverse=True)
+        return render_template('admin/graduated_students.html',
+                               students=students,
+                               sessions=sessions,
+                               session_filter=session_filter)
+    except Exception as e:
+        traceback.print_exc()
+        flash(f'Error: {str(e)}', 'danger')
+        return redirect(url_for('admin.promotion_dashboard'))
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# DATA INTEGRITY: FIND QUESTIONS WITH MISSING/TOO-FEW OPTIONS
+# ══════════════════════════════════════════════════════════════════════════
+
+@admin_bp.route('/diagnostics/incomplete-questions')
+@admin_required
+def incomplete_questions():
+    """
+    Find MCQ / true-false questions with fewer options than expected:
+      - MCQ should have up to 4 options (A-D); flag anything under 4 so an
+        intentionally-2-or-3-option question can still be reviewed, while
+        anything under 2 is unusable and shown as critical.
+      - True/False should always have exactly 2 options (A, B).
+    This surfaces questions created/edited before the option-count
+    validation was added to teacher.py's create_question/edit_question,
+    where a blank option field could be silently skipped or deleted.
+    """
+    try:
+        broken = []
+        questions = Question.query.filter(
+            Question.question_type.in_(['mcq', 'true_false'])
+        ).all()
+        for q in questions:
+            opt_count = len(q.options)
+            expected  = 2 if q.question_type == 'true_false' else 4
+            if opt_count < expected:
+                exam = q.exam
+                teacher = Teacher.query.filter_by(user_id=exam.created_by).first() if exam else None
+                broken.append({
+                    'question':   q,
+                    'exam':       exam,
+                    'opt_count':  opt_count,
+                    'expected':   expected,
+                    'critical':   opt_count < 2,
+                    'teacher':    teacher,
+                })
+        # Critical (unusable, <2 options) first, then by how far short they are
+        broken.sort(key=lambda b: (not b['critical'], b['opt_count']))
+        return render_template('admin/incomplete_questions.html', broken=broken)
+    except Exception as e:
+        traceback.print_exc()
+        flash(f'Error scanning questions: {str(e)}', 'danger')
+        return redirect(url_for('admin.dashboard'))
+
+
+@admin_bp.route('/diagnostics/exam/<int:exam_id>/raw')
+@admin_required
+def inspect_exam_raw(exam_id):
+    """
+    Dump the exact, unprocessed data for every question in an exam:
+    every option actually stored in the DB (with id + label), and — if a
+    student session exists — the exact question_order/option_order JSON
+    persisted for that session. Use this to compare against what the
+    student actually sees on the take-exam screen, instead of guessing.
+    """
+    try:
+        exam = Exam.query.get_or_404(exam_id)
+        questions = Question.query.filter_by(exam_id=exam_id).order_by(Question.order).all()
+
+        question_dump = []
+        for q in questions:
+            question_dump.append({
+                'id':            q.id,
+                'order':         q.order,
+                'question_type': q.question_type,
+                'text_preview':  (q.question_text or '')[:60],
+                'options': [
+                    {'id': o.id, 'label': o.option_label, 'text_preview': (o.option_text or '')[:40]}
+                    for o in q.options
+                ],
+                'option_count': len(q.options),
+            })
+
+        # Pull every session for this exam so we can see persisted order data
+        sessions = ExamSession.query.filter_by(exam_id=exam_id).all()
+        session_dump = []
+        for s in sessions:
+            session_dump.append({
+                'session_id':     s.id,
+                'student_id':     s.student_id,
+                'status':         s.status,
+                'question_order': s.question_order,
+                'option_order':   s.option_order,
+            })
+
+        return render_template('admin/inspect_exam_raw.html',
+                               exam=exam,
+                               question_dump=question_dump,
+                               session_dump=session_dump)
+    except Exception as e:
+        traceback.print_exc()
+        flash(f'Error inspecting exam: {str(e)}', 'danger')
+        return redirect(url_for('admin.incomplete_questions'))
+
+
+@admin_bp.route('/diagnostics/randomization-status')
+@admin_required
+def randomization_status():
+    """
+    List every exam and its current shuffle/randomization flags. Exams
+    created before the missing 'randomize_per_student' checkbox was added
+    to exam_form.html will show randomize_per_student=False even if the
+    teacher intended shuffling — because the form never sent that field,
+    so request.form.get('randomize_per_student') == 'on' always evaluated
+    False on save, regardless of the column's default=True.
+    """
+    try:
+        exams = Exam.query.filter_by(is_deleted=False).order_by(Exam.created_at.desc()).all()
+        exam_rows = [{
+            'exam': e,
+            'shuffle_questions':     e.shuffle_questions,
+            'shuffle_options':       e.shuffle_options,
+            'randomize_per_student': e.randomize_per_student,
+            'effectively_off':       not e.randomize_per_student,
+        } for e in exams]
+        off_count = sum(1 for r in exam_rows if r['effectively_off'])
+        return render_template('admin/randomization_status.html',
+                               exam_rows=exam_rows, off_count=off_count)
+    except Exception as e:
+        traceback.print_exc()
+        flash(f'Error: {str(e)}', 'danger')
+        return redirect(url_for('admin.dashboard'))
+
+
+@admin_bp.route('/diagnostics/randomization-status/fix-all', methods=['POST'])
+@admin_required
+def fix_all_randomization():
+    """
+    Bulk-enable randomize_per_student (and shuffle_questions/shuffle_options
+    if also off) for every exam that hasn't started yet — i.e. has no
+    ExamSession rows at all. Exams that already have student sessions are
+    skipped, since flipping the flag mid-exam-cycle would change behavior
+    inconsistently for students who already started vs those who haven't.
+    """
+    try:
+        exams = Exam.query.filter_by(is_deleted=False).all()
+        fixed = 0
+        skipped_in_progress = 0
+        for e in exams:
+            has_sessions = ExamSession.query.filter_by(exam_id=e.id).first() is not None
+            if has_sessions:
+                skipped_in_progress += 1
+                continue
+            if not e.randomize_per_student or not e.shuffle_questions or not e.shuffle_options:
+                e.randomize_per_student = True
+                e.shuffle_questions     = True
+                e.shuffle_options       = True
+                fixed += 1
+        db.session.commit()
+        msg = f'Enabled randomization on {fixed} exam(s) with no prior student sessions.'
+        if skipped_in_progress:
+            msg += f' Skipped {skipped_in_progress} exam(s) that already have student sessions.'
+        flash(msg, 'success')
+    except Exception as e:
+        db.session.rollback()
+        traceback.print_exc()
+        flash(f'Error fixing randomization: {str(e)}', 'danger')
+    return redirect(url_for('admin.randomization_status'))
+

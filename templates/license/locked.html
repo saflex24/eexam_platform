@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>License Required — Al-Ihan E-Exam</title>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+  }
+  .lock-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 3rem 2.5rem;
+    max-width: 440px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 30px 80px rgba(0,0,0,.5);
+  }
+  .lock-icon {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 34px;
+    color: #fff;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 8px 25px rgba(239,68,68,.4);
+  }
+  h1 { font-size: 22px; font-weight: 700; color: #1a1a2e; margin-bottom: 10px; }
+  p  { font-size: 14px; color: #718096; line-height: 1.6; margin-bottom: 1.5rem; }
+  .reason-box {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #991b1b;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    text-align: left;
+  }
+  .activate-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    text-decoration: none;
+    padding: 13px 30px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    transition: all .2s;
+    box-shadow: 0 6px 20px rgba(102,126,234,.35);
+  }
+  .activate-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(102,126,234,.5);
+    color: #fff;
+  }
+  .contact { margin-top: 1.5rem; font-size: 12px; color: #9aa3b0; }
+  .contact a { color: #667eea; text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="lock-card">
+  <div class="lock-icon"><i class="fas fa-lock"></i></div>
+  <h1>License Required</h1>
+  <p>This installation of Al-Ihan E-Exam Platform requires a valid license to operate.</p>
+
+  <div class="reason-box">
+    <i class="fas fa-exclamation-circle" style="margin-right:6px"></i>
+    {{ reason }}
+  </div>
+
+  <a href="{{ url_for('license.license_page') }}" class="activate-link">
+    <i class="fas fa-key"></i> Activate License
+  </a>
+
+  <div class="contact">
+    Contact: <a href="mailto:saflex24@gmail.com">saflex24@gmail.com</a> &bull;
+    <a href="tel:+2347034609708">07034609708</a>
+  </div>
+</div>
+</body>
+</html>

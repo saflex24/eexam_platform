@@ -1,501 +1,549 @@
 {% extends "base.html" %}
 
-{% block title %}Result Details - {{ student_user.first_name }} {{ student_user.last_name }}{% endblock %}
+{% block title %}Result Details — {{ student_user.first_name }} {{ student_user.last_name }}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='vendor/css/katex.min.css') }}">
 <style>
-    body {
-        font-family: Tahoma, Geneva, Verdana, sans-serif;
-        font-size: 12pt;
-    }
-    
-    .result-details-container {
-        font-family: Tahoma, Geneva, Verdana, sans-serif;
-        font-size: 12pt;
-    }
-    
-    .result-details-container h2,
-    .result-details-container h3,
-    .result-details-container h4,
-    .result-details-container h5,
-    .result-details-container h6,
-    .result-details-container p,
-    .result-details-container .card,
-    .result-details-container .badge {
-        font-family: Tahoma, Geneva, Verdana, sans-serif;
-    }
-    
-    .two-column-layout {
-        column-count: 2;
-        column-gap: 30px;
-    }
-    
-    .answer-card {
-        break-inside: avoid;
-        -webkit-column-break-inside: avoid;
-        page-break-inside: avoid;
-        margin-bottom: 20px;
-        font-size: 12pt;
-        /* Ensure the entire card including its header stays in one column */
-        display: inline-block;
-        width: 100%;
-    }
+/* ─── Typography (keep result.html feel inside base.html) ─────────────── */
+.rv-wrap { font-family: inherit; }
 
-    /* Prevent card header from ever being orphaned at top of a column */
-    .answer-card .card-header {
-        break-after: avoid;
-        -webkit-column-break-after: avoid;
-        page-break-after: avoid;
-    }
-    
-    .question-number {
-        font-weight: bold;
-        font-size: 12pt;
-    }
-    
-    .question-text {
-        font-weight: 600;
-        margin: 10px 0;
-        font-size: 12pt;
-        line-height: 1.5;
-    }
-    
-    .answer-text {
-        font-size: 12pt;
-        line-height: 1.5;
-    }
-    
-    .option-item {
-        padding: 8px 10px;
-        margin: 5px 0;
-        border-radius: 4px;
-        font-size: 12pt;
-    }
-    
-    .option-correct {
-        background-color: #d4edda;
-        border-left: 4px solid #28a745;
-        font-weight: 600;
-    }
-    
-    .option-incorrect {
-        background-color: #f8d7da;
-        border-left: 4px solid #dc3545;
-    }
-    
-    .option-neutral {
-        background-color: #f8f9fa;
-        border-left: 4px solid #dee2e6;
-    }
-    
-    .option-student-answer {
-        font-weight: bold;
-    }
+/* ─── School header card ──────────────────────────────────────────────── */
+.school-header-card .card-body { padding: 1rem 1.25rem; }
+.school-logo-placeholder {
+  width: 64px; height: 64px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(13,110,253,.1); border-radius: .5rem;
+}
+.school-divider {
+  border-color: #1a3c5e; border-width: 2px; opacity: 1; margin-top: .75rem; margin-bottom: .25rem;
+}
+.school-report-label {
+  text-align: center; color: #6c757d; font-size: .72rem;
+  letter-spacing: .1em; text-transform: uppercase;
+}
 
-    /* Unanswered question card styling */
-    .card.border-unanswered {
-        border-color: #adb5bd !important;
-    }
-    .bg-unanswered {
-        background-color: #6c757d !important;
-    }
-    
-    @media print {
-        .no-print {
-            display: none !important;
-        }
-        
-        .two-column-layout {
-            column-count: 2;
-            column-gap: 20px;
-        }
-        
-        .answer-card {
-            page-break-inside: avoid;
-        }
-        
-        nav, .sidebar, .btn, .breadcrumb {
-            display: none !important;
-        }
-        
-        body {
-            font-size: 12pt;
-        }
-    }
-    
-    @media (max-width: 992px) {
-        .two-column-layout {
-            column-count: 1;
-        }
-    }
+/* ─── Hero score card ─────────────────────────────────────────────────── */
+.hero-card .card-body.hero-banner { padding: 2rem 1.5rem; text-align: center; }
+.hero-card .display-4 { font-size: 3.5rem; }
+
+/* ─── Stat tiles (6-up row, matches result.html) ─────────────────────── */
+.stat-tile { border-radius: .375rem; padding: 1rem .5rem; text-align: center; }
+.stat-tile .stat-num { font-weight: 700; font-size: 1.15rem; line-height: 1.2; }
+.stat-tile .stat-lbl { font-size: .78rem; color: #6c757d; }
+
+/* ─── Pending-grading alert ───────────────────────────────────────────── */
+.grading-alert { margin-top: 1rem; }
+
+/* ─── Action buttons row ──────────────────────────────────────────────── */
+.action-row { text-align: center; margin-top: 1.5rem; }
+.action-row .btn + .btn { margin-left: .5rem; }
+
+/* ─── Answer Review header chip (matches result.html card-header style) ─ */
+.review-header { padding: .6rem 1rem; }
+
+/* ─── Two-column answer layout ────────────────────────────────────────── */
+.two-column-layout {
+  column-count: 2;
+  column-gap: 1.5rem;
+}
+@media (max-width: 992px) { .two-column-layout { column-count: 1; } }
+
+/* ─── Answer cards (refined from result.html list-group-item style) ───── */
+.answer-card {
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  page-break-inside: avoid;
+  display: inline-block;
+  width: 100%;
+  margin-bottom: 1.1rem;
+  border-radius: .5rem;
+  overflow: hidden;
+  border: 1px solid #dee2e6;
+  background: #fff;
+}
+.answer-card .ac-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: .55rem .9rem;
+  font-size: .85rem; font-weight: 600;
+}
+/* Header colour states */
+.answer-card.ac-correct   { border-color: #198754; }
+.answer-card.ac-incorrect { border-color: #dc3545; }
+.answer-card.ac-pending   { border-color: #ffc107; }
+.answer-card.ac-unanswered{ border-color: #adb5bd; }
+
+.answer-card.ac-correct    .ac-header { background: #d1e7dd; color: #0f5132; }
+.answer-card.ac-incorrect  .ac-header { background: #f8d7da; color: #842029; }
+.answer-card.ac-pending    .ac-header { background: #fff3cd; color: #664d03; }
+.answer-card.ac-unanswered .ac-header { background: #e9ecef; color: #495057; }
+
+.answer-card .ac-body { padding: .75rem .9rem; }
+
+/* Question text */
+.ac-question-text {
+  font-weight: 600; font-size: .92rem;
+  line-height: 1.55; margin-bottom: .6rem; color: #212529;
+}
+/* Marks line */
+.ac-marks { font-size: .82rem; margin-bottom: .5rem; }
+
+/* Options — same left-border style as result.html */
+.option-item {
+  padding: .45rem .7rem; margin: .3rem 0;
+  border-radius: .3rem; font-size: .85rem; line-height: 1.4;
+}
+.option-correct   { background: #d1e7dd; border-left: 4px solid #198754; font-weight: 600; }
+.option-incorrect { background: #f8d7da; border-left: 4px solid #dc3545; }
+.option-neutral   { background: #f8f9fa; border-left: 4px solid #dee2e6; }
+.option-student-answer { font-weight: 700; }
+
+.not-attempted-alert { font-size: .82rem; margin-top: .5rem; margin-bottom: 0; }
+
+/* Theory answer block */
+.theory-answer-block {
+  background: #f8f9fa; border-radius: .375rem; padding: .65rem .85rem;
+  font-size: .85rem; line-height: 1.55; margin-bottom: .5rem;
+}
+
+/* Correct answer block */
+.correct-answer-block {
+  background: #d1e7dd; border-radius: .375rem; padding: .5rem .85rem;
+  font-size: .82rem; line-height: 1.5;
+}
+
+/* Explanation block */
+.explanation-block {
+  font-size: .8rem; color: #6c757d;
+  margin-top: .5rem; border-top: 1px dashed #dee2e6; padding-top: .4rem;
+}
+
+/* ─── Proctoring report card ──────────────────────────────────────────── */
+.proctor-card .card-header { background: #fff3cd; border-bottom: 1px solid #ffc107; }
+.proctor-stat { font-size: .9rem; }
+
+/* ─── Print ───────────────────────────────────────────────────────────── */
+@media print {
+  .no-print, nav, .sidebar, .breadcrumb { display: none !important; }
+  .two-column-layout { column-count: 2; column-gap: 1.25rem; }
+  .answer-card { page-break-inside: avoid; }
+  body { font-size: 11pt; }
+}
 </style>
 {% endblock %}
 
+
 {% block content %}
-<div class="container-fluid mt-4 result-details-container">
-    <div class="row mb-4 no-print">
-        <div class="col-12">
-            <a href="{{ url_for('student.dashboard') }}" class="btn btn-outline-secondary mb-3">
-                <i class="fas fa-arrow-left"></i> Back to Dashboard
-            </a>
-            <h2><i class="fas fa-user-graduate"></i> Student Result Details</h2>
+<div class="row justify-content-center rv-wrap">
+<div class="col-lg-9">
+
+  {# ── Back link (no-print) ───────────────────────────────────────────── #}
+  <div class="mb-3 no-print">
+    <a href="{{ url_for('student.dashboard') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+    </a>
+  </div>
+
+  {# ── School Header (mirrors result.html school block) ──────────────── #}
+  {% set school = result.exam.school if result.exam and result.exam.school else current_school %}
+  {% if school %}
+  <div class="card shadow-sm border-0 mb-3 school-header-card">
+    <div class="card-body">
+      <div class="d-flex align-items-center gap-3">
+        {% if school.logo and school.logo != 'school_default.png' %}
+        <img src="{{ url_for('static', filename='uploads/' + school.logo) }}"
+             style="width:64px;height:64px;object-fit:contain;flex-shrink:0"
+             alt="{{ school.name }} logo">
+        {% else %}
+        <div class="school-logo-placeholder">
+          <i class="fas fa-school fa-2x text-primary"></i>
         </div>
+        {% endif %}
+        <div>
+          <h5 class="mb-0 fw-bold" style="color:#1a3c5e">{{ school.name }}</h5>
+          {% if school.motto %}
+          <div class="text-muted small fst-italic">{{ school.motto }}</div>
+          {% endif %}
+          {% if school.address %}
+          <div class="text-muted small">
+            {{ school.address }}{% if school.city %}, {{ school.city }}{% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      <hr class="school-divider">
+      <div class="school-report-label">Student Result Report</div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Hero: pass/fail banner + score ────────────────────────────────── #}
+  <div class="card shadow-lg border-0 mb-4 hero-card">
+    <div class="card-body hero-banner {% if result.is_passed %}bg-success-subtle{% else %}bg-danger-subtle{% endif %}">
+      <i class="fas fa-{% if result.is_passed %}check-circle text-success{% else %}times-circle text-danger{% endif %} fa-4x mb-3"></i>
+      <h3 class="fw-bold">
+        {{ 'Congratulations!' if result.is_passed else 'Better Luck Next Time' }}
+      </h3>
+      <p class="text-muted mb-1">
+        {{ result.exam.title }} &bull; {{ result.exam.subject }}
+      </p>
+      <h1 class="display-4 fw-bold">{{ '%.1f'|format(result.percentage) }}%</h1>
+      <span class="badge bg-{{ 'success' if result.is_passed else 'danger' }} fs-6 px-3 py-2">
+        {% if result.grade %}Grade {{ result.grade }} &bull; {% endif %}
+        {{ 'PASSED' if result.is_passed else 'FAILED' }}
+      </span>
     </div>
 
-    <!-- Student & Exam Info -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Student Information</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong>Name:</strong> {{ student_user.first_name }} {{ student_user.last_name }}</p>
-                            <p><strong>Email:</strong> {{ student_user.email }}</p>
-                            {% if student_profile %}
-                            <p><strong>Admission No:</strong> {{ student_profile.admission_number }}</p>
-                            {% else %}
-                            <p><strong>Admission No:</strong> N/A</p>
-                            {% endif %}
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>Exam:</strong> {{ result.exam.title }}</p>
-                            <p><strong>Subject:</strong> {{ result.exam.subject }}</p>
-                            <p><strong>Submitted:</strong> {{ result.submitted_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
-                            <p><strong>Duration:</strong> {{ result.exam.duration_minutes }} minutes</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    {# ── Student / Exam info inside same card ─── #}
+    <div class="card-body border-top">
+      <div class="row g-3 mb-2">
+        <div class="col-md-6">
+          <p class="mb-1"><strong>Name:</strong>
+            {{ student_user.first_name }} {{ student_user.last_name }}</p>
+          <p class="mb-1"><strong>Email:</strong> {{ student_user.email }}</p>
+          <p class="mb-0"><strong>Admission No:</strong>
+            {{ student_profile.admission_number if student_profile else 'N/A' }}</p>
         </div>
-
-        <div class="col-md-4">
-            <div class="card text-center {% if result.is_passed %}border-success{% else %}border-danger{% endif %}">
-                <div class="card-body">
-                    <h6 class="text-muted">Score</h6>
-                    <h1 class="display-4 {% if result.is_passed %}text-success{% else %}text-danger{% endif %}">
-                        {{ "%.2f"|format(result.percentage) }}%
-                    </h1>
-                    <p class="mb-0">
-                        <strong>{{ result.marks_obtained }}/{{ result.total_marks }}</strong> marks
-                    </p>
-                    <hr>
-                    {% if result.is_passed %}
-                    <span class="badge bg-success" style="font-size: 1.2rem; padding: 10px 20px;">
-                        <i class="fas fa-check-circle"></i> PASSED
-                    </span>
-                    {% else %}
-                    <span class="badge bg-danger" style="font-size: 1.2rem; padding: 10px 20px;">
-                        <i class="fas fa-times-circle"></i> FAILED
-                    </span>
-                    {% endif %}
-                    {% if result.grade %}
-                    <p class="mt-3 mb-0"><strong>Grade:</strong> <span class="badge bg-primary" style="font-size: 1.1rem;">{{ result.grade }}</span></p>
-                    {% endif %}
-                </div>
-            </div>
+        <div class="col-md-6">
+          <p class="mb-1"><strong>Exam:</strong> {{ result.exam.title }}</p>
+          <p class="mb-1"><strong>Subject:</strong> {{ result.exam.subject }}</p>
+          <p class="mb-1"><strong>Submitted:</strong>
+            {{ result.submitted_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+          <p class="mb-0"><strong>Duration:</strong>
+            {{ result.exam.duration_minutes }} minutes</p>
         </div>
+      </div>
     </div>
 
-    <!-- Statistics -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card text-center border-success">
-                <div class="card-body">
-                    <h3 class="text-success">{{ correct_count }}</h3>
-                    <p class="mb-0 text-muted">Correct Answers</p>
-                </div>
-            </div>
+    {# ── 6-stat tiles row (mirrors result.html) ─ #}
+    <div class="card-body border-top pt-3">
+      <div class="row text-center g-3">
+        <div class="col-md-2 col-4">
+          <div class="border rounded stat-tile">
+            <div class="stat-num">{{ total_questions }}</div>
+            <div class="stat-lbl">Questions</div>
+          </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-center border-danger">
-                <div class="card-body">
-                    <h3 class="text-danger">{{ incorrect_count }}</h3>
-                    <p class="mb-0 text-muted">Incorrect Answers</p>
-                </div>
-            </div>
+        <div class="col-md-2 col-4">
+          <div class="border rounded stat-tile">
+            <div class="stat-num">{{ total_questions - unattempted_count }}</div>
+            <div class="stat-lbl">Attempted</div>
+          </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-center border-warning">
-                <div class="card-body">
-                    <h3 class="text-warning">{{ unattempted_count }}</h3>
-                    <p class="mb-0 text-muted">Unattempted</p>
-                </div>
-            </div>
+        <div class="col-md-2 col-4">
+          <div class="border rounded stat-tile">
+            <div class="stat-num text-success">{{ correct_count }}</div>
+            <div class="stat-lbl">Correct</div>
+          </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-center border-info">
-                <div class="card-body">
-                    <h3 class="text-info">{{ result.total_time_minutes }}</h3>
-                    <p class="mb-0 text-muted">Minutes Used</p>
-                </div>
-            </div>
+        <div class="col-md-2 col-4">
+          <div class="border rounded stat-tile">
+            <div class="stat-num text-danger">{{ incorrect_count }}</div>
+            <div class="stat-lbl">Wrong</div>
+          </div>
         </div>
+        <div class="col-md-2 col-4">
+          <div class="border rounded stat-tile">
+            <div class="stat-num">{{ result.marks_obtained }}/{{ result.total_marks }}</div>
+            <div class="stat-lbl">Score</div>
+          </div>
+        </div>
+        <div class="col-md-2 col-4">
+          <div class="border rounded stat-tile">
+            <div class="stat-num">{{ result.total_time_minutes or '—' }}</div>
+            <div class="stat-lbl">Mins Used</div>
+          </div>
+        </div>
+      </div>
+
+      {% if result.needs_manual_grading %}
+      <div class="alert alert-warning grading-alert">
+        <i class="fas fa-info-circle me-2"></i>
+        This exam contains essay/short-answer questions pending manual grading.
+        Your final score may change.
+      </div>
+      {% endif %}
+
+      <div class="action-row no-print">
+        <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+          <i class="fas fa-print me-1"></i>Print Result
+        </button>
+        <a href="{{ url_for('student.my_results') }}" class="btn btn-outline-primary btn-sm">
+          <i class="fas fa-list me-1"></i>All Results
+        </a>
+        <a href="{{ url_for('student.dashboard') }}" class="btn btn-primary btn-sm">
+          <i class="fas fa-home me-1"></i>Dashboard
+        </a>
+      </div>
+    </div>
+  </div>{# /.hero-card #}
+
+  {# ── Answer Review section ──────────────────────────────────────────── #}
+  <div class="card shadow-sm mb-4">
+    <div class="card-header review-header">
+      <i class="fas fa-book-open me-2"></i>Detailed Answer Review
+      <small class="ms-2 text-muted fw-normal" style="font-size:.8rem">
+        {{ total_questions }} question{{ 's' if total_questions != 1 else '' }} total
+      </small>
     </div>
 
-    <!-- Print Button -->
-    <div class="row mb-3 no-print">
-        <div class="col-12 text-end">
-            <button class="btn btn-primary" onclick="window.print()">
-                <i class="fas fa-print"></i> Print Result
-            </button>
-        </div>
-    </div>
-
-    <!-- Answer Review Header -->
-    <div class="row mb-3">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-clipboard-list"></i> Detailed Answer Review
-                        <small class="ms-2" style="font-size:0.8rem;font-weight:400;">
-                            {{ total_questions }} question{{ 's' if total_questions != 1 else '' }} total
-                        </small>
-                    </h5>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Answer Review in Two Columns -->
-    {#
-        Build a lookup dict of question_id → StudentAnswer so we can
-        iterate over ALL questions (including unanswered ones) without
-        a separate DB query in the template.
-    #}
-    {% set answer_map = {} %}
-    {% for ans in answers %}
+    <div class="card-body p-3">
+      {# Build answer lookup map #}
+      {% set answer_map = {} %}
+      {% for ans in answers %}
         {% if answer_map.update({ans.question_id: ans}) %}{% endif %}
-    {% endfor %}
+      {% endfor %}
 
-    <div class="row">
-        <div class="col-12">
-            {% if all_questions %}
-            <div class="two-column-layout">
-                {% for question in all_questions %}
+      {% if all_questions %}
+      <div class="two-column-layout">
+        {% for question in all_questions %}
+        {% set answer = answer_map.get(question.id) %}
 
-                {# Resolve the StudentAnswer for this question (None if unanswered) #}
-                {% set answer = answer_map.get(question.id) %}
+        {# Determine card state #}
+        {% if answer is none %}
+          {% set ac_class     = 'ac-unanswered' %}
+          {% set status_icon  = 'fas fa-ban' %}
+          {% set status_label = 'Not Attempted' %}
+        {% elif answer.is_correct == true %}
+          {% set ac_class     = 'ac-correct' %}
+          {% set status_icon  = 'fas fa-check-circle' %}
+          {% set status_label = 'Correct' %}
+        {% elif answer.is_correct == false %}
+          {% set ac_class     = 'ac-incorrect' %}
+          {% set status_icon  = 'fas fa-times-circle' %}
+          {% set status_label = 'Incorrect' %}
+        {% else %}
+          {% set ac_class     = 'ac-pending' %}
+          {% set status_icon  = 'fas fa-hourglass-half' %}
+          {% set status_label = 'Pending Grading' %}
+        {% endif %}
 
-                {# Determine card state #}
-                {% if answer is none %}
-                    {# Question was never attempted #}
-                    {% set card_border   = 'border-unanswered' %}
-                    {% set header_class  = 'bg-unanswered text-white' %}
-                    {% set status_icon   = 'fas fa-ban' %}
-                    {% set status_label  = 'Not Attempted' %}
-                {% elif answer.is_correct == true %}
-                    {% set card_border   = 'border-success' %}
-                    {% set header_class  = 'bg-success text-white' %}
-                    {% set status_icon   = 'fas fa-check-circle' %}
-                    {% set status_label  = 'Correct' %}
-                {% elif answer.is_correct == false %}
-                    {% set card_border   = 'border-danger' %}
-                    {% set header_class  = 'bg-danger text-white' %}
-                    {% set status_icon   = 'fas fa-times-circle' %}
-                    {% set status_label  = 'Incorrect' %}
-                {% else %}
-                    {# Theory question — answered but not yet auto-graded #}
-                    {% set card_border   = 'border-warning' %}
-                    {% set header_class  = 'bg-warning text-dark' %}
-                    {% set status_icon   = 'fas fa-hourglass-half' %}
-                    {% set status_label  = 'Pending Grading' %}
-                {% endif %}
+        {% set marks_obtained = 0 if answer is none else (answer.marks_obtained or 0) %}
 
-                {# Marks display: 0/marks for unanswered; answer.marks_obtained otherwise #}
-                {% set marks_obtained = 0 if answer is none else (answer.marks_obtained or 0) %}
+        <div class="answer-card {{ ac_class }}">
 
-                <div class="answer-card card mb-3 {{ card_border }}">
-                    <div class="card-header {{ header_class }}">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="question-number">Question {{ loop.index }}</span>
-                            <span>
-                                <i class="{{ status_icon }}"></i> {{ status_label }}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="card-body">
+          {# Card header #}
+          <div class="ac-header">
+            <span><strong>Question {{ loop.index }}</strong></span>
+            <span>
+              <i class="{{ status_icon }} me-1"></i>{{ status_label }}
+            </span>
+          </div>
 
-                        <!-- Question text -->
-                        <div class="question-text latex-content">
-                            {{ question.question_text }}
-                        </div>
+          <div class="ac-body">
 
-                        <!-- Marks -->
-                        <p class="mb-2">
-                            <strong>Marks:</strong>
-                            <span class="{% if marks_obtained == question.marks %}text-success{% elif marks_obtained == 0 %}text-danger{% else %}text-warning{% endif %} fw-bold">
-                                {{ marks_obtained }}/{{ question.marks }}
-                            </span>
-                        </p>
-
-                        <!-- MCQ / True-False options -->
-                        {% if question.question_type in ['mcq', 'true_false'] %}
-                        <hr>
-                        <div class="answer-text">
-                            <p class="mb-2"><strong>Options:</strong></p>
-                            {% for option in question.options %}
-
-                            {# Determine if student chose this option #}
-                            {% set student_chose = (answer is not none and answer.selected_option_id == option.id) %}
-
-                            <div class="option-item latex-content
-                                {% if option.is_correct %}option-correct
-                                {% elif student_chose and not option.is_correct %}option-incorrect
-                                {% else %}option-neutral{% endif %}
-                                {% if student_chose %}option-student-answer{% endif %}">
-
-                                {{ option.option_label }}. {{ option.option_text }}
-
-                                {% if option.is_correct %}
-                                <i class="fas fa-check text-success float-end"></i>
-                                <span class="badge bg-success float-end me-2">Correct Answer</span>
-                                {% endif %}
-
-                                {% if student_chose %}
-                                <span class="badge bg-primary float-end me-2">Your Answer</span>
-                                {% endif %}
-                            </div>
-                            {% endfor %}
-
-                            {% if answer is none or answer.selected_option_id is none %}
-                            <div class="alert alert-secondary mt-2 mb-0">
-                                <i class="fas fa-ban"></i> This question was not attempted
-                            </div>
-                            {% endif %}
-                        </div>
-                        {% endif %}
-
-                        <!-- Theory answer -->
-                        {% if question.question_type == 'theory' %}
-                        <hr>
-                        <p class="mb-2"><strong>Your Answer:</strong></p>
-                        {% if answer is not none and answer.theory_answer %}
-                        <div class="bg-light p-3 rounded answer-text latex-content">
-                            {{ answer.theory_answer }}
-                        </div>
-                        {% else %}
-                        <div class="alert alert-secondary mb-0">
-                            <i class="fas fa-ban"></i> This question was not attempted
-                        </div>
-                        {% endif %}
-                        {% endif %}
-
-                    </div>
-                </div>
-                {% endfor %}
+            {# Question text with LaTeX support #}
+            <div class="ac-question-text latex-content">
+              {{ question.question_text }}
             </div>
-            {% else %}
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i> No questions found for this exam.
+
+            {# Marks #}
+            <p class="ac-marks">
+              <strong>Marks:</strong>
+              <span class="fw-bold
+                {% if marks_obtained == question.marks %}text-success
+                {% elif marks_obtained == 0 %}text-danger
+                {% else %}text-warning{% endif %}">
+                {{ marks_obtained }}/{{ question.marks }}
+              </span>
+            </p>
+
+            {# MCQ / True-False options #}
+            {% if question.question_type in ['mcq', 'true_false'] %}
+            <hr class="my-2">
+            {% for option in ordered_options_by_question.get(question.id, question.options) %}
+            {% set student_chose = (answer is not none and answer.selected_option_id == option.id) %}
+            <div class="option-item latex-content
+              {% if option.is_correct %}option-correct
+              {% elif student_chose and not option.is_correct %}option-incorrect
+              {% else %}option-neutral{% endif %}
+              {% if student_chose %}option-student-answer{% endif %}">
+
+              {{ option.option_label }}. {{ option.option_text }}
+
+              {% if option.is_correct %}
+              <span class="badge bg-success float-end ms-1">
+                <i class="fas fa-check me-1"></i>Correct
+              </span>
+              {% endif %}
+              {% if student_chose %}
+              <span class="badge bg-secondary float-end ms-1">Your Answer</span>
+              {% endif %}
+            </div>
+            {% endfor %}
+
+            {% if answer is none or answer.selected_option_id is none %}
+            <div class="alert alert-secondary not-attempted-alert">
+              <i class="fas fa-ban me-1"></i>This question was not attempted
             </div>
             {% endif %}
-        </div>
-    </div>
+            {% endif %}{# /mcq #}
 
-    <!-- Proctoring Report -->
-    {% if exam_session %}
-    <div class="row mt-4 no-print">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header bg-warning">
-                    <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Proctoring Report</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3">
-                            <p><strong>Tab Switches:</strong> 
-                                <span class="badge {% if exam_session.tab_switches > 5 %}bg-danger{% else %}bg-secondary{% endif %}" style="font-size: 11pt;">
-                                    {{ exam_session.tab_switches }}
-                                </span>
-                            </p>
-                        </div>
-                        <div class="col-md-3">
-                            <p><strong>Copy Attempts:</strong> 
-                                <span class="badge {% if exam_session.copy_attempts > 3 %}bg-danger{% else %}bg-secondary{% endif %}" style="font-size: 11pt;">
-                                    {{ exam_session.copy_attempts }}
-                                </span>
-                            </p>
-                        </div>
-                        <div class="col-md-3">
-                            <p><strong>Paste Attempts:</strong> 
-                                <span class="badge {% if exam_session.paste_attempts > 3 %}bg-danger{% else %}bg-secondary{% endif %}" style="font-size: 11pt;">
-                                    {{ exam_session.paste_attempts }}
-                                </span>
-                            </p>
-                        </div>
-                        <div class="col-md-3">
-                            <p><strong>Webcam Captures:</strong> 
-                                <span class="badge bg-info" style="font-size: 11pt;">
-                                    {{ exam_session.webcam_captures }}
-                                </span>
-                            </p>
-                        </div>
-                    </div>
-                    {% if exam_session.tab_switches > 5 or exam_session.copy_attempts > 3 or exam_session.paste_attempts > 3 %}
-                    <div class="alert alert-danger mt-3 mb-0">
-                        <i class="fas fa-exclamation-triangle"></i> <strong>Warning:</strong> Suspicious activity detected during exam. Multiple violations recorded.
-                    </div>
-                    {% endif %}
-                </div>
+            {# Theory / essay answer #}
+            {% if question.question_type in ('theory', 'essay', 'short_answer', 'fill_blank') %}
+            <hr class="my-2">
+            <p class="mb-1" style="font-size:.82rem"><strong>Your Answer:</strong></p>
+            {% if answer is not none and (answer.theory_answer or answer.text_answer) %}
+            <div class="theory-answer-block latex-content">
+              {{ answer.theory_answer or answer.text_answer }}
             </div>
-        </div>
-    </div>
-    {% endif %}
+            {% else %}
+            <div class="alert alert-secondary not-attempted-alert">
+              <i class="fas fa-ban me-1"></i>This question was not attempted
+            </div>
+            {% endif %}
+            {% if question.correct_answer %}
+            <div class="correct-answer-block latex-content mt-2">
+              <strong>Correct answer:</strong> {{ question.correct_answer }}
+            </div>
+            {% endif %}
+            {% endif %}{# /theory #}
 
-    <!-- Back Button at Bottom -->
-    <div class="row mt-4 mb-4 no-print">
-        <div class="col-12">
-            <a href="{{ url_for('student.dashboard') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Dashboard
-            </a>
-            <a href="{{ url_for('student.my_results') }}" class="btn btn-outline-primary">
-                <i class="fas fa-list"></i> View All Results
-            </a>
-        </div>
+            {# Explanation #}
+            {% if question.explanation %}
+            <div class="explanation-block latex-content">
+              <i class="fas fa-lightbulb me-1"></i>{{ question.explanation }}
+            </div>
+            {% endif %}
+
+          </div>{# /.ac-body #}
+        </div>{# /.answer-card #}
+        {% endfor %}
+      </div>{# /.two-column-layout #}
+
+      {% else %}
+      <div class="alert alert-info mb-0">
+        <i class="fas fa-info-circle me-1"></i>No questions found for this exam.
+      </div>
+      {% endif %}
+    </div>{# /.card-body #}
+  </div>{# /.review card #}
+
+  {# ── Proctoring Report ──────────────────────────────────────────────── #}
+  {% if exam_session %}
+  <div class="card shadow-sm mb-4 proctor-card no-print">
+    <div class="card-header">
+      <h6 class="mb-0 fw-bold">
+        <i class="fas fa-shield-alt me-2"></i>Proctoring Report
+      </h6>
     </div>
-</div>
+    <div class="card-body">
+      <div class="row text-center g-3">
+        <div class="col-md-3 col-6">
+          <div class="border rounded stat-tile">
+            <div class="stat-num">
+              <span class="badge {% if exam_session.tab_switches > 5 %}bg-danger{% else %}bg-secondary{% endif %}">
+                {{ exam_session.tab_switches }}
+              </span>
+            </div>
+            <div class="stat-lbl mt-1">Tab Switches</div>
+          </div>
+        </div>
+        <div class="col-md-3 col-6">
+          <div class="border rounded stat-tile">
+            <div class="stat-num">
+              <span class="badge {% if exam_session.copy_attempts > 3 %}bg-danger{% else %}bg-secondary{% endif %}">
+                {{ exam_session.copy_attempts }}
+              </span>
+            </div>
+            <div class="stat-lbl mt-1">Copy Attempts</div>
+          </div>
+        </div>
+        <div class="col-md-3 col-6">
+          <div class="border rounded stat-tile">
+            <div class="stat-num">
+              <span class="badge {% if exam_session.paste_attempts > 3 %}bg-danger{% else %}bg-secondary{% endif %}">
+                {{ exam_session.paste_attempts }}
+              </span>
+            </div>
+            <div class="stat-lbl mt-1">Paste Attempts</div>
+          </div>
+        </div>
+        <div class="col-md-3 col-6">
+          <div class="border rounded stat-tile">
+            <div class="stat-num">
+              <span class="badge bg-info">{{ exam_session.webcam_captures }}</span>
+            </div>
+            <div class="stat-lbl mt-1">Webcam Captures</div>
+          </div>
+        </div>
+      </div>
+
+      {% if exam_session.tab_switches > 5 or exam_session.copy_attempts > 3 or exam_session.paste_attempts > 3 %}
+      <div class="alert alert-danger mt-3 mb-0">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Warning:</strong> Suspicious activity detected during this exam.
+        Multiple violations have been recorded.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Bottom action row ──────────────────────────────────────────────── #}
+  <div class="d-flex gap-2 mb-5 no-print">
+    <a href="{{ url_for('student.dashboard') }}" class="btn btn-secondary btn-sm">
+      <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+    </a>
+    <a href="{{ url_for('student.my_results') }}" class="btn btn-outline-primary btn-sm">
+      <i class="fas fa-list me-1"></i>All Results
+    </a>
+  </div>
+
+</div>{# /.col-lg-9 #}
+</div>{# /.row #}
 {% endblock %}
+
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='vendor/js/katex.min.js') }}"></script>
 <script src="{{ url_for('static', filename='vendor/js/katex-auto-render.min.js') }}"></script>
 <script>
 (function () {
-    'use strict';
+  'use strict';
 
-    // KaTeX delimiter config — matches the same set used in take_exam.html
-    var KATEX_OPTS = {
-        delimiters: [
-            { left: '$$', right: '$$', display: true  },
-            { left: '$',  right: '$',  display: false },
-            { left: '\\[', right: '\\]', display: true  },
-            { left: '\\(', right: '\\)', display: false }
-        ],
-        throwOnError: false,
-        strict: false
-    };
+  /* KaTeX delimiter config — same set as take_exam.html */
+  var KATEX_OPTS = {
+    delimiters: [
+      { left: '$$', right: '$$',   display: true  },
+      { left: '$',  right: '$',    display: false },
+      { left: '\\[', right: '\\]', display: true  },
+      { left: '\\(', right: '\\)', display: false }
+    ],
+    throwOnError: false,
+    strict: false
+  };
 
-    function renderAllLatex() {
-        document.querySelectorAll('.latex-content').forEach(function (el) {
-            try {
-                renderMathInElement(el, KATEX_OPTS);
-            } catch (e) {
-                console.warn('[KaTeX] render error:', e);
-            }
-        });
+  function renderAllLatex() {
+    document.querySelectorAll('.latex-content').forEach(function (el) {
+      try {
+        renderMathInElement(el, KATEX_OPTS);
+      } catch (e) {
+        console.warn('[KaTeX] render error:', e);
+      }
+    });
+  }
+
+  /* Also support MathJax fallback (matches result.html block scripts) */
+  function doMathJax() {
+    if (window.renderLatex) renderLatex();
+    else if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      renderAllLatex();
+      doMathJax();
+    });
+  } else {
+    renderAllLatex();
+    if (window.MathJax && MathJax.startup && MathJax.startup.promise)
+      MathJax.startup.promise.then(doMathJax);
+    else {
+      var s = document.getElementById('MathJax-script');
+      if (s) s.addEventListener('load', doMathJax);
     }
-
-    // Run once DOM is ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', renderAllLatex);
-    } else {
-        renderAllLatex();
-    }
+  }
 }());
 </script>
 {% endblock %}

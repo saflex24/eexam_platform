@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit Subject' if subject else 'New Subject' }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.sf-page { max-width: 680px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+
+.sf-header { margin-bottom: 1.5rem; }
+.sf-header h2 { font-size: 18px; font-weight: 700; color: #1a1a2e; margin: 0 0 4px; }
+.sf-header p  { font-size: 12px; color: #7c8494; margin: 0; }
+
+.sf-card {
+    background: #fff; border: 1px solid #e8ecf2; border-radius: 14px;
+    overflow: hidden;
+}
+.sf-card-head {
+    padding: 14px 18px; background: #fafbfd; border-bottom: 1px solid #f0f3f7;
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .6px; color: #1a1a2e; display: flex; align-items: center; gap: 8px;
+}
+.sf-card-head i { color: #667eea; }
+.sf-card-body { padding: 20px 18px; }
+
+/* form elements */
+.f-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media(max-width:520px){ .f-row { grid-template-columns: 1fr; } }
+.f-group { margin-bottom: 16px; }
+.f-group label {
+    display: block; font-size: 11px; font-weight: 700; color: #6b7280;
+    text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px;
+}
+.f-group label .req { color: #ef4444; margin-left: 2px; }
+.f-control {
+    width: 100%; padding: 9px 11px; border: 1px solid #d1d5db; border-radius: 9px;
+    font-size: 13px; color: #1a1a2e; outline: none; transition: border-color .18s;
+    background: #fff; box-sizing: border-box;
+}
+.f-control:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,.1); }
+textarea.f-control { resize: vertical; min-height: 80px; }
+.f-hint { font-size: 11px; color: #9aa3b0; margin-top: 5px; }
+
+/* category chips */
+.cat-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.cat-chip {
+    background: #f3e8ff; color: #6b21a8; border-radius: 20px;
+    padding: 3px 11px; font-size: 11px; font-weight: 600; cursor: pointer;
+    transition: background .15s;
+}
+.cat-chip:hover { background: #e9d5ff; }
+
+/* action bar */
+.sf-actions {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 18px; border-top: 1px solid #f0f3f7; background: #fafbfd;
+}
+.btn-save {
+    background: #667eea; color: #fff; border: none; border-radius: 9px;
+    padding: 9px 22px; font-size: 13px; font-weight: 700; cursor: pointer;
+    transition: background .18s;
+}
+.btn-save:hover { background: #5a6fd6; }
+.btn-cancel {
+    background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb;
+    border-radius: 9px; padding: 9px 18px; font-size: 13px; font-weight: 600;
+    text-decoration: none; transition: background .15s;
+}
+.btn-cancel:hover { background: #e9ecf1; color: #374151; }
+
+/* info strip when editing */
+.sf-info-strip {
+    background: #f0f4ff; border: 1px solid #c7d2fe; border-radius: 10px;
+    padding: 10px 14px; font-size: 12px; color: #4338ca;
+    display: flex; align-items: center; gap: 8px; margin-bottom: 1.25rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sf-page">
+
+    <div class="sf-header">
+        <h2>
+            <i class="fas fa-book" style="color:#667eea;margin-right:8px"></i>
+            {{ 'Edit Subject' if subject else 'New Subject' }}
+        </h2>
+        <p>
+            {% if subject %}
+            Update the details for <strong>{{ subject.name }}</strong>.
+            {% else %}
+            Add a new subject to the master list.
+            {% endif %}
+        </p>
+    </div>
+
+    {% if subject %}
+    <div class="sf-info-strip">
+        <i class="fas fa-info-circle"></i>
+        Changing the subject name here does <strong>not</strong> automatically rename it
+        in existing exams or teacher profiles — update those separately if needed.
+    </div>
+    {% endif %}
+
+    <div class="sf-card">
+        <div class="sf-card-head">
+            <i class="fas fa-pencil-alt"></i>
+            Subject Details
+        </div>
+        <form method="POST"
+              action="{{ url_for('admin.edit_subject', id=subject.id) if subject else url_for('admin.create_subject') }}">
+
+            <div class="sf-card-body">
+
+                <div class="f-row">
+                    <div class="f-group" style="grid-column:1/-1">
+                        <label>Subject Name <span class="req">*</span></label>
+                        <input type="text" name="name" class="f-control"
+                               value="{{ subject.name if subject else '' }}"
+                               placeholder="e.g. Mathematics, English Language"
+                               required autofocus>
+                    </div>
+                </div>
+
+                <div class="f-row">
+                    <div class="f-group">
+                        <label>Subject Code</label>
+                        <input type="text" name="code" class="f-control"
+                               value="{{ subject.code if subject else '' }}"
+                               placeholder="e.g. MTH, ENG, PHY"
+                               maxlength="20">
+                        <div class="f-hint">Short unique code (auto-uppercased). Optional.</div>
+                    </div>
+                    <div class="f-group">
+                        <label>Category</label>
+                        <input type="text" name="category" id="categoryInput" class="f-control"
+                               value="{{ subject.category if subject else '' }}"
+                               placeholder="e.g. Core, Elective, Vocational"
+                               list="catList">
+                        <datalist id="catList">
+                            {% for cat in categories %}<option value="{{ cat }}">{% endfor %}
+                        </datalist>
+                        {% if categories %}
+                        <div class="cat-chips">
+                            {% for cat in categories %}
+                            <span class="cat-chip" onclick="document.getElementById('categoryInput').value='{{ cat }}'">{{ cat }}</span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="f-hint">Group subjects — e.g. Core, Elective, Sciences, Arts.</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="f-group">
+                    <label>Description</label>
+                    <textarea name="description" class="f-control"
+                              placeholder="Brief description of this subject (optional)">{{ subject.description if subject else '' }}</textarea>
+                </div>
+
+            </div>
+
+            <div class="sf-actions">
+                <button type="submit" class="btn-save">
+                    <i class="fas fa-save" style="margin-right:6px"></i>
+                    {{ 'Save Changes' if subject else 'Create Subject' }}
+                </button>
+                <a href="{{ url_for('admin.manage_subjects') }}" class="btn-cancel">Cancel</a>
+            </div>
+
+        </form>
+    </div>
+
+</div>
+{% endblock %}

@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import current_user, login_required
 from extensions import db
 from models.exam import Exam, Question, QuestionOption, ExamResult, ExamSession, StudentAnswer
-from models.class_model import Class
+from models.class_model import Class, Subject, TeacherSubjectClass
 from models.user import Teacher, User, Student
 from utils.decorators import teacher_required
 from utils.file_handler import import_questions_from_csv, generate_questions_template, save_upload_file
@@ -11,7 +11,8 @@ from werkzeug.utils import secure_filename
 import pandas as pd
 import io
 import os
-from models.class_model import Class
+import html as _html
+from models.class_model import Class, Subject, TeacherSubjectClass
 from utils.decorators import teacher_required
 import subprocess
 import json
@@ -218,7 +219,8 @@ def create_exam():
             db.session.rollback()
             flash(f'Error creating exam: {str(e)}', 'danger')
     classes = Class.query.filter_by(is_active=True).all()
-    return render_template('teacher/exam_form.html', exam=None, classes=classes)
+    all_subjects = Subject.query.filter_by(is_active=True).order_by(Subject.name).all()
+    return render_template('teacher/exam_form.html', exam=None, classes=classes, all_subjects=all_subjects)
 
 # ==================== EDIT EXAM ====================
 
@@ -238,6 +240,11 @@ def edit_exam(exam_id):
         exam.pass_marks = request.form.get('pass_marks', type=float, default=40)
         exam.duration_minutes = request.form.get('duration_minutes', type=int, default=60)
         exam.allow_student_view_result = request.form.get('allow_student_view_result') == 'on'
+        exam.shuffle_questions       = request.form.get('shuffle_questions') == 'on'
+        exam.shuffle_options         = request.form.get('shuffle_options') == 'on'
+        exam.randomize_per_student   = request.form.get('randomize_per_student') == 'on'
+        exam.show_results_immediately = request.form.get('show_results_immediately') == 'on'
+        exam.allow_review            = request.form.get('allow_review') == 'on'
         passcode = request.form.get('passcode', '').strip()
         exam.passcode = passcode if passcode else None
         start_date = request.form.get('start_date')
@@ -257,7 +264,8 @@ def edit_exam(exam_id):
             db.session.rollback()
             flash(f'Error updating exam: {str(e)}', 'danger')
     classes = Class.query.filter_by(is_active=True).all()
-    return render_template('teacher/exam_form.html', exam=exam, classes=classes)
+    all_subjects = Subject.query.filter_by(is_active=True).order_by(Subject.name).all()
+    return render_template('teacher/exam_form.html', exam=exam, classes=classes, all_subjects=all_subjects)
 
 # ==================== DELETE, PUBLISH, UNPUBLISH ====================
 
@@ -372,7 +380,7 @@ def get_school_settings():
     if not os.path.exists(logo_path):
         logo_path = None
     return {
-        'school_name': 'Mawo Schools And Educational Services',
+        'school_name': 'PREMIUM TOWERS INTERNATIONAL SCHOOL',
         'school_address': 'Minna, Niger State',
         'school_phone': '+23434609708',
         'school_email': 'Saflex24@gmail.com',
@@ -380,6 +388,18 @@ def get_school_settings():
     }
 
 # ==================== PDF REPORT GENERATOR ====================
+
+def _safe(text):
+    """
+    Escape any HTML special characters in dynamic text before embedding it
+    inside ReportLab paragraph markup.  This prevents ReportLab from
+    auto-generating <link> tags around URL-shaped strings, which would break
+    the tag-nesting and cause a parse error.
+    """
+    if not text:
+        return ''
+    return _html.escape(str(text).strip(), quote=False)
+
 
 def create_student_exam_report_pdf(exam, student, result, school_settings):
     """Create PDF student exam report - 2-row student info, 2-column questions, max 4 pages"""
@@ -464,21 +484,36 @@ def create_student_exam_report_pdf(exam, student, result, school_settings):
             print(f"  Q{idx} image error: {e}")
             return Paragraph("<i>[image error]</i>", S(f'ierr{idx}', 7, '#CC0000'))
 
+    # ------------------------------------------------------------------
+    # build_question_cell
+    # ------------------------------------------------------------------
     def build_question_cell(idx, question, answer, col_w):
+        """
+        Build the flowable list for one question cell.
+
+        FIX: All dynamic text (question text, option text, theory answers) is
+        passed through _safe() before being embedded in paragraph markup.
+        Option rows are built with separate <font> segments so there is never
+        a <font> tag wrapping a ReportLab-generated <link> tag — the nesting
+        error that caused the original crash.
+        """
         cell_items = []
 
+        # ── Question heading ────────────────────────────────────────────
         cell_items.append(Paragraph(
-            f"<b>Q{idx}.</b> {question.question_text} "
+            f"<b>Q{idx}.</b> {_safe(question.question_text)} "
             f"<font color='#888888' size='7'>[{question.marks}mk]</font>",
             q_s
         ))
 
+        # ── Optional question image ─────────────────────────────────────
         img = get_q_image(question.image, idx, max_w=col_w - 0.1*inch, max_h=1.2*inch)
         if img:
             cell_items.append(Spacer(1, 0.02*inch))
             cell_items.append(img)
             cell_items.append(Spacer(1, 0.02*inch))
 
+        # ── Fetch options ───────────────────────────────────────────────
         options = QuestionOption.query.filter_by(
             question_id=question.id
         ).order_by(QuestionOption.option_label).all()
@@ -487,29 +522,71 @@ def create_student_exam_report_pdf(exam, student, result, school_settings):
         is_mcq = bool(options) or q_type in ('multiple_choice', 'mcq', 'objective', 'true_false')
 
         if is_mcq and options:
-            sel_id = int(answer.selected_option_id) if (answer and answer.selected_option_id is not None) else None
+            sel_id = (
+                int(answer.selected_option_id)
+                if (answer and answer.selected_option_id is not None)
+                else None
+            )
+
             for opt in options:
                 is_sel = (sel_id is not None and sel_id == int(opt.id))
-                if opt.is_correct and is_sel:
-                    bg, fc, icon, note = colors.HexColor('#C8E6C9'), '#1B5E20', '✓', ' (your ans - correct)'
-                elif opt.is_correct and not is_sel:
-                    bg, fc, icon, note = colors.HexColor('#E8F5E9'), '#2E7D32', '✓', ' (correct)'
-                elif is_sel and not opt.is_correct:
-                    bg, fc, icon, note = colors.HexColor('#FFCDD2'), '#B71C1C', '✗', ' (your ans - wrong)'
-                else:
-                    bg, fc, icon, note = colors.white, '#333333', ' ', ''
 
-                opt_tbl = Table([[Paragraph(
-                    f"<font color='{fc}'><b>[{icon}]{opt.option_label}.</b> {opt.option_text}<i>{note}</i></font>",
-                    S(f'o{idx}_{opt.id}', 7, fc, False, TA_LEFT, 0, 0, 0)
-                )]], colWidths=[col_w - 0.08*inch])
+                if opt.is_correct and is_sel:
+                    bg   = colors.HexColor('#C8E6C9')
+                    fc   = '#1B5E20'
+                    icon = '+'          # tick alternative — avoids any unicode issue
+                    note = ' (your ans - correct)'
+                elif opt.is_correct and not is_sel:
+                    bg   = colors.HexColor('#E8F5E9')
+                    fc   = '#2E7D32'
+                    icon = '+'
+                    note = ' (correct)'
+                elif is_sel and not opt.is_correct:
+                    bg   = colors.HexColor('#FFCDD2')
+                    fc   = '#B71C1C'
+                    icon = 'x'
+                    note = ' (your ans - wrong)'
+                else:
+                    bg   = colors.white
+                    fc   = '#333333'
+                    icon = ' '
+                    note = ''
+
+                # ── KEY FIX ────────────────────────────────────────────
+                # Build the paragraph as three independent <font> spans.
+                # Dynamic text (_safe(opt.option_text), note) sits inside
+                # its own self-contained <font>…</font> block so that
+                # ReportLab can never auto-wrap it in a <link> tag that
+                # sits between an outer <font> open and close.
+                label_part = (
+                    f"<font color='{fc}'>"
+                    f"<b>[{icon}]{_safe(opt.option_label)}.</b>"
+                    f"</font>"
+                )
+                text_part = (
+                    f"<font color='{fc}'>"
+                    f" {_safe(opt.option_text)}"
+                    f"</font>"
+                )
+                note_part = (
+                    f"<font color='{fc}'><i>{_safe(note)}</i></font>"
+                    if note else ''
+                )
+
+                opt_style = S(
+                    f'o{idx}_{opt.id}', 7, fc, False, TA_LEFT, 0, 0, 0
+                )
+                opt_tbl = Table(
+                    [[Paragraph(label_part + text_part + note_part, opt_style)]],
+                    colWidths=[col_w - 0.08*inch]
+                )
                 opt_tbl.setStyle(TableStyle([
-                    ('BACKGROUND',    (0,0),(0,0), bg),
-                    ('LEFTPADDING',   (0,0),(0,0), 4),
-                    ('RIGHTPADDING',  (0,0),(0,0), 2),
-                    ('TOPPADDING',    (0,0),(0,0), 2),
-                    ('BOTTOMPADDING', (0,0),(0,0), 2),
-                    ('LINEBELOW',     (0,0),(0,0), 0.2, colors.HexColor('#EEEEEE')),
+                    ('BACKGROUND',    (0, 0), (0, 0), bg),
+                    ('LEFTPADDING',   (0, 0), (0, 0), 4),
+                    ('RIGHTPADDING',  (0, 0), (0, 0), 2),
+                    ('TOPPADDING',    (0, 0), (0, 0), 2),
+                    ('BOTTOMPADDING', (0, 0), (0, 0), 2),
+                    ('LINEBELOW',     (0, 0), (0, 0), 0.2, colors.HexColor('#EEEEEE')),
                 ]))
                 cell_items.append(opt_tbl)
 
@@ -518,31 +595,46 @@ def create_student_exam_report_pdf(exam, student, result, school_settings):
                     "<i>— no option selected —</i>",
                     S(f'na{idx}', 7, '#999999', False, TA_LEFT, 0, 1, 4)
                 ))
+
         else:
+            # ── Theory / short-answer ───────────────────────────────────
             theory_text = None
             if answer:
                 raw = answer.theory_answer
                 if raw and str(raw).strip().lower() != 'none':
                     theory_text = str(raw).strip()
-            ans_tbl = Table([[Paragraph(
-                theory_text if theory_text else "<i>No answer provided</i>",
-                S(f'at{idx}', 7, '#1B5E20' if theory_text else '#999999', False, TA_LEFT, 0, 0, 0)
-            )]], colWidths=[col_w - 0.08*inch])
+
+            ans_tbl = Table(
+                [[Paragraph(
+                    _safe(theory_text) if theory_text else "<i>No answer provided</i>",
+                    S(
+                        f'at{idx}', 7,
+                        '#1B5E20' if theory_text else '#999999',
+                        False, TA_LEFT, 0, 0, 0
+                    )
+                )]],
+                colWidths=[col_w - 0.08*inch]
+            )
             ans_tbl.setStyle(TableStyle([
-                ('BACKGROUND',    (0,0),(0,0),
+                ('BACKGROUND',    (0, 0), (0, 0),
                  colors.HexColor('#E8F5E9') if theory_text else colors.HexColor('#F5F5F5')),
-                ('LEFTPADDING',   (0,0),(0,0), 4),
-                ('RIGHTPADDING',  (0,0),(0,0), 2),
-                ('TOPPADDING',    (0,0),(0,0), 3),
-                ('BOTTOMPADDING', (0,0),(0,0), 3),
-                ('BOX',           (0,0),(0,0), 0.4, colors.HexColor('#CCCCCC')),
+                ('LEFTPADDING',   (0, 0), (0, 0), 4),
+                ('RIGHTPADDING',  (0, 0), (0, 0), 2),
+                ('TOPPADDING',    (0, 0), (0, 0), 3),
+                ('BOTTOMPADDING', (0, 0), (0, 0), 3),
+                ('BOX',           (0, 0), (0, 0), 0.4, colors.HexColor('#CCCCCC')),
             ]))
             cell_items.append(ans_tbl)
 
+        # ── Result summary row ──────────────────────────────────────────
         is_correct     = answer.is_correct     if answer else False
         marks_obtained = answer.marks_obtained if answer else 0
-        rc = '#2E7D32' if is_correct else ('#C62828' if answer else '#888888')
-        label = '✓ CORRECT' if is_correct else ('✗ INCORRECT' if answer else '— UNATTEMPTED')
+        rc    = '#2E7D32' if is_correct else ('#C62828' if answer else '#888888')
+        label = (
+            'CORRECT' if is_correct
+            else ('INCORRECT' if answer else 'UNATTEMPTED')
+        )
+
         cell_items.append(Paragraph(
             f"<font color='{rc}'><b>{label}</b></font>"
             f"<font color='#555555'>  {marks_obtained}/{question.marks}mk</font>",
@@ -551,6 +643,9 @@ def create_student_exam_report_pdf(exam, student, result, school_settings):
 
         return cell_items
 
+    # ------------------------------------------------------------------
+    # Header
+    # ------------------------------------------------------------------
     logo_path = school_settings.get('school_logo_path')
     if logo_path and os.path.exists(logo_path):
         try:
@@ -663,7 +758,7 @@ def create_student_exam_report_pdf(exam, student, result, school_settings):
 
     elements.append(Paragraph("DETAILED QUESTION ANALYSIS", heading_s))
     elements.append(Paragraph(
-        "<i>Legend: [✓] correct  [✗] wrong  [ ] not selected</i>",
+        "<i>Legend: [+] correct  [x] wrong  [ ] not selected</i>",
         legend_s
     ))
     elements.append(Spacer(1, 0.04*inch))
@@ -856,6 +951,7 @@ def create_question(exam_id):
 
             if question_type == 'mcq':
                 correct_answer = request.form.get('correct_answer', 'A')
+                saved_labels = []
                 for label in ['A', 'B', 'C', 'D']:
                     option_text = request.form.get(f'option_{label}', '').strip()
                     if option_text:
@@ -866,6 +962,22 @@ def create_question(exam_id):
                             is_correct=(label == correct_answer)
                         )
                         db.session.add(option)
+                        saved_labels.append(label)
+
+                # An MCQ with fewer than 2 options is unusable — block the
+                # save instead of silently creating a broken question that
+                # students will see with missing options later.
+                if len(saved_labels) < 2:
+                    db.session.rollback()
+                    flash('An MCQ question needs at least 2 options filled in. '
+                          'Please fill in at least Option A and Option B.', 'danger')
+                    return redirect(url_for('teacher.create_question', exam_id=exam_id))
+
+                if correct_answer not in saved_labels:
+                    db.session.rollback()
+                    flash(f'The marked correct answer ("{correct_answer}") has no text. '
+                          'Please fill in that option or choose a different correct answer.', 'danger')
+                    return redirect(url_for('teacher.create_question', exam_id=exam_id))
 
             elif question_type == 'true_false':
                 correct_answer = request.form.get('correct_answer', 'true')
@@ -926,6 +1038,8 @@ def edit_question(question_id):
 
             if question.question_type == 'mcq':
                 correct_answer = request.form.get('correct_answer', 'A')
+                explicit_delete = request.form.getlist('delete_option')  # labels explicitly marked for removal
+                saved_labels = []
                 for label in ['A', 'B', 'C', 'D']:
                     option_text = request.form.get(f'option_{label}', '').strip()
                     option = QuestionOption.query.filter_by(question_id=question_id, option_label=label).first()
@@ -935,8 +1049,28 @@ def edit_question(question_id):
                             db.session.add(option)
                         option.option_text = option_text
                         option.is_correct = (label == correct_answer)
+                        saved_labels.append(label)
                     elif option:
-                        db.session.delete(option)
+                        # Only delete an existing option if the teacher explicitly
+                        # checked "remove this option" — a blank textarea alone
+                        # (e.g. from a stray click or browser autofill clearing
+                        # the field) must NOT silently delete saved option data.
+                        if label in explicit_delete:
+                            db.session.delete(option)
+                        else:
+                            saved_labels.append(label)  # keep existing option as-is
+
+                if len(saved_labels) < 2:
+                    db.session.rollback()
+                    flash('An MCQ question needs at least 2 options. '
+                          'Please keep or fill in at least 2 options before saving.', 'danger')
+                    return redirect(url_for('teacher.edit_question', question_id=question_id))
+
+                if correct_answer not in saved_labels:
+                    db.session.rollback()
+                    flash(f'The marked correct answer ("{correct_answer}") has no option text. '
+                          'Please fill in that option or choose a different correct answer.', 'danger')
+                    return redirect(url_for('teacher.edit_question', question_id=question_id))
 
             elif question.question_type == 'true_false':
                 correct_answer = request.form.get('correct_answer', 'true')
@@ -1076,9 +1210,9 @@ def import_questions(exam_id):
                 exam.total_questions = Question.query.filter_by(exam_id=exam_id).count()
                 exam.total_marks = sum(q.marks for q in exam.questions)
                 db.session.commit()
-                flash(f'✓ {questions_imported} question(s) imported successfully!', 'success')
+                flash(f'Successfully imported {questions_imported} question(s).', 'success')
                 if errors:
-                    flash(f'⚠ Warnings: {"; ".join(errors[:5])}', 'warning')
+                    flash(f'Warnings: {"; ".join(errors[:5])}', 'warning')
             else:
                 flash('No questions were imported.', 'danger')
                 if errors:
@@ -1168,9 +1302,6 @@ def exam_results(exam_id):
         flash(f'Error loading exam results: {str(e)}', 'danger')
         return redirect(url_for('teacher.dashboard'))
 
-# ── PATCH: replace the existing result_details route in teacher.py ──────────────
-# The only change vs the original is fetching all_questions and building
-# answer_map so the template can render every question, including unattempted ones.
 
 @teacher_bp.route('/result/<int:result_id>/details')
 @teacher_required
@@ -1185,7 +1316,6 @@ def result_details(result_id):
         student_profile = Student.query.filter_by(user_id=result.student_id).first()
         exam_session    = ExamSession.query.get(result.exam_session_id)
 
-        # Fetch every question for this exam (needed to show unattempted questions)
         all_questions = (
             Question.query
             .filter_by(exam_id=result.exam_id)
@@ -1193,12 +1323,10 @@ def result_details(result_id):
             .all()
         )
 
-        # Fetch only the answered questions
         answers = StudentAnswer.query.filter_by(
             exam_session_id=result.exam_session_id
         ).all()
 
-        # Build a lookup dict so the template can resolve answer by question_id in O(1)
         answer_map = {a.question_id: a for a in answers}
 
         total_questions   = len(all_questions)
@@ -1207,7 +1335,6 @@ def result_details(result_id):
         correct_count     = sum(1 for a in answers if a.is_correct is True)
         incorrect_count   = sum(1 for a in answers if a.is_correct is False)
 
-        # Patch transient attributes so the template's result.correct_answers etc. work
         result.correct_answers   = correct_count
         result.incorrect_answers = incorrect_count
         result.unattempted       = unattempted_count
@@ -1217,9 +1344,9 @@ def result_details(result_id):
             result=result,
             student_user=student_user,
             student_profile=student_profile,
-            answers=answers,           # kept for backward compat
-            answer_map=answer_map,     # NEW: used by the redesigned template
-            all_questions=all_questions,  # NEW: full ordered question list
+            answers=answers,
+            answer_map=answer_map,
+            all_questions=all_questions,
             exam_session=exam_session,
             correct_count=correct_count,
             incorrect_count=incorrect_count,
@@ -1262,50 +1389,86 @@ def analytics_performance():
     try:
         teacher = Teacher.query.filter_by(user_id=current_user.id).first_or_404()
 
-        # FIX 1: Safely get teacher subject with case-insensitive handling
-        teacher_subject = None
+        # ── Build teacher's full subject list ─────────────────────────────────
+        # 1. From teacher profile subject field
+        subjects_set = set()
         if hasattr(teacher, 'subject') and teacher.subject:
-            teacher_subject = teacher.subject.strip()
+            subjects_set.add(teacher.subject.strip())
 
-        # Debug logging to track data flow
-        print(f"\n=== ANALYTICS DEBUG ===")
-        print(f"Teacher: {current_user.id} | Subject: '{teacher_subject}'")
+        # 2. From TeacherSubjectClass assignments (admin-assigned)
+        tsc_rows = TeacherSubjectClass.query.filter_by(teacher_id=teacher.id).all()
+        for row in tsc_rows:
+            if row.subject:
+                subjects_set.add(row.subject.strip())
 
-        exam_id   = request.args.get('exam_id', type=int)
-        class_id  = request.args.get('class_id', type=int)
-        date_from = request.args.get('date_from')
-        date_to   = request.args.get('date_to')
+        subjects         = sorted(subjects_set)
+        teacher_subject  = teacher.subject.strip() if (hasattr(teacher, 'subject') and teacher.subject) else None
 
-        # FIX 2: Query exams without strict subject filtering if no subject is set
-        exams_query = Exam.query.filter_by(created_by=current_user.id, published=True, is_deleted=False)
-        if teacher_subject:
-            # Use case-insensitive subject matching
-            exams_query = exams_query.filter(
-                func.lower(Exam.subject) == func.lower(teacher_subject)
-            )
-        teacher_exams = exams_query.order_by(Exam.created_at.desc()).all()
+        # ── Build teacher's assigned class list ────────────────────────────────
+        # 1. From TeacherSubjectClass assignments
+        tsc_class_ids = list({row.class_id for row in tsc_rows})
+        tsc_classes   = Class.query.filter(Class.id.in_(tsc_class_ids), Class.is_active == True).all() if tsc_class_ids else []
 
-        print(f"Teacher exams found: {len(teacher_exams)}")
+        # 2. From ClassTeacher legacy association
+        from models.user import ClassTeacher
+        ct_class_ids  = [ct.class_id for ct in ClassTeacher.query.filter_by(teacher_id=teacher.id).all()]
+        ct_classes    = Class.query.filter(Class.id.in_(ct_class_ids), Class.is_active == True).all() if ct_class_ids else []
 
-        subjects = [teacher_subject] if teacher_subject else list(
-            set(e.subject for e in teacher_exams if e.subject)
-        )
+        # Merge: unique classes from both sources
+        all_teacher_class_ids = set(tsc_class_ids + ct_class_ids)
+        teacher_classes_from_assignment = {c.id: c for c in tsc_classes + ct_classes}.values()
+
+        # ── Read filter params ────────────────────────────────────────────────
+        exam_id        = request.args.get('exam_id', type=int)
+        class_id       = request.args.get('class_id', type=int)
+        subject_filter = request.args.get('subject', '').strip()
+        date_from      = request.args.get('date_from')
+        date_to        = request.args.get('date_to')
+
+        # ── Fetch teacher's exams ─────────────────────────────────────────
+        # Always load ALL of this teacher's exams first (no subject gate).
+        # Subject filter is applied AFTER, only to results — so the exam
+        # dropdown always shows what the teacher actually created.
+        all_teacher_exams = Exam.query.filter_by(
+            created_by=current_user.id, is_deleted=False
+        ).order_by(Exam.created_at.desc()).all()
+
+        # Build full subject list from teacher's own exams too
+        for e in all_teacher_exams:
+            if e.subject:
+                subjects_set.add(e.subject.strip())
+        subjects = sorted(subjects_set)
+
+        # For analytics filtering, narrow by subject if selected
+        if subject_filter:
+            teacher_exams = [e for e in all_teacher_exams
+                             if e.subject and e.subject.strip().lower() == subject_filter.lower()]
+        else:
+            teacher_exams = all_teacher_exams
+
         teacher_exam_ids = [e.id for e in teacher_exams]
 
+        # ── Classes: merge assignment-based + result-based ────────────────────
+        if teacher_exam_ids:
+            result_based_classes = db.session.query(Class).join(
+                Student, Class.id == Student.class_id
+            ).join(
+                ExamResult, Student.user_id == ExamResult.student_id
+            ).filter(
+                ExamResult.exam_id.in_(teacher_exam_ids)
+            ).distinct().all()
+        else:
+            result_based_classes = []
+
+        # Merge all class sources for the dropdown
+        merged_class_map = {c.id: c for c in list(teacher_classes_from_assignment) + result_based_classes}
+        teacher_classes  = sorted(merged_class_map.values(), key=lambda c: c.name)
+
+        # ── If still no exams and no classes, return empty with correct lists ─
         if not teacher_exam_ids:
-            print("No exam IDs found — returning empty dashboard")
-            return render_empty_dashboard(teacher, teacher_subject, subjects)
+            return render_empty_dashboard(teacher, teacher_subject, subjects, teacher_classes)
 
-        # Get all classes that have students who took these exams
-        teacher_classes = db.session.query(Class).join(
-            Student, Class.id == Student.class_id
-        ).join(
-            ExamResult, Student.user_id == ExamResult.student_id
-        ).filter(
-            ExamResult.exam_id.in_(teacher_exam_ids)
-        ).distinct().all()
-
-        # Build filtered results query
+        # ── Filter results ────────────────────────────────────────────────────
         results_query = db.session.query(ExamResult).filter(
             ExamResult.exam_id.in_(teacher_exam_ids)
         )
@@ -1331,9 +1494,7 @@ def analytics_performance():
                 pass
 
         all_results = results_query.all()
-        print(f"All results count: {len(all_results)}")
 
-        # Compute all analytics components
         stats               = calculate_teacher_stats(all_results)
         top_performers      = get_top_performers(all_results, 10)
         struggling_students = get_struggling_students(all_results, 10)
@@ -1343,10 +1504,7 @@ def analytics_performance():
         grade_distribution  = get_grade_distribution(all_results)
         performance_trend   = get_performance_trend_for_teacher(teacher_exam_ids, class_id)
 
-        # FIX 3: Build enriched recent_submissions list so the template can access
-        # student name and exam title without relying on ORM relationships that
-        # may not be defined on ExamResult
-        raw_recent = results_query.order_by(ExamResult.submitted_at.desc()).limit(15).all()
+        raw_recent         = results_query.order_by(ExamResult.submitted_at.desc()).limit(15).all()
         recent_submissions = _enrich_recent_submissions(raw_recent)
 
         charts_data = {
@@ -1355,9 +1513,6 @@ def analytics_performance():
             'subject_perf': subject_performance,
             'class_comp':   class_comparison
         }
-
-        print(f"Stats: {stats}")
-        print(f"======================\n")
 
         return render_template(
             'teacher/analytics_performance.html',
@@ -1372,19 +1527,19 @@ def analytics_performance():
             recent_submissions=recent_submissions,
             performance_trend=performance_trend,
             charts_data=charts_data,
-            teacher_exams=teacher_exams,
+            teacher_exams=all_teacher_exams,  # full list for dropdown
             subjects=subjects,
             teacher_classes=teacher_classes,
             teacher_subject=teacher_subject,
             filters={
-                'exam_id':   exam_id,
-                'class_id':  class_id,
-                'date_from': date_from,
-                'date_to':   date_to
+                'exam_id':      exam_id,
+                'class_id':     class_id,
+                'subject':      subject_filter,
+                'date_from':    date_from,
+                'date_to':      date_to
             }
         )
     except Exception as e:
-        print(f"Error in analytics_performance: {str(e)}")
         import traceback
         traceback.print_exc()
         flash(f'Error loading analytics: {str(e)}', 'danger')
@@ -1405,7 +1560,6 @@ def _enrich_recent_submissions(raw_results):
             'result':        r,
             'student':       student_user,
             'exam':          exam_obj,
-            # Flat convenience fields so the template doesn't need result.result.*
             'submitted_at':  r.submitted_at,
             'percentage':    r.percentage,
             'grade':         r.grade,
@@ -1415,8 +1569,7 @@ def _enrich_recent_submissions(raw_results):
 
 # ==================== ANALYTICS HELPERS ====================
 
-def render_empty_dashboard(teacher, teacher_subject, subjects):
-    """Return the analytics template with zero-state data."""
+def render_empty_dashboard(teacher, teacher_subject, subjects, teacher_classes=None):
     empty_stats = {
         'total_students':    0,
         'total_submissions': 0,
@@ -1446,11 +1599,12 @@ def render_empty_dashboard(teacher, teacher_subject, subjects):
         },
         teacher_exams=[],
         subjects=subjects,
-        teacher_classes=[],
+        teacher_classes=teacher_classes or [],
         teacher_subject=teacher_subject,
         filters={
             'exam_id':   None,
             'class_id':  None,
+            'subject':   None,
             'date_from': None,
             'date_to':   None
         }
@@ -1458,7 +1612,6 @@ def render_empty_dashboard(teacher, teacher_subject, subjects):
 
 
 def calculate_teacher_stats(results):
-    """Aggregate summary statistics from a list of ExamResult objects."""
     if not results:
         return {
             'total_students':    0,
@@ -1484,15 +1637,6 @@ def calculate_teacher_stats(results):
 
 
 def get_top_performers(results, limit=10):
-    """
-    Return top-performing students sorted by average score descending.
-
-    FIX 4: The returned dicts use 'student' key pointing to a User object
-    (not a Student profile) — matching what the template expects:
-        perf.student.full_name
-        perf.average_score
-        perf.total_exams
-    """
     if not results:
         return []
 
@@ -1507,7 +1651,7 @@ def get_top_performers(results, limit=10):
         if user:
             avg = sum(scores) / len(scores)
             performers.append({
-                'student':         user,      # User object — template uses .full_name
+                'student':         user,
                 'student_profile': profile,
                 'average_score':   round(avg, 2),
                 'total_exams':     len(scores),
@@ -1520,12 +1664,6 @@ def get_top_performers(results, limit=10):
 
 
 def get_struggling_students(results, limit=10):
-    """
-    Return students with average score below 50%, sorted ascending.
-
-    FIX 5: Same 'student' → User object convention as get_top_performers so
-    both tables in the template use the same access pattern.
-    """
     if not results:
         return []
 
@@ -1541,7 +1679,7 @@ def get_struggling_students(results, limit=10):
             profile = Student.query.filter_by(user_id=student_id).first()
             if user:
                 struggling.append({
-                    'student':         user,    # User object — template uses .full_name
+                    'student':         user,
                     'student_profile': profile,
                     'average_score':   round(avg, 2),
                     'total_exams':     len(scores),
@@ -1554,38 +1692,79 @@ def get_struggling_students(results, limit=10):
 
 
 def get_subject_performance_for_teacher(exam_ids, class_id, date_from, date_to):
+    """Per-subject performance breakdown, optionally filtered by class.
+    Returns list of dicts with subject, class breakdown, avg, pass_rate, and per-student data.
+    """
     if not exam_ids:
         return []
-    query = db.session.query(
-        Exam.subject,
-        func.count(ExamResult.id).label('total'),
-        func.avg(ExamResult.percentage).label('avg_score'),
-        func.sum(func.cast(ExamResult.is_passed, db.Integer)).label('passed')
-    ).join(ExamResult, Exam.id == ExamResult.exam_id).filter(Exam.id.in_(exam_ids))
+
+    # Build exam→subject map once
+    exam_subj_map = {e.id: (e.subject or 'General') for e in Exam.query.filter(Exam.id.in_(exam_ids)).all()}
+
+    # Base results query
+    rq = db.session.query(ExamResult).filter(ExamResult.exam_id.in_(exam_ids))
     if class_id:
-        query = query.join(Student, ExamResult.student_id == Student.user_id).filter(
+        rq = rq.join(Student, ExamResult.student_id == Student.user_id).filter(
             Student.class_id == class_id
         )
     if date_from:
         try:
-            query = query.filter(ExamResult.submitted_at >= datetime.strptime(date_from, '%Y-%m-%d'))
+            rq = rq.filter(ExamResult.submitted_at >= datetime.strptime(date_from, '%Y-%m-%d'))
         except ValueError:
             pass
     if date_to:
         try:
-            query = query.filter(ExamResult.submitted_at <= datetime.strptime(date_to, '%Y-%m-%d'))
+            rq = rq.filter(ExamResult.submitted_at <= datetime.strptime(date_to, '%Y-%m-%d'))
         except ValueError:
             pass
-    results = query.group_by(Exam.subject).all()
-    return [
-        {
-            'subject':           subj or 'General',
+    all_results = rq.all()
+
+    # Aggregate per subject
+    subj_data = {}   # subject → {scores:[], student_scores:{sid:[]}}
+    for r in all_results:
+        subj = exam_subj_map.get(r.exam_id, 'General')
+        if subj not in subj_data:
+            subj_data[subj] = {'scores': [], 'student_scores': {}}
+        subj_data[subj]['scores'].append(r.percentage)
+        subj_data[subj]['student_scores'].setdefault(r.student_id, []).append(r.percentage)
+
+    output = []
+    for subj, d in sorted(subj_data.items()):
+        scores = d['scores']
+        total  = len(scores)
+        passed = sum(1 for s in scores if s >= 50)
+        avg    = round(sum(scores) / total, 2) if total else 0
+        pr     = round((passed / total) * 100, 2) if total else 0
+
+        # Per-student breakdown for this subject
+        per_student = []
+        for sid, sc_list in d['student_scores'].items():
+            u   = User.query.get(sid)
+            stu = Student.query.filter_by(user_id=sid).first()
+            if u:
+                stu_avg = round(sum(sc_list) / len(sc_list), 1)
+                per_student.append({
+                    'name':       u.full_name,
+                    'class_name': stu.class_info.full_name if stu and stu.class_info else '—',
+                    'avg':        stu_avg,
+                    'attempts':   len(sc_list),
+                    'passed':     sum(1 for s in sc_list if s >= 50),
+                    'status':     'Strong' if stu_avg >= 75 else ('Average' if stu_avg >= 50 else 'Needs Help'),
+                })
+        per_student.sort(key=lambda x: x['avg'], reverse=True)
+
+        output.append({
+            'subject':           subj,
             'total_submissions': total,
-            'average_score':     round(avg, 2) if avg else 0,
-            'pass_rate':         round((passed / total * 100), 2) if total > 0 else 0,
-        }
-        for subj, total, avg, passed in results
-    ]
+            'average_score':     avg,
+            'pass_rate':         pr,
+            'pass_count':        passed,
+            'fail_count':        total - passed,
+            'high':              round(max(scores), 1) if scores else 0,
+            'low':               round(min(scores), 1) if scores else 0,
+            'per_student':       per_student,
+        })
+    return output
 
 
 def get_exam_performance_for_teacher(exam_ids, class_id, date_from, date_to):
@@ -1655,23 +1834,16 @@ def get_class_comparison_for_teacher(exam_ids, date_from, date_to):
 
 
 def get_grade_distribution(results):
-    """
-    FIX 6: Fall back to computing grade from percentage when result.grade
-    is not set, so the pie chart always has real data.
-    """
     dist = {'A': 0, 'B': 0, 'C': 0, 'D': 0, 'F': 0}
     if not results:
         return dist
-
     for r in results:
         grade = r.grade if (r.grade and r.grade in dist) else _compute_grade(r.percentage)
         dist[grade] += 1
-
     return dist
 
 
 def _compute_grade(percentage):
-    """Derive a letter grade from a percentage score."""
     if percentage >= 70:
         return 'A'
     elif percentage >= 60:
@@ -1694,7 +1866,6 @@ def get_performance_trend_for_teacher(exam_ids, class_id):
     elif dialect_name == 'mysql':
         month_expr = func.date_format(ExamResult.submitted_at, '%Y-%m').label('month')
     else:
-        # SQLite fallback
         month_expr = func.strftime('%Y-%m', ExamResult.submitted_at).label('month')
 
     query = db.session.query(
@@ -1731,10 +1902,23 @@ def export_performance_report():
         date_from = request.args.get('date_from')
         date_to   = request.args.get('date_to')
 
-        exams_query = Exam.query.filter_by(created_by=current_user.id, published=True, is_deleted=False)
+        # Build full subject list from profile + TeacherSubjectClass
+        export_subjects = set()
         if teacher_subject:
+            export_subjects.add(teacher_subject.lower())
+        for row in TeacherSubjectClass.query.filter_by(teacher_id=teacher.id).all():
+            if row.subject:
+                export_subjects.add(row.subject.strip().lower())
+
+        subject_filter_exp = request.args.get('subject', '').strip()
+        exams_query = Exam.query.filter_by(created_by=current_user.id, is_deleted=False)
+        if subject_filter_exp:
             exams_query = exams_query.filter(
-                func.lower(Exam.subject) == func.lower(teacher_subject)
+                func.lower(Exam.subject) == subject_filter_exp.lower()
+            )
+        elif export_subjects:
+            exams_query = exams_query.filter(
+                func.lower(Exam.subject).in_(export_subjects)
             )
         teacher_exams = exams_query.all()
         exam_ids = [e.id for e in teacher_exams]
@@ -1786,7 +1970,6 @@ def export_performance_report():
         for row, result in enumerate(results, 4):
             student         = User.query.get(result.student_id)
             student_profile = Student.query.filter_by(user_id=result.student_id).first()
-            # FIX 7: Safely get exam object for export rows
             exam_obj = result.exam if hasattr(result, 'exam') and result.exam else Exam.query.get(result.exam_id)
 
             ws.cell(row, 1).value = student.full_name if student else 'Unknown'

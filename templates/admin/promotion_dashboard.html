@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+{% block title %}Student Promotion{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+  --pr-green:  #10b981; --pr-amber:  #f59e0b; --pr-red: #ef4444;
+  --pr-purple: #8b5cf6; --pr-blue:   #3b82f6; --pr-gray: #9ca3af;
+  --pr-border: #e8ecf2; --pr-bg: #f1f3f7;
+}
+.pr-page { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+
+/* ── header ── */
+.pr-head { display:flex; align-items:flex-start; justify-content:space-between;
+           flex-wrap:wrap; gap:12px; margin-bottom:1.25rem; }
+.pr-head h2 { font-size:18px; font-weight:700; color:#1a1a2e; margin:0 0 4px; }
+.pr-head p  { font-size:12px; color:#7c8494; margin:0; }
+.pr-head-btns { display:flex; gap:8px; flex-wrap:wrap; }
+.btn-config { background:#f0f4ff; color:#667eea; border:1px solid #c7d2fe;
+              border-radius:9px; padding:8px 16px; font-size:13px; font-weight:600;
+              text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+.btn-config:hover { background:#e0e7ff; color:#667eea; }
+.btn-grad   { background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0;
+              border-radius:9px; padding:8px 16px; font-size:13px; font-weight:600;
+              text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+.btn-grad:hover { background:#dcfce7; color:#15803d; }
+
+/* ── term banner ── */
+.pr-term-banner {
+  background:linear-gradient(135deg,#667eea,#764ba2); color:#fff;
+  border-radius:12px; padding:1rem 1.4rem;
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; gap:10px; margin-bottom:1.25rem;
+}
+.pr-term-info .lbl { font-size:10px; text-transform:uppercase; letter-spacing:.7px; opacity:.75; }
+.pr-term-info .val { font-size:17px; font-weight:700; }
+.pr-warn { background:#fff8e1; border:1px solid #ffe082; border-radius:10px;
+           padding:.75rem 1.1rem; font-size:12.5px; color:#6d4c00;
+           display:flex; align-items:center; gap:8px; margin-bottom:1.25rem; }
+
+/* ── run-promotion card ── */
+.pr-run-card { background:#fff; border:1px solid var(--pr-border); border-radius:12px;
+               overflow:hidden; margin-bottom:1.25rem; }
+.pr-card-head { padding:12px 16px; background:#fafbfd; border-bottom:1px solid #f0f3f7;
+                font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.6px;
+                color:#1a1a2e; display:flex; align-items:center; gap:8px; }
+.pr-card-head i { color:#667eea; }
+.pr-card-body { padding:16px; }
+.pr-form-row { display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:12px; align-items:end; }
+@media(max-width:768px){ .pr-form-row { grid-template-columns:1fr 1fr; } }
+.fg label { display:block; font-size:11px; font-weight:600; color:#6b7280;
+            text-transform:uppercase; letter-spacing:.5px; margin-bottom:5px; }
+.fg input, .fg select, .fg textarea {
+  width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:8px;
+  font-size:13px; color:#1a1a2e; outline:none; transition:border-color .18s; background:#fff;
+}
+.fg input:focus, .fg select:focus, .fg textarea:focus { border-color:#667eea; }
+.btn-promote { background:#667eea; color:#fff; border:none; border-radius:9px;
+               padding:9px 22px; font-size:13px; font-weight:700; cursor:pointer;
+               transition:background .18s; white-space:nowrap; }
+.btn-promote:hover { background:#5a6fd6; }
+.btn-danger  { background:#ef4444; color:#fff; border:none; border-radius:9px;
+               padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; }
+.btn-danger:hover { background:#dc2626; }
+
+/* ── class previews ── */
+.pr-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:14px;
+           margin-bottom:1.5rem; }
+.pr-cls-card { background:#fff; border:1px solid var(--pr-border); border-radius:12px;
+               overflow:hidden; }
+.pr-cls-head { padding:10px 14px; display:flex; align-items:center; justify-content:space-between;
+               border-bottom:1px solid #f0f3f7; }
+.pr-cls-name { font-size:14px; font-weight:700; color:#1a1a2e; }
+.pr-cls-meta { font-size:11px; color:#9aa3b0; }
+.pr-arrow { display:flex; align-items:center; gap:8px; padding:8px 14px;
+            border-bottom:1px solid #f5f7fa; flex-wrap:wrap; }
+.badge-from { background:#e0f2fe; color:#0369a1; border-radius:6px; padding:3px 9px;
+              font-size:11px; font-weight:700; }
+.badge-to   { background:#e8f5e9; color:#2e7d32; border-radius:6px; padding:3px 9px;
+              font-size:11px; font-weight:700; }
+.badge-grad { background:#ede9fe; color:#5b21b6; border-radius:6px; padding:3px 9px;
+              font-size:11px; font-weight:700; display:flex; align-items:center; gap:4px; }
+.badge-none { background:#f3f4f6; color:#9ca3af; border-radius:6px; padding:3px 9px;
+              font-size:11px; font-weight:700; }
+.pr-arrow-icon { font-size:12px; color:#9aa3b0; }
+.pr-stu-list { max-height:200px; overflow-y:auto; }
+.pr-stu-row { display:flex; align-items:center; justify-content:space-between;
+              padding:7px 14px; border-bottom:1px solid #f5f7fa; font-size:12px; }
+.pr-stu-row:last-child { border-bottom:none; }
+.pr-stu-name { font-weight:600; color:#1a1a2e; }
+.pr-stu-adm  { font-size:11px; color:#9aa3b0; }
+.pr-stu-action { display:flex; gap:6px; align-items:center; }
+.btn-sm-blue { background:#e0f2fe; color:#0369a1; border:none; border-radius:5px;
+               padding:3px 9px; font-size:11px; font-weight:600; cursor:pointer; }
+.btn-sm-purple { background:#ede9fe; color:#5b21b6; border:none; border-radius:5px;
+                 padding:3px 9px; font-size:11px; font-weight:600; cursor:pointer; }
+.pr-empty { text-align:center; padding:1.5rem; color:#9aa3b0; font-size:12px; }
+.pr-empty i { font-size:24px; display:block; margin-bottom:6px; }
+.pr-cls-count { font-size:11px; color:#667eea; font-weight:600;
+                background:#f0f4ff; border-radius:20px; padding:2px 8px; }
+
+/* ── history section ── */
+.pr-hist-card { background:#fff; border:1px solid var(--pr-border); border-radius:12px;
+                overflow:hidden; margin-bottom:1.25rem; }
+.at { width:100%; border-collapse:collapse; font-size:12px; }
+.at th { padding:9px 14px; text-align:left; font-size:10.5px; font-weight:700;
+         text-transform:uppercase; letter-spacing:.5px; color:#9aa3b0;
+         border-bottom:1px solid #f0f3f7; background:#fafbfd; white-space:nowrap; }
+.at td { padding:9px 14px; border-bottom:1px solid #f5f7fa; vertical-align:middle; }
+.at tr:last-child td { border-bottom:none; }
+.at tr:hover td { background:#fafbfd; }
+.badge-promoted   { background:#e0f2fe; color:#0369a1; }
+.badge-graduated  { background:#ede9fe; color:#5b21b6; }
+.badge-repeated   { background:#fff8e1; color:#a16207; }
+.badge-transferred{ background:#e8f5e9; color:#2e7d32; }
+.type-badge { border-radius:5px; padding:2px 8px; font-size:10px; font-weight:700; }
+
+/* rollback btn */
+.btn-rollback { background:#fef3f2; color:#b91c1c; border:1px solid #fecaca;
+                border-radius:7px; padding:5px 12px; font-size:12px; font-weight:600;
+                cursor:pointer; }
+.btn-rollback:hover { background:#fee2e2; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pr-page">
+
+  {# ── Header ── #}
+  <div class="pr-head">
+    <div>
+      <h2><i class="fas fa-level-up-alt" style="color:#667eea;margin-right:8px"></i>Student Promotion</h2>
+      <p>Promote students to the next class at the end of a session. Terminal-class students will graduate and their accounts will be deactivated.</p>
+    </div>
+    <div class="pr-head-btns">
+      <a href="{{ url_for('admin.promotion_class_config') }}" class="btn-config">
+        <i class="fas fa-cog"></i> Configure Classes
+      </a>
+      <a href="{{ url_for('admin.graduated_students') }}" class="btn-grad">
+        <i class="fas fa-graduation-cap"></i> Graduated Students
+      </a>
+    </div>
+  </div>
+
+  {# ── Current term banner ── #}
+  {% if current_term %}
+  <div class="pr-term-banner">
+    <div class="pr-term-info">
+      <div class="lbl">Active Academic Session</div>
+      <div class="val">{{ current_term.session_name }} — {{ current_term.term }} Term</div>
+    </div>
+    <div style="font-size:11px;opacity:.75">
+      Promotion runs at end of session. Make sure it's the Third Term before promoting.
+    </div>
+  </div>
+  {% else %}
+  <div class="pr-warn">
+    <i class="fas fa-exclamation-triangle" style="color:#f59e0b"></i>
+    No current academic term set.
+    <a href="{{ url_for('admin.manage_term') }}" style="color:#667eea;font-weight:700;margin-left:4px">Set term →</a>
+  </div>
+  {% endif %}
+
+  {# ── Run Promotion Form ── #}
+  <div class="pr-run-card">
+    <div class="pr-card-head"><i class="fas fa-play-circle"></i> Run Bulk Promotion</div>
+    <div class="pr-card-body">
+      <form method="POST" action="{{ url_for('admin.run_promotion') }}"
+            onsubmit="return confirm('Run promotion for session \'' + document.getElementById('sess').value + '\'? This will move ALL active students to the next class and graduate terminal-class students.\n\nThis action can be rolled back. Proceed?')">
+        <div class="pr-form-row">
+          <div class="fg">
+            <label>Session Name <span style="color:#ef4444">*</span></label>
+            <input type="text" name="session_name" id="sess"
+                   value="{{ current_term.session_name if current_term else '' }}"
+                   placeholder="e.g. 2024/2025" required>
+          </div>
+          <div class="fg">
+            <label>Scope</label>
+            <select name="mode" id="modeSelect" onchange="toggleClassPicker(this.value)">
+              <option value="all">All Active Classes</option>
+              <option value="class">Selected Classes Only</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>Note (optional)</label>
+            <input type="text" name="note" placeholder="e.g. End of 2024/2025 session">
+          </div>
+          <div class="fg">
+            <label>&nbsp;</label>
+            <button type="submit" class="btn-promote">
+              <i class="fas fa-level-up-alt" style="margin-right:6px"></i>Run Promotion
+            </button>
+          </div>
+        </div>
+
+        {# Class picker (hidden unless mode=class) #}
+        <div id="classPicker" style="display:none;margin-top:12px">
+          <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px">
+            Select Classes to Promote
+          </label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">
+            {% for cp in class_previews %}
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;
+                          background:#f0f4ff;border:1px solid #c7d2fe;border-radius:8px;
+                          padding:5px 11px">
+              <input type="checkbox" name="class_ids" value="{{ cp.class.id }}">
+              {{ cp.class.full_name }}
+              <span style="font-size:11px;color:#667eea">({{ cp.count }})</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# ── Class Previews ── #}
+  <div class="pr-card-head" style="border-radius:10px 10px 0 0;border:1px solid var(--pr-border);
+       background:#fafbfd;margin-bottom:0;border-bottom:none;padding:12px 16px">
+    <i class="fas fa-eye" style="color:#667eea"></i>
+    Promotion Preview — Active Classes
+  </div>
+  <div style="border:1px solid var(--pr-border);border-top:none;border-radius:0 0 12px 12px;
+              padding:14px;background:#f8f9fb;margin-bottom:1.25rem">
+    <div class="pr-grid">
+      {% for cp in class_previews %}
+      <div class="pr-cls-card">
+        <div class="pr-cls-head">
+          <div>
+            <div class="pr-cls-name">{{ cp.class.full_name }}</div>
+            <div class="pr-cls-meta">Level {{ cp.class.level or '—' }}</div>
+          </div>
+          <span class="pr-cls-count">{{ cp.count }} student{{ 's' if cp.count != 1 }}</span>
+        </div>
+
+        {# Arrow row #}
+        <div class="pr-arrow">
+          <span class="badge-from">{{ cp.class.full_name }}</span>
+          {% if cp.action == 'graduate' %}
+            <i class="fas fa-long-arrow-alt-right pr-arrow-icon"></i>
+            <span class="badge-grad"><i class="fas fa-graduation-cap" style="font-size:9px"></i>Graduate</span>
+          {% elif cp.action == 'promote' and cp.destination %}
+            <i class="fas fa-long-arrow-alt-right pr-arrow-icon"></i>
+            <span class="badge-to">{{ cp.destination.full_name }}</span>
+          {% else %}
+            <i class="fas fa-question-circle pr-arrow-icon" style="color:#f59e0b"></i>
+            <span class="badge-none">No target class</span>
+          {% endif %}
+        </div>
+
+        {# Student list #}
+        {% if cp.students %}
+        <div class="pr-stu-list">
+          {% for s in cp.students %}
+          <div class="pr-stu-row">
+            <div>
+              <div class="pr-stu-name">{{ s.user.full_name }}</div>
+              <div class="pr-stu-adm">{{ s.admission_number }}</div>
+            </div>
+            <div class="pr-stu-action">
+              {# Manual single-student action #}
+              <button class="btn-sm-blue"
+                      onclick="openManual({{ s.id }}, '{{ s.user.full_name|e }}', {{ cp.class.id }})">
+                Manual
+              </button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="pr-empty"><i class="fas fa-users-slash"></i>No active students</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# ── Promotion History ── #}
+  {% if session_history %}
+  <div class="pr-hist-card">
+    <div class="pr-card-head" style="justify-content:space-between">
+      <span><i class="fas fa-history" style="color:#667eea;margin-right:6px"></i>Promotion History</span>
+    </div>
+    {% for sess_name, records in session_history.items() %}
+    <div style="border-bottom:1px solid #f0f3f7">
+      <div style="display:flex;align-items:center;justify-content:space-between;
+                  padding:10px 16px;background:#fafbfd">
+        <div>
+          <span style="font-size:13px;font-weight:700;color:#1a1a2e">{{ sess_name }}</span>
+          <span style="font-size:11px;color:#9aa3b0;margin-left:8px">{{ records|length }} record(s)</span>
+        </div>
+        <form method="POST" action="{{ url_for('admin.rollback_promotion') }}"
+              onsubmit="return confirm('Rollback ALL promotions for session \'{{ sess_name }}\'?\nThis will return every student to their previous class.\nGraduated students will be reactivated.\nProceeed?')">
+          <input type="hidden" name="session_name" value="{{ sess_name }}">
+          <button type="submit" class="btn-rollback">
+            <i class="fas fa-undo" style="margin-right:4px"></i>Rollback
+          </button>
+        </form>
+      </div>
+      <div style="overflow-x:auto;max-height:260px;overflow-y:auto">
+        <table class="at">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Adm. No.</th>
+              <th>From</th>
+              <th>To / Status</th>
+              <th>Type</th>
+              <th>Date</th>
+              <th>Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in records %}
+            <tr>
+              <td style="font-weight:600">{{ r.student.user.full_name if r.student and r.student.user else '—' }}</td>
+              <td style="color:#9aa3b0">{{ r.student.admission_number if r.student else '—' }}</td>
+              <td>{{ r.from_class.full_name if r.from_class else '—' }}</td>
+              <td>
+                {% if r.promotion_type == 'graduated' %}
+                <span class="badge-grad" style="border-radius:5px;padding:2px 8px;font-size:10px;font-weight:700;background:#ede9fe;color:#5b21b6">
+                  <i class="fas fa-graduation-cap" style="font-size:9px"></i> Graduated
+                </span>
+                {% elif r.to_class %}
+                {{ r.to_class.full_name }}
+                {% else %} — {% endif %}
+              </td>
+              <td>
+                <span class="type-badge badge-{{ r.promotion_type }}">{{ r.promotion_type|title }}</span>
+              </td>
+              <td style="color:#9aa3b0;white-space:nowrap">{{ r.created_at.strftime('%d %b %Y') }}</td>
+              <td style="color:#9aa3b0;font-size:11px">{{ r.note or '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>{# /pr-page #}
+
+{# ── Manual Single Student Modal ── #}
+<div id="manualModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
+     z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;width:440px;max-width:95vw;
+              box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden">
+    <div style="padding:14px 18px;background:#fafbfd;border-bottom:1px solid #f0f3f7;
+                display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:14px;font-weight:700;color:#1a1a2e">
+        <i class="fas fa-user-graduate" style="color:#667eea;margin-right:8px"></i>
+        Manual Promotion
+      </span>
+      <button onclick="closeManual()" style="background:none;border:none;font-size:18px;color:#9aa3b0;cursor:pointer">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('admin.promote_single_student') }}">
+      <input type="hidden" name="student_id" id="m_student_id">
+      <div style="padding:18px">
+        <p style="font-size:13px;color:#374151;margin:0 0 14px">
+          Student: <strong id="m_student_name"></strong>
+        </p>
+        <div class="fg" style="margin-bottom:12px">
+          <label>Action</label>
+          <select name="action" id="m_action" onchange="toggleManualClass(this.value)">
+            <option value="promote">Promote to class</option>
+            <option value="graduate">Graduate (deactivate account)</option>
+            <option value="repeat">Repeat current class</option>
+            <option value="transfer">Transfer to class</option>
+          </select>
+        </div>
+        <div id="m_class_div" class="fg" style="margin-bottom:12px">
+          <label>Destination Class</label>
+          <select name="to_class_id" id="m_class">
+            <option value="">— Select class —</option>
+            {% for cp in class_previews %}
+            <option value="{{ cp.class.id }}">{{ cp.class.full_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="fg" style="margin-bottom:12px">
+          <label>Session</label>
+          <input type="text" name="session_name"
+                 value="{{ current_term.session_name if current_term else '' }}"
+                 placeholder="e.g. 2024/2025">
+        </div>
+        <div class="fg" style="margin-bottom:16px">
+          <label>Note</label>
+          <input type="text" name="note" placeholder="Optional note">
+        </div>
+        <div style="display:flex;gap:10px">
+          <button type="submit" class="btn-promote" style="flex:1">
+            <i class="fas fa-check" style="margin-right:6px"></i>Confirm
+          </button>
+          <button type="button" onclick="closeManual()"
+                  style="flex:1;background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;
+                         border-radius:9px;padding:9px;font-size:13px;font-weight:600;cursor:pointer">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleClassPicker(val){
+  document.getElementById('classPicker').style.display = val === 'class' ? 'block' : 'none';
+}
+function openManual(id, name, fromClassId){
+  document.getElementById('m_student_id').value  = id;
+  document.getElementById('m_student_name').textContent = name;
+  document.getElementById('m_class').value        = '';
+  document.getElementById('manualModal').style.display = 'flex';
+}
+function closeManual(){
+  document.getElementById('manualModal').style.display = 'none';
+}
+function toggleManualClass(action){
+  const show = ['promote','transfer'].includes(action);
+  document.getElementById('m_class_div').style.display = show ? 'block' : 'none';
+}
+// Close modal on backdrop click
+document.getElementById('manualModal').addEventListener('click', function(e){
+  if(e.target === this) closeManual();
+});
+</script>
+{% endblock %}

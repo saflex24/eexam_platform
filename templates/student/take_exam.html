@@ -915,7 +915,7 @@
                     {% if question.question_type == 'mcq' %}
                     <div class="options-container">
                         {% set question_num = loop.index %}
-                        {% for option in question.options|sort(attribute='option_label') %}
+                        {% for option in ordered_options_by_question.get(question.id, question.options) %}
                         <div class="option-card" onclick="selectOption({{ loop.index0 }}, {{ question.id }}, {{ question_num }})">
                             <div class="option-label">{{ option.option_label }}</div>
                             <div class="option-text latex-content">{{ option.option_text }}</div>
@@ -933,7 +933,7 @@
                     {% if question.question_type == 'true_false' %}
                     <div class="options-container">
                         {% set question_num = loop.index %}
-                        {% for option in question.options %}
+                        {% for option in ordered_options_by_question.get(question.id, question.options) %}
                         <div class="option-card" onclick="selectOption({{ loop.index0 }}, {{ question.id }}, {{ question_num }})">
                             <div class="option-label">{{ option.option_label }}</div>
                             <div class="option-text">{{ option.option_text }}</div>

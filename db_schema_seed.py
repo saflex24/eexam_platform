@@ -239,7 +239,7 @@ def seed_students(classes):
                 # Create user
                 user = User(
                     username=username,
-                    email=f"student{student_count}@mawoschool.edu.ng",
+                    email=f"student{student_count}@Premium-Towers-Int.edu.ng",
                     first_name=first_name,
                     last_name=last_name,
                     gender=random.choice(['Male', 'Female']),

@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}Academic Term / Session{% endblock %}
+
+{% block extra_css %}
+<style>
+.term-page { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+.term-page h2 { font-size: 18px; font-weight: 700; color: #1a1a2e; margin: 0 0 4px; }
+.term-page .sub { font-size: 12px; color: #7c8494; margin: 0 0 1.5rem; }
+
+/* current banner */
+.term-banner {
+    background: linear-gradient(135deg,#667eea,#764ba2);
+    color:#fff; border-radius:12px; padding:1.2rem 1.4rem;
+    display:flex; align-items:center; gap:14px; margin-bottom:1.5rem;
+}
+.term-banner i { font-size:28px; opacity:.85; }
+.term-banner .tb-label { font-size:11px; text-transform:uppercase; letter-spacing:.7px; opacity:.75; }
+.term-banner .tb-val   { font-size:20px; font-weight:700; line-height:1.2; }
+.term-banner .tb-dates { font-size:12px; opacity:.75; margin-top:3px; }
+.term-none {
+    background:#f8f9ff; border:2px dashed #c7cfed; color:#7c8494;
+    border-radius:12px; padding:1.2rem 1.4rem; text-align:center; margin-bottom:1.5rem;
+    font-size:13px;
+}
+
+/* two-column layout */
+.term-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+@media(max-width:768px){ .term-grid { grid-template-columns:1fr; } }
+
+/* panel */
+.t-panel { background:#fff; border:1px solid #e8ecf2; border-radius:12px; overflow:hidden; }
+.t-panel-head {
+    padding:12px 16px; border-bottom:1px solid #f0f3f7; background:#fafbfd;
+    font-size:12px; font-weight:700; color:#1a1a2e; text-transform:uppercase;
+    letter-spacing:.6px; display:flex; align-items:center; gap:8px;
+}
+.t-panel-head i { color:#667eea; font-size:12px; }
+.t-panel-body { padding:16px; }
+
+/* form */
+.f-group { margin-bottom:14px; }
+.f-group label { display:block; font-size:11px; font-weight:600; color:#6b7280;
+    text-transform:uppercase; letter-spacing:.5px; margin-bottom:5px; }
+.f-group input, .f-group select {
+    width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:8px;
+    font-size:13px; color:#1a1a2e; outline:none; transition:border-color .18s;
+}
+.f-group input:focus, .f-group select:focus { border-color:#667eea; }
+.f-check { display:flex; align-items:center; gap:8px; font-size:13px; color:#374151; }
+.f-check input { width:auto; }
+.btn-primary-sm {
+    background:#667eea; color:#fff; border:none; border-radius:8px;
+    padding:8px 18px; font-size:13px; font-weight:600; cursor:pointer;
+    transition:background .18s; width:100%;
+}
+.btn-primary-sm:hover { background:#5a6fd6; }
+
+/* table */
+.t-table { width:100%; border-collapse:collapse; font-size:13px; }
+.t-table th { padding:10px 12px; text-align:left; font-size:11px; font-weight:700;
+    text-transform:uppercase; letter-spacing:.5px; color:#9aa3b0;
+    border-bottom:1px solid #f0f3f7; background:#fafbfd; }
+.t-table td { padding:10px 12px; border-bottom:1px solid #f5f7fa; vertical-align:middle; }
+.t-table tr:last-child td { border-bottom:none; }
+.badge-current {
+    background:#e8f5e9; color:#2e7d32; border:1px solid #a5d6a7;
+    border-radius:6px; padding:3px 9px; font-size:11px; font-weight:700;
+    text-transform:uppercase; letter-spacing:.4px;
+}
+.badge-term {
+    background:#ede9fe; color:#5b21b6; border-radius:6px;
+    padding:3px 9px; font-size:11px; font-weight:600;
+}
+.btn-set {
+    background:#f0f4ff; color:#667eea; border:1px solid #c7d2fe;
+    border-radius:6px; padding:4px 11px; font-size:12px; font-weight:600;
+    cursor:pointer; transition:background .15s;
+}
+.btn-set:hover { background:#e0e7ff; }
+.btn-del {
+    background:none; border:none; color:#ef4444; cursor:pointer;
+    font-size:13px; padding:4px 6px;
+}
+.btn-del:hover { color:#b91c1c; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="term-page">
+    <h2><i class="fas fa-calendar-alt" style="color:#667eea;margin-right:8px"></i>Academic Term &amp; Session</h2>
+    <p class="sub">Set the current academic session and term shown across the system.</p>
+
+    {# ── Current term banner ── #}
+    {% if current_term %}
+    <div class="term-banner">
+        <i class="fas fa-bookmark"></i>
+        <div>
+            <div class="tb-label">Current Term</div>
+            <div class="tb-val">{{ current_term.session_name }} — {{ current_term.term }} Term</div>
+            {% if current_term.start_date and current_term.end_date %}
+            <div class="tb-dates">
+                {{ current_term.start_date.strftime('%d %b %Y') }} → {{ current_term.end_date.strftime('%d %b %Y') }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="term-none">
+        <i class="fas fa-exclamation-circle" style="margin-right:6px"></i>
+        No current term set. Create one below or click <strong>Set as Current</strong> on an existing term.
+    </div>
+    {% endif %}
+
+    <div class="term-grid">
+
+        {# ── Create new term ── #}
+        <div class="t-panel">
+            <div class="t-panel-head"><i class="fas fa-plus-circle"></i> New Academic Term</div>
+            <div class="t-panel-body">
+                <form method="POST" action="{{ url_for('admin.manage_term') }}">
+                    <input type="hidden" name="action" value="create">
+                    <div class="f-group">
+                        <label>Session Name <span style="color:#ef4444">*</span></label>
+                        <input type="text" name="session_name" placeholder="e.g. 2025/2026" required>
+                    </div>
+                    <div class="f-group">
+                        <label>Term <span style="color:#ef4444">*</span></label>
+                        <select name="term" required>
+                            <option value="">— Select term —</option>
+                            <option value="First">First Term</option>
+                            <option value="Second">Second Term</option>
+                            <option value="Third">Third Term</option>
+                        </select>
+                    </div>
+                    <div class="f-group" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                        <div>
+                            <label>Start Date</label>
+                            <input type="date" name="start_date">
+                        </div>
+                        <div>
+                            <label>End Date</label>
+                            <input type="date" name="end_date">
+                        </div>
+                    </div>
+                    <div class="f-group">
+                        <label class="f-check">
+                            <input type="checkbox" name="make_current" value="1" checked>
+                            Set as current active term
+                        </label>
+                    </div>
+                    <button type="submit" class="btn-primary-sm">
+                        <i class="fas fa-save" style="margin-right:6px"></i>Create Term
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        {# ── All terms list ── #}
+        <div class="t-panel">
+            <div class="t-panel-head"><i class="fas fa-list"></i> All Terms</div>
+            {% if terms %}
+            <div style="overflow-x:auto">
+                <table class="t-table">
+                    <thead>
+                        <tr>
+                            <th>Session</th>
+                            <th>Term</th>
+                            <th>Status</th>
+                            <th style="text-align:right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in terms %}
+                        <tr>
+                            <td style="font-weight:600;color:#1a1a2e">{{ t.session_name }}</td>
+                            <td><span class="badge-term">{{ t.term }}</span></td>
+                            <td>
+                                {% if t.is_current %}
+                                <span class="badge-current">Current</span>
+                                {% else %}
+                                <span style="font-size:11px;color:#9aa3b0">—</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align:right;white-space:nowrap">
+                                {% if not t.is_current %}
+                                <form method="POST" style="display:inline">
+                                    <input type="hidden" name="action" value="set_current">
+                                    <input type="hidden" name="term_id" value="{{ t.id }}">
+                                    <button type="submit" class="btn-set">Set Current</button>
+                                </form>
+                                {% endif %}
+                                <form method="POST" style="display:inline" onsubmit="return confirm('Delete this term?')">
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="term_id" value="{{ t.id }}">
+                                    <button type="submit" class="btn-del" title="Delete"><i class="fas fa-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="t-panel-body" style="text-align:center;color:#9aa3b0;padding:2rem">
+                <i class="fas fa-calendar-times" style="font-size:28px;margin-bottom:8px;display:block"></i>
+                No terms yet. Create one to get started.
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

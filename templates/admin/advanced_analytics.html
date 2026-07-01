@@ -359,6 +359,135 @@
         </div>
     </div>
 
+
+    <!-- SUBJECT PERFORMANCE DETAIL -->
+    <div class="ac" style="margin-bottom:8px;">
+        <div class="ac-head amber" style="justify-content:space-between">
+            <span><i class="fas fa-book"></i> Student Performance Per Subject</span>
+            {% if subject_detail %}
+            <span style="font-size:.65rem;color:rgba(255,255,255,.7);font-weight:400">{{ subject_detail|length }} subject{{ 's' if subject_detail|length != 1 }}</span>
+            {% endif %}
+        </div>
+        {% if subject_detail %}
+        <div class="ac-body-p0" style="overflow-x:auto">
+            {% for sd in subject_detail %}
+            <div style="border-bottom:1px solid var(--border)">
+                <!-- Subject header row -->
+                <div style="display:flex;align-items:center;justify-content:space-between;
+                            padding:.55rem .8rem;background:#fafbfd;flex-wrap:wrap;gap:8px"
+                     data-bs-toggle="collapse"
+                     data-bs-target="#subj-{{ loop.index }}"
+                     style="cursor:pointer">
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <span style="background:#8b5cf6;color:#fff;border-radius:7px;
+                                     padding:3px 9px;font-size:.65rem;font-weight:700">
+                            {{ sd.subject }}
+                        </span>
+                        <span style="font-size:.7rem;color:var(--muted)">
+                            {{ sd.n_students }} student{{ 's' if sd.n_students != 1 }} · {{ sd.total_att }} attempt{{ 's' if sd.total_att != 1 }}
+                        </span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                        <div style="text-align:center">
+                            <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Avg</div>
+                            <div style="font-size:.8rem;font-weight:700;
+                                color:{% if sd.avg >= 75 %}#10b981{% elif sd.avg >= 50 %}#f59e0b{% else %}#ef4444{% endif %}">
+                                {{ sd.avg }}%
+                            </div>
+                        </div>
+                        <div style="text-align:center">
+                            <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Pass</div>
+                            <div style="font-size:.8rem;font-weight:700;color:#10b981">{{ sd.pass_count }}</div>
+                        </div>
+                        <div style="text-align:center">
+                            <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Fail</div>
+                            <div style="font-size:.8rem;font-weight:700;color:#ef4444">{{ sd.fail_count }}</div>
+                        </div>
+                        <div style="text-align:center">
+                            <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Pass%</div>
+                            <div style="font-size:.8rem;font-weight:700;color:var(--text)">{{ sd.pass_rate }}%</div>
+                        </div>
+                        <div style="text-align:center">
+                            <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">High</div>
+                            <div style="font-size:.8rem;font-weight:600;color:#3b82f6">{{ sd.high }}%</div>
+                        </div>
+                        <div style="text-align:center">
+                            <div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Low</div>
+                            <div style="font-size:.8rem;font-weight:600;color:#9ca3af">{{ sd.low }}%</div>
+                        </div>
+                        <!-- pass-rate bar -->
+                        <div style="width:80px">
+                            <div style="height:6px;background:#f1f5f9;border-radius:3px;overflow:hidden">
+                                <div style="height:100%;width:{{ sd.pass_rate }}%;
+                                    background:{% if sd.pass_rate >= 70 %}#10b981{% elif sd.pass_rate >= 50 %}#f59e0b{% else %}#ef4444{% endif %};
+                                    border-radius:3px;transition:width .4s"></div>
+                            </div>
+                            <div style="font-size:.6rem;color:var(--muted);margin-top:2px;text-align:right">pass rate</div>
+                        </div>
+                        <i class="fas fa-chevron-down" style="font-size:.6rem;color:var(--muted);cursor:pointer"
+                           onclick="this.closest('[data-bs-toggle]').click();this.classList.toggle('fa-chevron-up');
+                                    this.classList.toggle('fa-chevron-down')"></i>
+                    </div>
+                </div>
+
+                <!-- Collapsible student breakdown -->
+                <div class="collapse" id="subj-{{ loop.index }}">
+                    {% if sd.per_student %}
+                    <table class="at" style="margin:0">
+                        <thead>
+                            <tr>
+                                <th style="padding-left:1.1rem">#</th>
+                                <th>Student</th>
+                                <th>Class</th>
+                                <th>Avg Score</th>
+                                <th>Attempts</th>
+                                <th>Passed</th>
+                                <th>Failed</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ps in sd.per_student %}
+                            <tr>
+                                <td style="padding-left:1.1rem;color:var(--muted);font-size:.7rem">{{ loop.index }}</td>
+                                <td style="font-weight:600">{{ ps.name }}</td>
+                                <td style="color:var(--muted)">{{ ps.class_name }}</td>
+                                <td>
+                                    <span class="sb {% if ps.avg >= 75 %}sb-g{% elif ps.avg >= 50 %}sb-y{% else %}sb-r{% endif %}">
+                                        {{ ps.avg }}%
+                                    </span>
+                                </td>
+                                <td style="color:var(--muted)">{{ ps.attempts }}</td>
+                                <td style="color:#10b981;font-weight:600">{{ ps.passed }}</td>
+                                <td style="color:#ef4444;font-weight:600">{{ ps.attempts - ps.passed }}</td>
+                                <td>
+                                    {% if ps.avg >= 75 %}
+                                    <span style="background:#e8f5e9;color:#2e7d32;border-radius:5px;
+                                                 padding:2px 8px;font-size:.65rem;font-weight:700">Strong</span>
+                                    {% elif ps.avg >= 50 %}
+                                    <span style="background:#fff8e1;color:#8d6e00;border-radius:5px;
+                                                 padding:2px 8px;font-size:.65rem;font-weight:700">Average</span>
+                                    {% else %}
+                                    <span style="background:#fef3f2;color:#b91c1c;border-radius:5px;
+                                                 padding:2px 8px;font-size:.65rem;font-weight:700">Needs Help</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="empty"><i class="fas fa-users"></i>No student data for this subject</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty"><i class="fas fa-book-open"></i>No subject data available for current filters</div>
+        {% endif %}
+    </div>
+
     <!-- DETAILED PERFORMANCE TABLE -->
     <div class="ac" style="margin-bottom:8px;">
         <div class="ac-head slate">
@@ -542,20 +671,24 @@
         }
     });
 
-    // Subject — horizontal bar
+    // Subject — grouped horizontal bar (avg + pass rate)
     new Chart(document.getElementById('subjectChart').getContext('2d'), {
         type: 'bar',
         data: {
             labels: {{ subject_labels|tojson }},
-            datasets: [{ label:'Avg Score', data: {{ subject_data|tojson }},
-                backgroundColor: '#8b5cf6', borderRadius:3, borderWidth:0 }]
+            datasets: [
+                { label:'Avg Score (%)',  data: {{ subject_data|tojson }},
+                  backgroundColor: '#8b5cf6', borderRadius:3, borderWidth:0 },
+                { label:'Pass Rate (%)',  data: {{ subject_detail|map(attribute='pass_rate')|list|tojson }},
+                  backgroundColor: '#10b981', borderRadius:3, borderWidth:0 }
+            ]
         },
         options: { ...DEF, indexAxis:'y',
             scales: {
                 x: { beginAtZero:true, max:100, ticks:{ font:{size:9}, callback: v=>v+'%' }, grid:{ color:'#f1f5f9' } },
                 y: { ticks:{ font:{size:9} }, grid:{ display:false } }
             },
-            plugins: { legend:{ display:false } }
+            plugins: { legend:{ position:'top', labels:{ font:{size:9}, boxWidth:9, padding:7 } } }
         }
     });
 

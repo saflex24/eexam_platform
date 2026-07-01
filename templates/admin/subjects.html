@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+{% block title %}Manage Subjects{% endblock %}
+
+{% block extra_css %}
+<style>
+.subj-page { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+
+/* ── Page header ── */
+.subj-header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px; margin-bottom: 1.25rem;
+}
+.subj-header h2 {
+    font-size: 18px; font-weight: 700; color: #1a1a2e; margin: 0 0 3px;
+}
+.subj-header p { font-size: 12px; color: #7c8494; margin: 0; }
+.btn-new {
+    background: #667eea; color: #fff; border: none; border-radius: 9px;
+    padding: 9px 18px; font-size: 13px; font-weight: 600; cursor: pointer;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 7px;
+    transition: background .18s; white-space: nowrap;
+}
+.btn-new:hover { background: #5a6fd6; color: #fff; }
+
+/* ── Stat strip ── */
+.subj-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    margin-bottom: 1.25rem;
+}
+@media(max-width:600px){ .subj-stats { grid-template-columns: 1fr 1fr; } }
+.stat-card {
+    background: #fff; border: 1px solid #e8ecf2; border-radius: 12px;
+    padding: 1rem 1.2rem; display: flex; align-items: center; gap: 12px;
+}
+.stat-icon {
+    width: 38px; height: 38px; border-radius: 10px; display: flex;
+    align-items: center; justify-content: center; font-size: 15px;
+    color: #fff; flex-shrink: 0;
+}
+.stat-icon.s-purple { background: #667eea; }
+.stat-icon.s-green  { background: #11998e; }
+.stat-icon.s-gray   { background: #9ca3af; }
+.stat-val  { font-size: 24px; font-weight: 700; color: #1a1a2e; line-height: 1; }
+.stat-lbl  { font-size: 11px; color: #9aa3b0; text-transform: uppercase;
+             letter-spacing: .5px; margin-top: 2px; }
+
+/* ── Filter bar ── */
+.filter-strip {
+    background: #fff; border: 1px solid #e8ecf2; border-radius: 10px;
+    padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 10px;
+    align-items: center; margin-bottom: 1rem;
+}
+.filter-strip input, .filter-strip select {
+    padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 8px;
+    font-size: 13px; color: #374151; outline: none; transition: border-color .18s;
+    background: #fff;
+}
+.filter-strip input  { flex: 1; min-width: 180px; }
+.filter-strip select { min-width: 140px; }
+.filter-strip input:focus, .filter-strip select:focus { border-color: #667eea; }
+.btn-filter {
+    background: #667eea; color: #fff; border: none; border-radius: 8px;
+    padding: 7px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.btn-clear {
+    background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb;
+    border-radius: 8px; padding: 7px 14px; font-size: 13px; font-weight: 600;
+    cursor: pointer; text-decoration: none;
+}
+.btn-clear:hover { background: #e9ecf1; color: #374151; }
+
+/* ── Panel ── */
+.subj-panel {
+    background: #fff; border: 1px solid #e8ecf2; border-radius: 12px;
+    overflow: hidden;
+}
+.subj-panel-head {
+    padding: 12px 16px; border-bottom: 1px solid #f0f3f7; background: #fafbfd;
+    font-size: 12px; font-weight: 700; color: #1a1a2e; text-transform: uppercase;
+    letter-spacing: .6px; display: flex; align-items: center; gap: 8px;
+}
+.subj-panel-head i { color: #667eea; font-size: 12px; }
+.subj-count { margin-left: auto; font-size: 11px; color: #9aa3b0; font-weight: 400;
+              text-transform: none; letter-spacing: 0; }
+
+/* ── Table ── */
+.subj-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.subj-table th {
+    padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .5px; color: #9aa3b0;
+    border-bottom: 1px solid #f0f3f7; background: #fafbfd; white-space: nowrap;
+}
+.subj-table td {
+    padding: 11px 14px; border-bottom: 1px solid #f5f7fa; vertical-align: middle;
+}
+.subj-table tr:last-child td { border-bottom: none; }
+.subj-table tr:hover td { background: #fafbfd; }
+
+.badge-code {
+    background: #e0f2fe; color: #0369a1; border-radius: 6px;
+    padding: 3px 9px; font-size: 11px; font-weight: 700;
+    letter-spacing: .4px; display: inline-block;
+}
+.badge-cat {
+    background: #f3e8ff; color: #6b21a8; border-radius: 6px;
+    padding: 3px 9px; font-size: 11px; font-weight: 600; display: inline-block;
+}
+.badge-active {
+    background: #e8f5e9; color: #2e7d32; border-radius: 6px;
+    padding: 3px 9px; font-size: 11px; font-weight: 700; display: inline-block;
+}
+.badge-inactive {
+    background: #fef3f2; color: #b91c1c; border-radius: 6px;
+    padding: 3px 9px; font-size: 11px; font-weight: 700; display: inline-block;
+}
+.subj-name { font-weight: 600; color: #1a1a2e; font-size: 13px; }
+.subj-desc { font-size: 11px; color: #9aa3b0; margin-top: 2px; }
+
+/* ── Action buttons ── */
+.act-btns { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
+.btn-edit {
+    background: #f0f4ff; color: #667eea; border: 1px solid #c7d2fe;
+    border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600;
+    text-decoration: none; transition: background .15s; white-space: nowrap;
+}
+.btn-edit:hover { background: #e0e7ff; color: #667eea; }
+.btn-toggle {
+    background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0;
+    border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: background .15s; white-space: nowrap;
+}
+.btn-toggle.deact {
+    background: #fff7ed; color: #c2410c; border-color: #fed7aa;
+}
+.btn-toggle:hover { opacity: .85; }
+.btn-del {
+    background: none; border: 1px solid #fecaca; color: #ef4444;
+    border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer;
+    transition: background .15s;
+}
+.btn-del:hover { background: #fee2e2; }
+
+/* ── Empty ── */
+.subj-empty {
+    text-align: center; padding: 3rem 1rem; color: #9aa3b0;
+}
+.subj-empty i { font-size: 36px; display: block; margin-bottom: 12px; }
+.subj-empty strong { font-size: 15px; color: #6b7280; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="subj-page">
+
+    {# ── Header ── #}
+    <div class="subj-header">
+        <div>
+            <h2><i class="fas fa-book" style="color:#667eea;margin-right:8px"></i>Manage Subjects</h2>
+            <p>Create and manage the master subject list used across exams, teachers, and assignments.</p>
+        </div>
+        <a href="{{ url_for('admin.create_subject') }}" class="btn-new">
+            <i class="fas fa-plus"></i> New Subject
+        </a>
+    </div>
+
+    {# ── Stats ── #}
+    <div class="subj-stats">
+        <div class="stat-card">
+            <div class="stat-icon s-purple"><i class="fas fa-book"></i></div>
+            <div>
+                <div class="stat-val">{{ total_active + total_inactive }}</div>
+                <div class="stat-lbl">Total Subjects</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon s-green"><i class="fas fa-check-circle"></i></div>
+            <div>
+                <div class="stat-val">{{ total_active }}</div>
+                <div class="stat-lbl">Active</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon s-gray"><i class="fas fa-ban"></i></div>
+            <div>
+                <div class="stat-val">{{ total_inactive }}</div>
+                <div class="stat-lbl">Inactive</div>
+            </div>
+        </div>
+    </div>
+
+    {# ── Filters ── #}
+    <form method="GET" action="{{ url_for('admin.manage_subjects') }}">
+        <div class="filter-strip">
+            <input type="text" name="search" value="{{ search }}"
+                   placeholder="Search by name or code…">
+            <select name="category">
+                <option value="">All categories</option>
+                {% for cat in categories %}
+                <option value="{{ cat }}" {{ 'selected' if category_filter == cat }}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+            <select name="status">
+                <option value="all"      {{ 'selected' if status_filter == 'all' }}>All statuses</option>
+                <option value="active"   {{ 'selected' if status_filter == 'active' }}>Active only</option>
+                <option value="inactive" {{ 'selected' if status_filter == 'inactive' }}>Inactive only</option>
+            </select>
+            <button type="submit" class="btn-filter">
+                <i class="fas fa-search"></i> Filter
+            </button>
+            {% if search or category_filter or status_filter not in ('', 'active') %}
+            <a href="{{ url_for('admin.manage_subjects') }}" class="btn-clear">Clear</a>
+            {% endif %}
+        </div>
+    </form>
+
+    {# ── Subjects table ── #}
+    <div class="subj-panel">
+        <div class="subj-panel-head">
+            <i class="fas fa-list"></i> Subjects
+            <span class="subj-count">{{ subjects|length }} result{{ 's' if subjects|length != 1 }}</span>
+        </div>
+
+        {% if subjects %}
+        <div style="overflow-x:auto">
+            <table class="subj-table">
+                <thead>
+                    <tr>
+                        <th style="padding-left:16px">#</th>
+                        <th>Subject Name</th>
+                        <th>Code</th>
+                        <th>Category</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th style="text-align:right;padding-right:16px">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in subjects %}
+                    <tr>
+                        <td style="padding-left:16px;color:#9aa3b0;font-size:11px">{{ loop.index }}</td>
+                        <td>
+                            <div class="subj-name">{{ s.name }}</div>
+                            {% if s.description %}
+                            <div class="subj-desc">{{ s.description[:60] }}{% if s.description|length > 60 %}…{% endif %}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if s.code %}
+                            <span class="badge-code">{{ s.code }}</span>
+                            {% else %}
+                            <span style="color:#c4c9d4;font-size:12px">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if s.category %}
+                            <span class="badge-cat">{{ s.category }}</span>
+                            {% else %}
+                            <span style="color:#c4c9d4;font-size:12px">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if s.is_active %}
+                            <span class="badge-active"><i class="fas fa-circle" style="font-size:7px;margin-right:4px"></i>Active</span>
+                            {% else %}
+                            <span class="badge-inactive"><i class="fas fa-circle" style="font-size:7px;margin-right:4px"></i>Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td style="font-size:11px;color:#9aa3b0">
+                            {{ s.created_at.strftime('%d %b %Y') }}
+                        </td>
+                        <td style="padding-right:16px">
+                            <div class="act-btns">
+                                <a href="{{ url_for('admin.edit_subject', id=s.id) }}" class="btn-edit">
+                                    <i class="fas fa-pencil-alt"></i> Edit
+                                </a>
+                                <form method="POST" action="{{ url_for('admin.toggle_subject', id=s.id) }}" style="margin:0">
+                                    <button type="submit"
+                                            class="btn-toggle {{ 'deact' if s.is_active else '' }}"
+                                            title="{{ 'Deactivate' if s.is_active else 'Activate' }}">
+                                        {% if s.is_active %}
+                                        <i class="fas fa-toggle-on"></i> Deactivate
+                                        {% else %}
+                                        <i class="fas fa-toggle-off"></i> Activate
+                                        {% endif %}
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('admin.delete_subject', id=s.id) }}"
+                                      style="margin:0"
+                                      onsubmit="return confirm('Delete subject \'{{ s.name }}\'? This cannot be undone.')">
+                                    <button type="submit" class="btn-del" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="subj-empty">
+            <i class="fas fa-book-open"></i>
+            <strong>No subjects found</strong>
+            <p style="font-size:12px;margin-top:6px">
+                {% if search or category_filter %}
+                Try adjusting your filters, or
+                <a href="{{ url_for('admin.manage_subjects') }}">clear them</a>.
+                {% else %}
+                <a href="{{ url_for('admin.create_subject') }}">Create your first subject</a> to get started.
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

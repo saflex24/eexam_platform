@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Configure Class Promotion Order{% endblock %}
+
+{% block extra_css %}
+<style>
+.pc-page { max-width: 860px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+.pc-page h2 { font-size: 18px; font-weight: 700; color: #1a1a2e; margin: 0 0 4px; }
+.pc-page p  { font-size: 12px; color: #7c8494; margin: 0 0 1.25rem; }
+
+.pc-card { background: #fff; border: 1px solid #e8ecf2; border-radius: 12px; overflow: hidden; }
+.pc-head  { padding: 12px 16px; background: #fafbfd; border-bottom: 1px solid #f0f3f7;
+            font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px;
+            color: #1a1a2e; display: flex; align-items: center; gap: 8px; }
+.pc-head i { color: #667eea; }
+
+.pc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.pc-table th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700;
+               text-transform: uppercase; letter-spacing: .5px; color: #9aa3b0;
+               border-bottom: 1px solid #f0f3f7; background: #fafbfd; }
+.pc-table td { padding: 10px 14px; border-bottom: 1px solid #f5f7fa; vertical-align: middle; }
+.pc-table tr:last-child td { border-bottom: none; }
+
+.pc-table input[type=number] { width: 70px; padding: 6px 8px; border: 1px solid #d1d5db;
+  border-radius: 7px; font-size: 13px; text-align: center; outline: none; }
+.pc-table input[type=number]:focus { border-color: #667eea; }
+.pc-table select { padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 7px;
+  font-size: 12px; outline: none; min-width: 160px; background: #fff; }
+.pc-table select:focus { border-color: #667eea; }
+
+.info-box { background: #f0f4ff; border: 1px solid #c7d2fe; border-radius: 10px;
+            padding: 12px 16px; font-size: 12.5px; color: #3730a3; margin-bottom: 1.25rem;
+            display: flex; gap: 10px; }
+.info-box i { flex-shrink: 0; margin-top: 2px; }
+
+.pc-footer { padding: 14px 16px; border-top: 1px solid #f0f3f7; background: #fafbfd;
+             display: flex; gap: 10px; align-items: center; }
+.btn-save   { background: #667eea; color: #fff; border: none; border-radius: 9px;
+              padding: 9px 22px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.btn-save:hover { background: #5a6fd6; }
+.btn-back   { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb;
+              border-radius: 9px; padding: 9px 18px; font-size: 13px; font-weight: 600;
+              text-decoration: none; }
+
+.badge-terminal { background: #ede9fe; color: #5b21b6; border-radius: 6px;
+                  padding: 3px 8px; font-size: 10px; font-weight: 700; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pc-page">
+  <h2><i class="fas fa-cog" style="color:#667eea;margin-right:8px"></i>Configure Class Promotion Order</h2>
+  <p>Set the promotion level for each class, mark terminal (graduating) classes, and optionally link each class to its specific next class.</p>
+
+  <div class="info-box">
+    <i class="fas fa-info-circle"></i>
+    <div>
+      <strong>How it works:</strong> Set <em>Level</em> in ascending order (e.g. JSS1=1, JSS2=2, JSS3=3, SS1=4, SS2=5, SS3=6).
+      During bulk promotion, students move from their class to the class with <em>Level + 1</em> — or to the explicitly linked <em>Next Class</em>.
+      Mark the final class (e.g. SS3) as <strong>Terminal</strong> — students there will be graduated, not promoted.
+    </div>
+  </div>
+
+  <form method="POST" action="{{ url_for('admin.promotion_class_config') }}">
+    <div class="pc-card">
+      <div class="pc-head"><i class="fas fa-layer-group"></i> Classes</div>
+      <div style="overflow-x:auto">
+        <table class="pc-table">
+          <thead>
+            <tr>
+              <th>Class Name</th>
+              <th>Code</th>
+              <th>Level <span style="font-size:9px;color:#c4c9d4">(promotion order)</span></th>
+              <th>Terminal <span style="font-size:9px;color:#c4c9d4">(graduates here)</span></th>
+              <th>Next Class <span style="font-size:9px;color:#c4c9d4">(override auto)</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for cls in classes %}
+            <tr>
+              <td>
+                <strong style="color:#1a1a2e">{{ cls.full_name }}</strong>
+                {% if cls.is_terminal %}
+                <span class="badge-terminal" style="margin-left:6px">Terminal</span>
+                {% endif %}
+              </td>
+              <td style="color:#9aa3b0">{{ cls.code }}</td>
+              <td>
+                <input type="number" name="level_{{ cls.id }}"
+                       value="{{ cls.level or 0 }}" min="0" max="99">
+              </td>
+              <td>
+                <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px">
+                  <input type="checkbox" name="terminal_{{ cls.id }}" value="1"
+                         {{ 'checked' if cls.is_terminal }}
+                         style="width:auto;accent-color:#667eea">
+                  Graduating class
+                </label>
+              </td>
+              <td>
+                <select name="next_{{ cls.id }}">
+                  <option value="">— Auto by level —</option>
+                  {% for c2 in classes %}
+                  {% if c2.id != cls.id %}
+                  <option value="{{ c2.id }}" {{ 'selected' if cls.next_class_id == c2.id }}>
+                    {{ c2.full_name }}
+                  </option>
+                  {% endif %}
+                  {% endfor %}
+                </select>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="pc-footer">
+        <button type="submit" class="btn-save">
+          <i class="fas fa-save" style="margin-right:6px"></i>Save Configuration
+        </button>
+        <a href="{{ url_for('admin.promotion_dashboard') }}" class="btn-back">← Back to Promotion</a>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Raw Exam Data — {{ exam.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.rx-page { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; font-family: 'Courier New', monospace; }
+.rx-page h2 { font-family: -apple-system, sans-serif; font-size: 18px; font-weight: 700; color: #1a1a2e; margin: 0 0 4px; }
+.rx-page p  { font-family: -apple-system, sans-serif; font-size: 12px; color: #7c8494; margin: 0 0 1.25rem; }
+
+.rx-note {
+    font-family: -apple-system, sans-serif;
+    background:#f0f4ff; border:1px solid #c7d2fe; border-radius:10px;
+    padding:11px 15px; font-size:12.5px; color:#3730a3; margin-bottom:1.25rem;
+}
+
+.rx-q {
+    background:#fff; border:1px solid #e2e8f0; border-radius:8px;
+    margin-bottom:10px; overflow:hidden;
+}
+.rx-q-head {
+    background:#1e293b; color:#e2e8f0; padding:8px 14px; font-size:12.5px;
+    display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;
+}
+.rx-q-head .qid { color:#60a5fa; font-weight:700; }
+.rx-q-head .qtype { color:#fbbf24; }
+.rx-count {
+    font-family: -apple-system, sans-serif;
+    font-weight:700; padding:2px 9px; border-radius:5px; font-size:11px;
+}
+.rx-count.ok   { background:#dcfce7; color:#15803d; }
+.rx-count.bad  { background:#fee2e2; color:#b91c1c; }
+
+.rx-q-body { padding:10px 14px; font-size:12.5px; }
+.rx-q-text { color:#64748b; margin-bottom:8px; }
+.rx-opt {
+    display:flex; gap:10px; align-items:center;
+    padding:5px 8px; border-bottom:1px solid #f1f5f9; font-size:12px;
+}
+.rx-opt:last-child { border-bottom:none; }
+.rx-opt-id { color:#94a3b8; min-width:60px; }
+.rx-opt-label {
+    background:#667eea; color:#fff; width:22px; height:22px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:11px;
+    font-weight:700; flex-shrink:0;
+}
+.rx-no-opts { color:#b91c1c; font-style:italic; padding:6px 8px; }
+
+.rx-session-panel {
+    font-family: -apple-system, sans-serif;
+    background:#fff; border:1px solid #e2e8f0; border-radius:10px;
+    margin-top:1.5rem; overflow:hidden;
+}
+.rx-session-head {
+    background:#fafbfd; padding:10px 14px; font-size:12px; font-weight:700;
+    color:#1a1a2e; border-bottom:1px solid #f0f3f7;
+}
+.rx-session-row { padding:9px 14px; border-bottom:1px solid #f5f7fa; font-size:11.5px; }
+.rx-session-row:last-child { border-bottom:none; }
+.rx-session-row code {
+    display:block; background:#f8fafc; padding:6px 8px; border-radius:5px;
+    margin-top:4px; font-size:10.5px; color:#475569; word-break:break-all;
+    font-family:'Courier New', monospace;
+}
+.rx-back {
+    font-family: -apple-system, sans-serif;
+    display:inline-flex; align-items:center; gap:5px; font-size:12px;
+    font-weight:600; color:#667eea; text-decoration:none; margin-bottom:14px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rx-page">
+    <a href="{{ url_for('admin.incomplete_questions') }}" class="rx-back">
+        <i class="fas fa-arrow-left"></i> Back to Diagnostics
+    </a>
+    <h2>Raw Exam Data — {{ exam.title }}</h2>
+    <p>Exact contents of the database for this exam: every question, every option actually saved (with IDs), and any persisted shuffle order for active sessions. No formatting, no shuffling, no fallback logic — exactly what's stored.</p>
+
+    <div class="rx-note">
+        Compare the option count shown below against what appears on the student's take-exam screen.
+        If a question shows fewer options here than the student says they're missing, the data itself
+        is incomplete and the fix is in the question editor. If the counts here match what the
+        student <em>should</em> see but they're reporting fewer, the problem is in rendering — send this exact page back for further investigation.
+    </div>
+
+    {% for q in question_dump %}
+    <div class="rx-q">
+        <div class="rx-q-head">
+            <span><span class="qid">Q#{{ q.id }}</span> &nbsp;(order: {{ q.order }})</span>
+            <span class="qtype">{{ q.question_type|upper }}</span>
+            {% if q.question_type in ('mcq', 'true_false') %}
+            {% set expected = 2 if q.question_type == 'true_false' else 4 %}
+            <span class="rx-count {{ 'ok' if q.option_count >= expected else 'bad' }}">
+                {{ q.option_count }} option{{ 's' if q.option_count != 1 }} stored
+            </span>
+            {% endif %}
+        </div>
+        <div class="rx-q-body">
+            <div class="rx-q-text">{{ q.text_preview }}{% if q.text_preview|length >= 60 %}…{% endif %}</div>
+            {% if q.question_type in ('mcq', 'true_false') %}
+                {% if q.options %}
+                    {% for opt in q.options %}
+                    <div class="rx-opt">
+                        <span class="rx-opt-id">id={{ opt.id }}</span>
+                        <span class="rx-opt-label">{{ opt.label }}</span>
+                        <span>{{ opt.text_preview }}{% if opt.text_preview|length >= 40 %}…{% endif %}</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="rx-no-opts">⚠ No options stored for this question at all.</div>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+
+    <div class="rx-session-panel">
+        <div class="rx-session-head">
+            <i class="fas fa-database"></i> Persisted Session Order Data ({{ session_dump|length }} session{{ 's' if session_dump|length != 1 }})
+        </div>
+        {% if session_dump %}
+            {% for s in session_dump %}
+            <div class="rx-session-row">
+                <strong>Session #{{ s.session_id }}</strong> — student_id={{ s.student_id }}, status={{ s.status }}
+                <code>question_order: {{ s.question_order or '(null — not yet generated)' }}</code>
+                <code>option_order: {{ s.option_order or '(null — not yet generated)' }}</code>
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="rx-session-row" style="color:#94a3b8">No exam sessions exist for this exam yet.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

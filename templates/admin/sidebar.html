@@ -25,4 +25,19 @@
         <i class="fas fa-file-alt"></i> Exams
     </a>
 
+    <a href="{{ url_for('admin.manage_subjects') }}"
+       class="sidebar-link {% if request.endpoint in ('admin.manage_subjects','admin.create_subject','admin.edit_subject') %}active{% endif %}">
+        <i class="fas fa-book"></i> Subjects
+    </a>
+
+    <a href="{{ url_for('admin.teacher_assignments') }}"
+       class="sidebar-link {% if request.endpoint == 'admin.teacher_assignments' %}active{% endif %}">
+        <i class="fas fa-link"></i> Assignments
+    </a>
+
+    <a href="{{ url_for('admin.manage_term') }}"
+       class="sidebar-link {% if request.endpoint == 'admin.manage_term' %}active{% endif %}">
+        <i class="fas fa-calendar-alt"></i> Term / Session
+    </a>
+
 </aside>

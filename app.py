@@ -1,12 +1,13 @@
 import os
 import sys
 import logging
-from flask import Flask, render_template, redirect, url_for
+from flask import Flask, render_template, redirect, url_for, request
 from flask_login import current_user
 from werkzeug.exceptions import HTTPException
 
 from config import config
 from extensions import db, login_manager, migrate
+from license_manager import check_license
 
 
 # ================================
@@ -115,11 +116,33 @@ def create_app(config_name=None):
     from routes.admin import admin_bp
     from routes.teacher import teacher_bp
     from routes.student import student_bp
+    from routes.license import license_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp, url_prefix="/admin")
     app.register_blueprint(teacher_bp, url_prefix="/teacher")
     app.register_blueprint(student_bp, url_prefix="/student")
+    app.register_blueprint(license_bp)
+
+    # ================================
+    # LICENSE ENFORCEMENT MIDDLEWARE
+    # Runs before every request.
+    # Passes through: /license/* routes, /static/* assets, /favicon.ico
+    # Blocks everything else when license is invalid/expired.
+    # ================================
+    _LICENSE_FREE_PREFIXES = ("/license", "/static", "/favicon")
+
+    @app.before_request
+    def enforce_license():
+        path = request.path
+        # Always allow access to license routes and static assets
+        if any(path.startswith(p) for p in _LICENSE_FREE_PREFIXES):
+            return None  # let through
+
+        valid, reason, _payload = check_license()
+        if not valid:
+            # Render a hard-locked page — no redirect loop possible
+            return render_template("license/locked.html", reason=reason), 403
 
     # ================================
     # HOME ROUTE

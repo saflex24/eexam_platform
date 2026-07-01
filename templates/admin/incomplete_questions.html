@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Incomplete Questions Diagnostic{% endblock %}
+
+{% block extra_css %}
+<style>
+.iq-page { max-width: 1000px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+.iq-page h2 { font-size: 18px; font-weight: 700; color: #1a1a2e; margin: 0 0 4px; }
+.iq-page p  { font-size: 12px; color: #7c8494; margin: 0 0 1.25rem; }
+
+.iq-banner {
+    background:#fef3f2; border:1px solid #fecaca; border-radius:10px;
+    padding:.75rem 1.1rem; font-size:12.5px; color:#b91c1c;
+    display:flex; align-items:center; gap:8px; margin-bottom:1.25rem;
+}
+.iq-banner-ok {
+    background:#f0fdf4; border:1px solid #bbf7d0; color:#15803d;
+}
+
+.iq-panel { background:#fff; border:1px solid #e8ecf2; border-radius:12px; overflow:hidden; }
+.iq-panel-head { padding:12px 16px; background:#fafbfd; border-bottom:1px solid #f0f3f7;
+    font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.6px;
+    color:#1a1a2e; display:flex; align-items:center; gap:8px; }
+.iq-panel-head i { color:#667eea; }
+.iq-panel-head .cnt { margin-left:auto; font-size:11px; color:#9aa3b0; font-weight:400; text-transform:none; }
+
+.at { width:100%; border-collapse:collapse; font-size:13px; }
+.at th { padding:10px 14px; text-align:left; font-size:11px; font-weight:700;
+    text-transform:uppercase; letter-spacing:.5px; color:#9aa3b0;
+    border-bottom:1px solid #f0f3f7; background:#fafbfd; white-space:nowrap; }
+.at td { padding:10px 14px; border-bottom:1px solid #f5f7fa; vertical-align:middle; }
+.at tr:last-child td { border-bottom:none; }
+.at tr:hover td { background:#fafbfd; }
+
+.badge-count { background:#fef3f2; color:#b91c1c; border-radius:6px;
+    padding:3px 9px; font-size:11px; font-weight:700; }
+.badge-zero  { background:#fee2e2; color:#991b1b; }
+.btn-fix { background:#f0f4ff; color:#667eea; border:1px solid #c7d2fe;
+    border-radius:6px; padding:5px 12px; font-size:12px; font-weight:600;
+    text-decoration:none; white-space:nowrap; }
+.btn-fix:hover { background:#e0e7ff; color:#667eea; }
+
+.iq-empty { text-align:center; padding:3rem 1rem; color:#9aa3b0; }
+.iq-empty i { font-size:36px; display:block; margin-bottom:12px; color:#10b981; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="iq-page">
+    <h2><i class="fas fa-stethoscope" style="color:#667eea;margin-right:8px"></i>Incomplete Questions Diagnostic</h2>
+    <p>Scans all MCQ and True/False questions for missing options — these would display incompletely to students.</p>
+
+    {% if broken %}
+    {% set critical_count = broken|selectattr('critical')|list|length %}
+    <div class="iq-banner">
+        <i class="fas fa-exclamation-triangle"></i>
+        Found {{ broken|length }} question(s) with fewer options than expected
+        {% if critical_count %}({{ critical_count }} critical — fewer than 2 options, unusable as-is){% endif %}.
+        Open each one and add the missing option(s).
+    </div>
+    {% else %}
+    <div class="iq-banner iq-banner-ok">
+        <i class="fas fa-check-circle"></i>
+        No incomplete questions found — every MCQ has 4 options and every True/False has 2.
+    </div>
+    {% endif %}
+
+    <div class="iq-panel">
+        <div class="iq-panel-head">
+            <i class="fas fa-list"></i> Questions Needing Attention
+            <span class="cnt">{{ broken|length }} found</span>
+        </div>
+
+        {% if broken %}
+        <div style="overflow-x:auto">
+            <table class="at">
+                <thead>
+                    <tr>
+                        <th style="padding-left:16px">#</th>
+                        <th>Exam</th>
+                        <th>Teacher</th>
+                        <th>Question</th>
+                        <th>Type</th>
+                        <th>Options Found</th>
+                        <th style="text-align:right;padding-right:16px">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in broken %}
+                    <tr>
+                        <td style="padding-left:16px;color:#9aa3b0;font-size:11px">{{ loop.index }}</td>
+                        <td style="font-weight:600">{{ b.exam.title if b.exam else '—' }}</td>
+                        <td style="font-size:12px;color:#374151">
+                            {{ b.teacher.user.full_name if b.teacher and b.teacher.user else '—' }}
+                        </td>
+                        <td style="max-width:300px">{{ b.question.question_text[:70] }}{% if b.question.question_text|length > 70 %}…{% endif %}</td>
+                        <td><span style="font-size:11px;color:#9aa3b0">{{ b.question.question_type|upper }}</span></td>
+                        <td>
+                            <span class="badge-count {{ 'badge-zero' if b.critical }}">
+                                {{ b.opt_count }} / {{ b.expected }} option{{ 's' if b.expected != 1 }}
+                            </span>
+                            {% if b.critical %}
+                            <span style="font-size:9px;color:#991b1b;font-weight:700;display:block;margin-top:2px">CRITICAL</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align:right;padding-right:16px">
+                            <a href="{{ url_for('admin.manage_exams', search=b.exam.title) if b.exam else '#' }}" class="btn-fix">
+                                <i class="fas fa-eye"></i> View Exam
+                            </a>
+                            {% if b.exam %}
+                            <a href="{{ url_for('admin.inspect_exam_raw', exam_id=b.exam.id) }}" class="btn-fix" style="margin-left:4px">
+                                <i class="fas fa-database"></i> Raw Data
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="iq-empty">
+            <i class="fas fa-shield-check"></i>
+            <strong>All questions are complete</strong>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

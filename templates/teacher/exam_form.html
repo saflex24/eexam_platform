@@ -49,8 +49,21 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="subject" class="form-label">Subject *</label>
-                                <input type="text" class="form-control" id="subject" name="subject" 
-                                       value="{{ exam.subject if exam else '' }}" required>
+                                {% if all_subjects %}
+                                <select class="form-select" id="subject" name="subject" required>
+                                    <option value="">— Select subject —</option>
+                                    {% for s in all_subjects %}
+                                    <option value="{{ s.name }}"
+                                        {{ 'selected' if exam and exam.subject == s.name else '' }}>
+                                        {{ s.name }}{% if s.code %} ({{ s.code }}){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                {% else %}
+                                <input type="text" class="form-control" id="subject" name="subject"
+                                       value="{{ exam.subject if exam else '' }}" required
+                                       placeholder="Add subjects in Admin → Subjects">
+                                {% endif %}
                             </div>
 
                             <div class="col-md-6 mb-3">
@@ -176,6 +189,15 @@
                            {{ 'checked' if not exam or exam.shuffle_options else '' }}>
                     <label class="form-check-label" for="shuffle_options">
                         Shuffle Options
+                    </label>
+                </div>
+
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="randomize_per_student" name="randomize_per_student" 
+                           {{ 'checked' if not exam or exam.randomize_per_student else '' }}>
+                    <label class="form-check-label" for="randomize_per_student">
+                        Randomize Per Student
+                        <small class="d-block text-muted">Master switch — must be on for Shuffle Questions/Options above to take effect</small>
                     </label>
                 </div>
 

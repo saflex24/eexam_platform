@@ -87,8 +87,26 @@
 
                             <div class="col-md-6 mb-3">
                                 <label for="subject" class="form-label">Subject *</label>
-                                <input type="text" class="form-control" id="subject" name="subject" 
-                                       value="{{ teacher.subject if teacher else '' }}" required>
+                                {% if all_subjects %}
+                                <select class="form-select" id="subject" name="subject" required>
+                                    <option value="">— Select subject —</option>
+                                    {% for s in all_subjects %}
+                                    <option value="{{ s.name }}"
+                                        {{ 'selected' if teacher and teacher.subject == s.name else '' }}>
+                                        {{ s.name }}{% if s.code %} ({{ s.code }}){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                {% else %}
+                                <input type="text" class="form-control" id="subject" name="subject"
+                                       value="{{ teacher.subject if teacher else '' }}" required
+                                       placeholder="No subjects in master list yet">
+                                {% endif %}
+                                <div class="form-text">
+                                    <a href="{{ url_for('admin.manage_subjects') }}" target="_blank">
+                                        <i class="fas fa-external-link-alt"></i> Manage subject list
+                                    </a>
+                                </div>
                             </div>
                         </div>
 

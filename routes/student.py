@@ -5,6 +5,7 @@ from models.user import Student
 from models.exam import Exam, ExamSession, StudentAnswer, ExamResult, Question, QuestionOption, ProctoringLog
 from models.class_model import Class
 from utils.decorators import student_required
+from utils.exam_shuffle import ensure_shuffle_persisted, get_ordered_questions, get_ordered_options, build_ordered_options_map
 from datetime import datetime, timedelta
 import random
 import string
@@ -222,8 +223,27 @@ def take_exam(session_id):
             return redirect(url_for('student.dashboard'))
         
         exam = exam_session.exam
-        questions = Question.query.filter_by(exam_id=exam.id).order_by(Question.order).all()
-        
+        all_questions = Question.query.filter_by(exam_id=exam.id).order_by(Question.order).all()
+
+        # ── Randomize questions/options per student (eExam 2.0) ─────────────
+        # ensure_shuffle_persisted() generates a shuffle ONCE per session and
+        # persists it to the ExamSession (question_order / option_order
+        # columns) — it's a no-op if already generated, so calling it on
+        # every request keeps order stable across reloads, AJAX saves, and
+        # final review instead of re-shuffling every time the page loads.
+        ensure_shuffle_persisted(db, exam, exam_session, all_questions)
+
+        # Always read back through the shared helpers so the order matches
+        # exactly what admin review/grading screens will later display.
+        # NOTE: we do NOT reassign q.options directly — that relationship has
+        # cascade='all, delete-orphan', and reassigning it risks SQLAlchemy
+        # treating reordered-but-identical rows as orphans on next commit.
+        # We instead pass a separate ordered_options_by_question dict
+        # through to the template.
+        questions = get_ordered_questions(Question, exam.id, exam_session)
+        ordered_options_by_question = build_ordered_options_map(questions, exam_session)
+        # ──────────────────────────────────────────────────────────────────────
+
         if exam_session.status in ('pending', 'started'):
             exam_session.status = 'in_progress'
             if not exam_session.start_time:
@@ -299,7 +319,8 @@ def take_exam(session_id):
         
         exam_session.last_activity = datetime.utcnow()
         db.session.commit()
-        return render_template('student/take_exam.html', exam=exam, session=exam_session, questions=questions)
+        return render_template('student/take_exam.html', exam=exam, session=exam_session,
+                               questions=questions, ordered_options_by_question=ordered_options_by_question)
         
     except Exception as e:
         print(f"ERROR in take_exam: {str(e)}")
@@ -1011,13 +1032,19 @@ def view_result(result_id):
         student_user    = User.query.get(result.student_id)
         student_profile = Student.query.filter_by(user_id=result.student_id).first()
         answers         = StudentAnswer.query.filter_by(exam_session_id=result.exam_session_id).all()
-        all_questions   = Question.query.filter_by(exam_id=result.exam_id).all()
+        exam_session    = ExamSession.query.get(result.exam_session_id)
+
+        # Show questions/options in the exact order the student saw them
+        # during the exam (persisted on the session), not the default order —
+        # otherwise review would silently re-shuffle and confuse students.
+        all_questions = get_ordered_questions(Question, result.exam_id, exam_session)
+        ordered_options_by_question = build_ordered_options_map(all_questions, exam_session)
+
         total_questions = len(all_questions)
         answered_count  = len(answers)
         unattempted_count = total_questions - answered_count
         correct_count   = sum(1 for a in answers if a.is_correct is True)
         incorrect_count = sum(1 for a in answers if a.is_correct is False)
-        exam_session    = ExamSession.query.get(result.exam_session_id)
 
         return render_template('student/result_view.html',
                                result=result,
@@ -1026,6 +1053,7 @@ def view_result(result_id):
                                student=student_profile,
                                answers=answers,
                                all_questions=all_questions,
+                               ordered_options_by_question=ordered_options_by_question,
                                total_questions=total_questions,
                                answered_count=answered_count,
                                correct_count=correct_count,

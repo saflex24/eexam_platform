@@ -168,11 +168,22 @@
                 </select>
             </div>
             <div class="f-group">
+                <label>Subject</label>
+                <select name="subject" class="form-select">
+                    <option value="">All Subjects</option>
+                    {% for s in subjects %}
+                    <option value="{{ s }}" {% if filters.subject == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="f-group">
                 <label>Class</label>
                 <select name="class_id" class="form-select">
                     <option value="">All Classes</option>
                     {% for cls in teacher_classes %}
-                    <option value="{{ cls.id }}" {% if filters.class_id == cls.id %}selected{% endif %}>{{ cls.name }}</option>
+                    <option value="{{ cls.id }}" {% if filters.class_id == cls.id %}selected{% endif %}>
+                        {{ cls.full_name }}
+                    </option>
                     {% endfor %}
                 </select>
             </div>
@@ -350,6 +361,127 @@
         </div>
     </div>
 
+    <!-- STUDENT PERFORMANCE PER SUBJECT -->
+    <div class="ap-card">
+        <div class="ap-card-head" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);justify-content:space-between">
+            <span><i class="fas fa-book"></i> Student Performance Per Subject</span>
+            {% if filters.class_id %}
+            <span class="subj-tag">Filtered by class</span>
+            {% elif filters.subject %}
+            <span class="subj-tag">{{ filters.subject }}</span>
+            {% endif %}
+        </div>
+        {% if subject_performance %}
+        <div class="ap-card-body" style="padding:0">
+            {% for sp in subject_performance %}
+            <div style="border-bottom:1px solid var(--border)">
+                <!-- Subject summary row -->
+                <div style="display:flex;align-items:center;justify-content:space-between;
+                            padding:.55rem .9rem;background:#fafbfd;cursor:pointer;
+                            flex-wrap:wrap;gap:8px"
+                     onclick="toggleSubjBlock(this)">
+                    <div style="display:flex;align-items:center;gap:9px">
+                        <span style="background:#8b5cf6;color:#fff;border-radius:7px;
+                                     padding:3px 10px;font-size:.65rem;font-weight:700">
+                            {{ sp.subject }}
+                        </span>
+                        <span style="font-size:.68rem;color:var(--slate)">
+                            {{ sp.per_student|length }} student{{ 's' if sp.per_student|length != 1 }}
+                            &middot; {{ sp.total_submissions }} attempt{{ 's' if sp.total_submissions != 1 }}
+                        </span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                        <div style="text-align:center">
+                            <div style="font-size:.6rem;color:var(--muted);text-transform:uppercase">Avg</div>
+                            <div class="{% if sp.average_score >= 70 %}score-hi{% elif sp.average_score >= 50 %}score-mid{% else %}score-lo{% endif %}"
+                                 style="font-size:.8rem;font-weight:700">{{ sp.average_score }}%</div>
+                        </div>
+                        <div style="text-align:center">
+                            <div style="font-size:.6rem;color:var(--muted);text-transform:uppercase">Pass</div>
+                            <div style="font-size:.8rem;font-weight:700;color:#10b981">{{ sp.pass_count }}</div>
+                        </div>
+                        <div style="text-align:center">
+                            <div style="font-size:.6rem;color:var(--muted);text-transform:uppercase">Fail</div>
+                            <div style="font-size:.8rem;font-weight:700;color:#ef4444">{{ sp.fail_count }}</div>
+                        </div>
+                        <div style="text-align:center">
+                            <div style="font-size:.6rem;color:var(--muted);text-transform:uppercase">Pass%</div>
+                            <div style="font-size:.8rem;font-weight:700">{{ sp.pass_rate }}%</div>
+                        </div>
+                        <!-- pass bar -->
+                        <div style="width:70px">
+                            <div style="height:5px;background:#f1f5f9;border-radius:3px;overflow:hidden">
+                                <div style="height:100%;width:{{ sp.pass_rate }}%;
+                                    background:{% if sp.pass_rate >= 70 %}#10b981{% elif sp.pass_rate >= 50 %}#f59e0b{% else %}#ef4444{% endif %};
+                                    border-radius:3px"></div>
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-down" style="font-size:.65rem;color:var(--muted)"></i>
+                    </div>
+                </div>
+                <!-- Student breakdown (hidden by default) -->
+                <div class="subj-detail" style="display:none">
+                    {% if sp.per_student %}
+                    <table class="ap-table" style="margin:0">
+                        <thead>
+                            <tr>
+                                <th style="padding-left:1rem">#</th>
+                                <th>Student</th>
+                                <th>Class</th>
+                                <th>Avg Score</th>
+                                <th>Attempts</th>
+                                <th>Passed</th>
+                                <th>Failed</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ps in sp.per_student %}
+                            <tr>
+                                <td style="padding-left:1rem;color:var(--muted);font-size:.7rem">{{ loop.index }}</td>
+                                <td style="font-weight:600">{{ ps.name }}</td>
+                                <td style="color:var(--muted)">{{ ps.class_name }}</td>
+                                <td class="{% if ps.avg >= 70 %}score-hi{% elif ps.avg >= 50 %}score-mid{% else %}score-lo{% endif %}">
+                                    {{ ps.avg }}%
+                                </td>
+                                <td style="color:var(--muted)">{{ ps.attempts }}</td>
+                                <td style="color:#10b981;font-weight:600">{{ ps.passed }}</td>
+                                <td style="color:#ef4444;font-weight:600">{{ ps.attempts - ps.passed }}</td>
+                                <td>
+                                    {% if ps.status == 'Strong' %}
+                                    <span class="badge-pass" style="background:#e8f5e9;color:#2e7d32">Strong</span>
+                                    {% elif ps.status == 'Average' %}
+                                    <span class="badge-pass" style="background:#fff8e1;color:#8d6e00">Average</span>
+                                    {% else %}
+                                    <span class="badge-fail">Needs Help</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="empty-state"><i class="fas fa-users"></i>No student data for this subject</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="ap-card-body">
+            <div class="empty-state">
+                <i class="fas fa-book-open"></i>
+                {% if not teacher_classes and not subjects %}
+                No classes or subjects assigned to you yet.
+                Ask your admin to assign you in <strong>Admin → Assignments</strong>.
+                {% elif not subject_performance %}
+                No exam results recorded yet. Results will appear once students submit exams.
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
     <!-- RECENT SUBMISSIONS
          recent_submissions = list of dicts from _enrich_recent_submissions().
          Keys: sub.student (User), sub.exam (Exam), sub.submitted_at,
@@ -454,6 +586,19 @@
         });
     }
 })();
+
+function toggleSubjBlock(header) {
+    const detail = header.nextElementSibling;
+    const icon   = header.querySelector('.fa-chevron-down, .fa-chevron-up');
+    if (detail) {
+        const isHidden = detail.style.display === 'none';
+        detail.style.display = isHidden ? 'block' : 'none';
+        if (icon) {
+            icon.classList.toggle('fa-chevron-down', !isHidden);
+            icon.classList.toggle('fa-chevron-up',   isHidden);
+        }
+    }
+}
 </script>
 {% endif %}
 {% endblock %}

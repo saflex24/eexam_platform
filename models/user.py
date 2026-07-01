@@ -82,9 +82,12 @@ class Student(db.Model):
     date_of_birth = db.Column(db.Date, nullable=True)
     guardian_name = db.Column(db.String(150), nullable=True)
     guardian_contact = db.Column(db.String(20), nullable=True)
-    is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_active         = db.Column(db.Boolean, default=True)
+    # graduated | active | repeated | transferred | withdrawn
+    status            = db.Column(db.String(20), default='active')
+    graduation_session = db.Column(db.String(50), nullable=True)  # e.g. '2024/2025'
+    created_at        = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at        = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     user = db.relationship(
         'User',

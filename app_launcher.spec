@@ -1,4 +1,0 @@
-postgresql://eexam_db_user:jwhx5ngOSc2fkNhUSwZTx1l6H9IzerXG@dpg-d7aomkea2pns738u8dtg-a/eexam_db
-postgresql://eexam_db_user:jwhx5ngOSc2fkNhUSwZTx1l6H9IzerXG@dpg-d7aomkea2pns738u8dtg-a.oregon-postgres.render.com/eexam_db
-username: eexam_db_user
-pass: jwhx5ngOSc2fkNhUSwZTx1l6H9IzerXG
