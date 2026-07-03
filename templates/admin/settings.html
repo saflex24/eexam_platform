@@ -335,7 +335,7 @@
                 <div class="col-md-4 mb-3">
                     <label class="form-label d-block">Student Registration</label>
                     <label class="switch">
-                        <input type="checkbox" name="allow_student_registration" 
+                        <input type="checkbox" name="allow_student_registration" id="enrollmentToggle"
                                {{ 'checked' if settings.allow_student_registration else '' }}>
                         <span class="slider"></span>
                     </label>
@@ -361,6 +361,21 @@
                         <option value="Europe/London" {{ 'selected' if settings.timezone == 'Europe/London' else '' }}>Europe/London (GMT)</option>
                         <option value="Asia/Dubai" {{ 'selected' if settings.timezone == 'Asia/Dubai' else '' }}>Asia/Dubai (GST)</option>
                     </select>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div id="enrollmentLinkBox" class="p-3 mb-2 rounded" style="background: rgba(99,102,241,0.06); border: 1px solid var(--border); {{ '' if settings.allow_student_registration else 'display:none;' }}">
+                        <label class="form-label d-block mb-2"><i class="fas fa-link"></i> Student Enrollment Link</label>
+                        <small class="d-block text-muted mb-2">Share this link with students so they can register their own name, admission number, class, username and password.</small>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="enrollmentLinkInput" value="{{ enrollment_link }}" readonly>
+                            <button type="button" class="btn btn-outline-primary" id="copyEnrollmentLink">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -429,5 +444,31 @@
             uploadArea.innerHTML = `<strong>Selected:</strong> ${fileName}`;
         }
     });
+
+    // Show/hide the enrollment link box as the toggle is flipped
+    const enrollmentToggle = document.getElementById('enrollmentToggle');
+    const enrollmentLinkBox = document.getElementById('enrollmentLinkBox');
+    if (enrollmentToggle && enrollmentLinkBox) {
+        enrollmentToggle.addEventListener('change', function () {
+            enrollmentLinkBox.style.display = this.checked ? '' : 'none';
+        });
+    }
+
+    // Copy enrollment link to clipboard
+    const copyBtn = document.getElementById('copyEnrollmentLink');
+    if (copyBtn) {
+        copyBtn.addEventListener('click', function () {
+            const input = document.getElementById('enrollmentLinkInput');
+            input.select();
+            input.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(input.value).then(function () {
+                const original = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                setTimeout(() => { copyBtn.innerHTML = original; }, 1500);
+            }).catch(function () {
+                document.execCommand('copy');
+            });
+        });
+    }
 </script>
 {% endblock %}

@@ -7,6 +7,7 @@ from flask_login import current_user, login_required
 from extensions import db
 from models.user import User, Student, Teacher, Role
 from models.class_model import Class, AcademicTerm, TeacherSubjectClass, Subject, PromotionHistory
+from models.system_setting import SystemSetting
 from utils.decorators import admin_required
 from utils.exam_shuffle import get_ordered_questions as _get_ordered_questions, get_ordered_options, build_ordered_options_map
 from utils.file_handler import (
@@ -698,30 +699,127 @@ def change_admin_password():
         return redirect(url_for('admin.admin_profile'))
 
 
+ALLOWED_BRANDING_EXTENSIONS = {'png', 'jpg', 'jpeg', 'svg', 'ico'}
+
+
+def _allowed_branding_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_BRANDING_EXTENSIONS
+
+
+def _save_branding_file(file, prefix):
+    """Save a logo/favicon upload under static/uploads/branding and return the
+    path relative to the static folder (suitable for url_for('static', filename=...))."""
+    from werkzeug.utils import secure_filename
+
+    filename = secure_filename(file.filename)
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f"{prefix}_{timestamp}_{filename}"
+
+    upload_dir = os.path.join('static', 'uploads', 'branding')
+    os.makedirs(upload_dir, exist_ok=True)
+    file.save(os.path.join(upload_dir, filename))
+
+    return f"uploads/branding/{filename}"
+
+
 @admin_bp.route('/settings', methods=['GET', 'POST'])
 @admin_required
 def admin_settings():
     try:
+        setting = SystemSetting.get_instance()
+
         if request.method == 'POST':
+            school_name = request.form.get('school_name', '').strip()
+            if not school_name:
+                flash('School name is required.', 'danger')
+                return redirect(url_for('admin.admin_settings'))
+
+            setting.school_name       = school_name
+            setting.school_short_name = request.form.get('school_short_name', '').strip()
+            setting.school_email      = request.form.get('school_email', '').strip()
+            setting.school_phone      = request.form.get('school_phone', '').strip()
+            setting.school_website    = request.form.get('school_website', '').strip()
+            setting.school_address    = request.form.get('school_address', '').strip()
+
+            setting.primary_color   = request.form.get('primary_color', setting.primary_color)
+            setting.secondary_color = request.form.get('secondary_color', setting.secondary_color)
+
+            setting.enrollment_open  = request.form.get('allow_student_registration') == 'on'
+            setting.maintenance_mode = request.form.get('maintenance_mode') == 'on'
+            setting.timezone         = request.form.get('timezone', setting.timezone or 'UTC')
+
+            setting.footer_text    = request.form.get('footer_text', '').strip()
+            setting.copyright_text = request.form.get('copyright_text', '').strip()
+
+            logo_file = request.files.get('school_logo')
+            if logo_file and logo_file.filename:
+                if _allowed_branding_file(logo_file.filename):
+                    setting.school_logo = _save_branding_file(logo_file, 'logo')
+                else:
+                    flash('Logo must be a PNG, JPG, or SVG file.', 'warning')
+
+            favicon_file = request.files.get('school_favicon')
+            if favicon_file and favicon_file.filename:
+                if _allowed_branding_file(favicon_file.filename):
+                    setting.school_favicon = _save_branding_file(favicon_file, 'favicon')
+                else:
+                    flash('Favicon must be an ICO or PNG file.', 'warning')
+
+            setting.updated_at = datetime.utcnow()
+            db.session.commit()
+
             flash('Settings updated successfully!', 'success')
             return redirect(url_for('admin.admin_settings'))
 
-        settings = {
-            'email_notifications':        True,
-            'auto_approve_students':      False,
-            'enable_proctoring':          True,
-            'default_pass_percentage':    60,
-            'allow_student_registration': True,
-            'require_email_verification': False,
-            'max_exam_duration':          180,
-            'allow_exam_retake':          False
-        }
-        return render_template('admin/settings.html', settings=settings)
+        settings = setting.to_dict()
+        enrollment_link = url_for('auth.register', _external=True)
+        return render_template('admin/settings.html', settings=settings, enrollment_link=enrollment_link)
     except Exception as e:
+        db.session.rollback()
         print(f"ERROR in admin_settings: {str(e)}")
         traceback.print_exc()
         flash('Error loading settings.', 'danger')
         return redirect(url_for('admin.dashboard'))
+
+
+@admin_bp.route('/settings/remove-logo', methods=['POST'])
+@admin_required
+def remove_logo():
+    try:
+        setting = SystemSetting.get_instance()
+        if setting.school_logo:
+            old_path = os.path.join('static', setting.school_logo)
+            if os.path.exists(old_path):
+                os.remove(old_path)
+            setting.school_logo = ''
+            db.session.commit()
+            flash('Logo removed.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        print(f"ERROR in remove_logo: {str(e)}")
+        traceback.print_exc()
+        flash('Error removing logo.', 'danger')
+    return redirect(url_for('admin.admin_settings'))
+
+
+@admin_bp.route('/settings/remove-favicon', methods=['POST'])
+@admin_required
+def remove_favicon():
+    try:
+        setting = SystemSetting.get_instance()
+        if setting.school_favicon:
+            old_path = os.path.join('static', setting.school_favicon)
+            if os.path.exists(old_path):
+                os.remove(old_path)
+            setting.school_favicon = ''
+            db.session.commit()
+            flash('Favicon removed.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        print(f"ERROR in remove_favicon: {str(e)}")
+        traceback.print_exc()
+        flash('Error removing favicon.', 'danger')
+    return redirect(url_for('admin.admin_settings'))
 
 
 @admin_bp.route('/activity-log', methods=['GET'])
@@ -3667,4 +3765,3 @@ def fix_all_randomization():
         traceback.print_exc()
         flash(f'Error fixing randomization: {str(e)}', 'danger')
     return redirect(url_for('admin.randomization_status'))
-

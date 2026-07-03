@@ -197,12 +197,14 @@ a:hover { color: #4facfe; }
                         </button>
                     </form>
 
+                    {% if enrollment_open %}
                     <hr>
 
                     <p class="text-center" style="color:#8fa3c8;">
                         Don't have an account?
                         <a href="{{ url_for('auth.register') }}">Register here</a>
                     </p>
+                    {% endif %}
 
                 </div>
             </div>
